@@ -1,8 +1,13 @@
 # app/schemas/sool_schema.py
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import Optional
 
+class SoolCreate(BaseModel):
+    name: str = Field(..., min_length=1)
+    category: str | None = None
+    abv: float | None = None
+    region: str | None = None
 
 class SoolBase(BaseModel):
     name: str
