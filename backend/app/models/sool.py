@@ -1,5 +1,6 @@
 from sqlalchemy import Column, Integer, String, Float
 from app.core.database import Base
+from sqlalchemy.orm import relationship
 
 class Sool(Base):
     __tablename__ = "sool"
@@ -9,3 +10,5 @@ class Sool(Base):
     category = Column(String)
     abv = Column(Float)
     region = Column(String)
+
+reviews = relationship("Review", backref="sool", cascade="all, delete")
