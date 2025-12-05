@@ -12,6 +12,11 @@ class Sool(Base):
     abv = Column(Float)
     region = Column(String)
 
+    # 추가 필드
+    description = Column(String, nullable=True)
+    producer = Column(String, nullable=True)
+    ingredients = Column(String, nullable=True)
+
     # ↙ MUST be inside class
     reviews = relationship("Review", backref="sool", cascade="all, delete")
 

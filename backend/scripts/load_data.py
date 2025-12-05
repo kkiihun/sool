@@ -8,7 +8,7 @@ from app.models.sool import Sool
 BASE_PATH = os.path.join(os.path.dirname(__file__), "..", "data")
 
 FILES = [
-    "sool_basic_clean.csv",
+    "sool_basic_region_added.csv",
     "sense_clean.csv",
 ]
 
@@ -57,8 +57,10 @@ def import_data():
                 Sool(
                     name=name,
                     abv=clean_abv(row.get("abv")),
-                    category=row.get("category"),
-                    region=row.get("region"),
+                    region=row.get("region") or "미등록",
+                    description=row.get("description"),
+                    producer=row.get("producer"),
+                    ingredients=row.get("ingredients"),
                 )
             )
 
