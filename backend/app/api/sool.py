@@ -48,6 +48,24 @@ def create_sool(payload: SoolCreate, db: Session = Depends(get_db)):
 def get_sool_list(db: Session = Depends(get_db)):
     return db.query(Sool).all()
 
+# ------------------------
+# 📌 Search Sool (GET)
+# ------------------------
+@router.get("/search", response_model=list[SoolResponse])
+def search_sool(q: str, db: Session = Depends(get_db)):
+    # 최소 2글자 이상일 경우만 검색 수행
+    if len(q) < 2:
+        return []
+
+    results = (
+        db.query(Sool)
+        .filter(Sool.name.like(f"%{q}%"))
+        .all()
+    )
+
+    return results
+
+
 
 # 🚨 여기 추가된 상세 조회 API
 @router.get("/{sool_id}", response_model=SoolResponse)

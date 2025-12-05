@@ -50,10 +50,15 @@ export default function SenseList() {
             <tr className="border-b border-gray-700">
               <th className="p-2">ID</th>
               <th className="p-2">Sool ID</th>
+                <th className="p-2">Clarity</th>
+                <th className="p-2">Color</th>
               <th className="p-2">Sweetness</th>
+                <th className="p-2">Smoothness</th>
               <th className="p-2">Aroma</th>
               <th className="p-2">Rating</th>
+                <th className="p-2">Notes</th>
               <th className="p-2">Date</th>
+                <th className="p-2">상세</th>
             </tr>
           </thead>
           <tbody>
@@ -61,10 +66,23 @@ export default function SenseList() {
               <tr key={item.id} className="border-b border-gray-800 hover:bg-gray-800 cursor-pointer">
                 <td className="p-2">{item.id}</td>
                 <td className="p-2">{item.sool_id}</td>
-                <td className="p-2">{item.sweetness}</td>
+                  <td className="p-2">{item.clarity}</td>
+                <td className="p-2">{item.color}</td>
+                  <td className="p-2">{item.sweetness}</td>
+                  <td className="p-2">{item.smoothness}</td>
                 <td className="p-2">{item.aroma}</td>
                 <td className="p-2">{item.rating ?? "-"}</td>
+                  <td className="p-2">{item.notes ?? "-"}</td>
                 <td className="p-2">{item.date ?? "-"}</td>
+                  <td>
+                      <a
+                        href={`/sense/${item.id}`}
+                        style={{ textDecoration: "underline", color: "skyblue", cursor: "pointer" }}
+                      >
+                        상세보기
+                      </a>
+                    </td>
+
               </tr>
             ))}
           </tbody>

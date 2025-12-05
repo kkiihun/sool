@@ -26,3 +26,10 @@ def add_sense(payload: SenseCreate, db: Session = Depends(get_db)):
 @router.get("/", response_model=list[SenseResponse])
 def get_sense(db: Session = Depends(get_db)):
     return db.query(Sense).all()
+
+@router.get("/{sense_id}", response_model=SenseResponse)
+async def get_sense(sense_id: int, db: Session = Depends(get_db)):
+    sense = db.query(Sense).filter(Sense.id == sense_id).first()
+    if not sense:
+        raise HTTPException(status_code=404, detail="Not found")
+    return sense
