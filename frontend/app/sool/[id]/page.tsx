@@ -2,42 +2,37 @@
 
 import { useState, useEffect } from "react";
 
-export default function SoolDetail({ params }: any) {
-  const [id, setId] = useState<string | null>(null);
+export default function SoolDetail({ params }: { params: Promise<{ id: string }> }) {
+  const [resolvedId, setResolvedId] = useState<string | null>(null);
   const [data, setData] = useState<any>(null);
+  const [reviews, setReviews] = useState<any[]>([]);
   const [rating, setRating] = useState<number | null>(null);
   const [notes, setNotes] = useState("");
-  const [reviews, setReviews] = useState<any[]>([]); // ← 배열로 초기화
 
-  // unwrap params.id (Next.js 요구사항)
+  // 🚀 params 처리 (Next.js 요구사항)
   useEffect(() => {
-    async function resolveParams() {
-      const resolved = await params;
-      setId(resolved.id);
-    }
-    resolveParams();
+    params.then((p) => setResolvedId(p.id));
   }, [params]);
 
-  // 상세 데이터 + 리뷰 로딩
+  // 🚀 데이터 fetch
   useEffect(() => {
-    if (!id) return;
+    if (!resolvedId) return;
 
     const fetchDetail = async () => {
-      const res = await fetch(`http://127.0.0.1:8000/sool/${id}`);
+      const res = await fetch(`http://127.0.0.1:8000/sool/${resolvedId}`);
       setData(await res.json());
     };
 
     const fetchReviews = async () => {
-      const res = await fetch(`http://127.0.0.1:8000/review/${id}`);
-      const json = await res.json();
-      setReviews(Array.isArray(json) ? json : []); // ← map 에러 방지
+      const res = await fetch(`http://127.0.0.1:8000/review/${resolvedId}`);
+      setReviews(await res.json());
     };
 
     fetchDetail();
     fetchReviews();
-  }, [id]);
+  }, [resolvedId]);
 
-  // 리뷰 저장
+  // 🚀 리뷰 저장
   const submitReview = async () => {
     if (!rating) return alert("별점을 입력해주세요.");
 
@@ -47,7 +42,7 @@ export default function SoolDetail({ params }: any) {
       body: JSON.stringify({
         rating,
         notes,
-        sool_id: Number(id),
+        sool_id: Number(resolvedId),
       }),
     });
 
@@ -55,23 +50,21 @@ export default function SoolDetail({ params }: any) {
     setRating(null);
     setNotes("");
 
-    // 새로 저장하면 목록 갱신
-    const res = await fetch(`http://127.0.0.1:8000/review/${id}`);
-    const updated = await res.json();
-    setReviews(Array.isArray(updated) ? updated : []);
+    const res = await fetch(`http://127.0.0.1:8000/review/${resolvedId}`);
+    setReviews(await res.json());
   };
 
-  if (!id || !data) return <p className="p-6">로딩 중...</p>;
+  if (!resolvedId || !data) return <p className="p-6 text-gray-300">⏳ 로딩 중...</p>;
 
   return (
-    <div className="p-6">
+    <div className="p-6 text-white">
       <h1 className="text-3xl font-bold mb-4">{data.name}</h1>
 
-      <p>🍶 도수: {data.abv ?? "?"}%</p>
+      <p>🍶 도수: {data.abv}%</p>
       <p>📍 지역: {data.region ?? "미등록"}</p>
       <p>📦 카테고리: {data.category ?? "미분류"}</p>
 
-      <hr className="my-6" />
+      <hr className="my-6 border-gray-700" />
 
       <h2 className="text-xl font-semibold mb-3">리뷰 남기기</h2>
 
@@ -80,32 +73,29 @@ export default function SoolDetail({ params }: any) {
         placeholder="별점 (1~5)"
         value={rating ?? ""}
         onChange={(e) => setRating(Number(e.target.value))}
-        className="border p-2 rounded w-full mb-3 bg-gray-800 text-white placeholder-gray-400"
+        className="border p-2 w-full bg-gray-900 text-white mb-3"
       />
-
       <textarea
-        placeholder="메모..."
+        placeholder="메모 작성..."
         value={notes}
         onChange={(e) => setNotes(e.target.value)}
-        className="border p-2 rounded w-full mb-3 bg-gray-800 text-white placeholder-gray-400"
+        className="border p-2 w-full bg-gray-900 text-white mb-3"
       />
-
       <button
         onClick={submitReview}
-        className="bg-blue-500 text-white px-4 py-2 rounded"
+        className="bg-blue-600 px-4 py-2 rounded hover:bg-blue-500 transition"
       >
         저장하기
       </button>
 
-      <hr className="my-6" />
+      <hr className="my-6 border-gray-700" />
 
-      <h2 className="text-xl font-semibold mb-3">📌 기록된 리뷰</h2>
-
+      <h2 className="text-xl font-semibold mb-3">📌 사용자 리뷰</h2>
       {reviews.length === 0 ? (
-        <p>리뷰 없음</p>
+        <p className="text-gray-400">리뷰 없음</p>
       ) : (
         reviews.map((r) => (
-          <div key={r.id} className="border p-3 rounded mb-3">
+          <div key={r.id} className="border border-gray-700 p-3 rounded mb-3">
             ⭐ {r.rating}
             <p>{r.notes}</p>
           </div>
