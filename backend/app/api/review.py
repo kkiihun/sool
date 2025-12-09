@@ -27,7 +27,21 @@ def create_review(review: ReviewCreate, db: Session = Depends(get_db)):
     db.refresh(new_review)
     return new_review
 
+# 🔹 리뷰 요약 데이터 (새 추가)
+@router.get("/summary/{sool_id}")
+def get_review_summary(sool_id: int, db: Session = Depends(get_db)):
+    reviews = db.query(Review).filter(Review.sool_id == sool_id).all()
 
+    if not reviews:
+        return {"avg": None, "count": 0}
+
+    avg = sum([r.rating for r in reviews]) / len(reviews)
+    return {"avg": round(avg, 1), "count": len(reviews)}
+
+# 리뷰 목록 가져오기
 @router.get("/{sool_id}", response_model=list[ReviewResponse])
 def get_reviews(sool_id: int, db: Session = Depends(get_db)):
     return db.query(Review).filter(Review.sool_id == sool_id).all()
+
+
+
