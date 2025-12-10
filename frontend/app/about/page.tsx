@@ -49,7 +49,7 @@ export default function AboutPage() {
       <div className="flex gap-6 mt-2 text-lg">
         {/* 네이버 블로그 */}
         <a
-          href="https://blog.naver.com/badakaya"
+          href="https://blog.naver.com/sensedatalab"
           target="_blank"
           className="hover:text-blue-400 transition"
         >
