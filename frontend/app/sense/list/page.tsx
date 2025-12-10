@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 import axios from "axios";
+import Link from "next/link";
+import BackButton from "@/app/components/BackButton";
 
 interface Sense {
   id: number;
@@ -13,12 +15,21 @@ interface Sense {
   smoothness: number;
   rating?: number;
   notes?: string;
-  date?: string;
+  date?: string | null;
 }
 
-export default function SenseList() {
+export default function SenseListPage() {
   const [data, setData] = useState<Sense[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // 🔥 날짜 포맷 처리 함수 (모든 케이스 처리)
+  const formatDate = (date: string | null | undefined) => {
+    if (!date) return "-"; // null, undefined
+    if (typeof date !== "string") return "-";
+    const trimmed = date.trim();
+    if (trimmed === "" || trimmed === "Invalid Date") return "-";
+    return trimmed.slice(0, 10); // YYYY-MM-DD만 반환
+  };
 
   const fetchData = async () => {
     try {
@@ -36,53 +47,67 @@ export default function SenseList() {
     fetchData();
   }, []);
 
-  if (loading) return <p className="text-white p-6">⏳ 불러오는 중...</p>;
+  if (loading) {
+    return <p className="text-white p-6">⏳ 로딩중...</p>;
+  }
 
   return (
     <div className="p-6 text-white">
+
+      {/* 뒤로가기 + 홈버튼 */}
+      <div className="flex items-center gap-4 mb-4">
+        <BackButton />
+        <Link href="/" className="text-blue-400 hover:text-blue-300 underline">
+          홈으로 이동
+        </Link>
+      </div>
+
       <h1 className="text-2xl font-bold mb-4">📋 테이스팅 노트 목록</h1>
 
       {data.length === 0 ? (
-        <p>저장된 데이터가 없습니다.</p>
+        <p>저장된 테이스팅 노트가 없습니다.</p>
       ) : (
         <table className="w-full border border-gray-700 text-left">
           <thead>
             <tr className="border-b border-gray-700">
               <th className="p-2">ID</th>
               <th className="p-2">Sool ID</th>
-                <th className="p-2">Clarity</th>
-                <th className="p-2">Color</th>
+              <th className="p-2">Clarity</th>
+              <th className="p-2">Color</th>
               <th className="p-2">Sweetness</th>
-                <th className="p-2">Smoothness</th>
+              <th className="p-2">Smoothness</th>
               <th className="p-2">Aroma</th>
               <th className="p-2">Rating</th>
-                <th className="p-2">Notes</th>
               <th className="p-2">Date</th>
-                <th className="p-2">상세</th>
+              <th className="p-2">상세</th>
             </tr>
           </thead>
           <tbody>
             {data.map((item) => (
-              <tr key={item.id} className="border-b border-gray-800 hover:bg-gray-800 cursor-pointer">
+              <tr
+                key={item.id}
+                className="border-b border-gray-800 hover:bg-gray-800"
+              >
                 <td className="p-2">{item.id}</td>
                 <td className="p-2">{item.sool_id}</td>
-                  <td className="p-2">{item.clarity}</td>
+                <td className="p-2">{item.clarity}</td>
                 <td className="p-2">{item.color}</td>
-                  <td className="p-2">{item.sweetness}</td>
-                  <td className="p-2">{item.smoothness}</td>
+                <td className="p-2">{item.sweetness}</td>
+                <td className="p-2">{item.smoothness}</td>
                 <td className="p-2">{item.aroma}</td>
                 <td className="p-2">{item.rating ?? "-"}</td>
-                  <td className="p-2">{item.notes ?? "-"}</td>
-                <td className="p-2">{item.date ?? "-"}</td>
-                  <td>
-                      <a
-                        href={`/sense/${item.id}`}
-                        style={{ textDecoration: "underline", color: "skyblue", cursor: "pointer" }}
-                      >
-                        상세보기
-                      </a>
-                    </td>
 
+                {/* ★★★ 날짜 표시는 반드시 formatDate로 처리해야 함 ★★★ */}
+                <td className="p-2">{formatDate(item.date)}</td>
+
+                <td className="p-2">
+                  <Link
+                    href={`/sense/list/${item.id}`}
+                    className="underline text-blue-400 hover:text-blue-300"
+                  >
+                    보기
+                  </Link>
+                </td>
               </tr>
             ))}
           </tbody>
