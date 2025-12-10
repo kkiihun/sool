@@ -1,16 +1,64 @@
+// frontend/app/updates/page.tsx
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Timeline, Typography } from "antd";
-import { ArrowLeftOutlined } from "@ant-design/icons";
+import { ArrowLeftOutlined, PlusOutlined } from "@ant-design/icons";
 
-const { Title } = Typography;
+interface UpdateItem {
+  message: string;
+  timestamp: string; // "2025-12-10 23:11:22"
+}
 
 export default function UpdatesPage() {
-  return (
-    <div style={{ padding: "40px", color: "#fff" }}>
+  const [updates, setUpdates] = useState<UpdateItem[]>([]);
+  const [newMessage, setNewMessage] = useState("");
 
-      {/* 🔙 홈 버튼 */}
+  const fetchUpdates = async () => {
+    try {
+      const res = await fetch("http://127.0.0.1:8000/updates/");
+      if (!res.ok) throw new Error("업데이트 불러오기 실패");
+      const data: UpdateItem[] = await res.json();
+      setUpdates(data);
+    } catch (err) {
+      console.error(err);
+      alert("업데이트 목록을 불러오지 못했습니다.");
+    }
+  };
+
+  useEffect(() => {
+    fetchUpdates();
+  }, []);
+
+  const handleAdd = async () => {
+    if (!newMessage.trim()) {
+      alert("내용을 입력해주세요.");
+      return;
+    }
+
+    try {
+      const res = await fetch("http://127.0.0.1:8000/updates/", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: newMessage.trim() }),
+      });
+
+      if (!res.ok) throw new Error("저장 실패");
+
+      const created: UpdateItem = await res.json();
+
+      // 화면 리스트에 바로 반영
+      setUpdates((prev) => [created, ...prev]);
+      setNewMessage("");
+    } catch (err) {
+      console.error(err);
+      alert("업데이트 저장 중 오류가 발생했습니다.");
+    }
+  };
+
+  return (
+    <div style={{ padding: 40, color: "#fff" }}>
+      {/* 🔙 홈으로 돌아가기 */}
       <div style={{ marginBottom: 20 }}>
         <Link href="/" style={{ color: "#6aaaff", fontSize: 14 }}>
           <ArrowLeftOutlined style={{ marginRight: 6 }} />
@@ -18,50 +66,66 @@ export default function UpdatesPage() {
         </Link>
       </div>
 
-      <Title level={2} style={{ color: "#fff" }}>Updates</Title>
+      <h1 style={{ fontSize: 32, fontWeight: 700, marginBottom: 24 }}>Updates</h1>
 
-      {/* ⭕ 올바른 Timeline 선언 방식 */}
-      <Timeline
-        style={{ marginTop: 20 }}
-        items={[
-          {
-            color: "green",
-            icon: "⭐",
-            content: (
-              <span style={{ color: "#e6e6e6", fontSize: "16px" }}>
-                리뷰 별점 시스템 수정 (2025-12-10)
+      {/* 입력 영역 */}
+      <div style={{ display: "flex", gap: 8, marginBottom: 24 }}>
+        <input
+          value={newMessage}
+          onChange={(e) => setNewMessage(e.target.value)}
+          placeholder="예) 테이스팅 노트 입력 페이지 개선"
+          style={{
+            flex: 1,
+            padding: "8px 12px",
+            borderRadius: 6,
+            border: "1px solid #444",
+            background: "#111",
+            color: "#eee",
+          }}
+        />
+        <button
+          onClick={handleAdd}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 6,
+            padding: "8px 16px",
+            borderRadius: 6,
+            border: "none",
+            background: "#3b82f6",
+            color: "#fff",
+            cursor: "pointer",
+          }}
+        >
+          <PlusOutlined />
+          추가
+        </button>
+      </div>
+
+      {/* 업데이트 리스트 */}
+      {updates.length === 0 ? (
+        <p style={{ color: "#888" }}>아직 등록된 업데이트가 없습니다.</p>
+      ) : (
+        <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
+          {updates.map((item, idx) => (
+            <li
+              key={idx}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+                marginBottom: 12,
+              }}
+            >
+              <span style={{ color: "#facc15", marginRight: 4 }}>⭐</span>
+              <span style={{ color: "#e6e6e6" }}>{item.message}</span>
+              <span style={{ color: "#888", fontSize: 14, marginLeft: 8 }}>
+                ({item.timestamp})
               </span>
-            ),
-          },
-          {
-            color: "green",
-            icon: "⭐",
-            content: (
-              <span style={{ color: "#e6e6e6", fontSize: "16px" }}>
-                리뷰 시스템 추가 (2025-12-09)
-              </span>
-            ),
-          },
-          {
-            color: "green",
-            icon: "⭐",
-            content: (
-              <span style={{ color: "#e6e6e6", fontSize: "16px" }}>
-                평점 기준 정렬 기능 준비중
-              </span>
-            ),
-          },
-          {
-            color: "gray",
-            icon: "🚧",
-            content: (
-              <span style={{ color: "#999", fontSize: "16px" }}>
-                이미지 데이터 준비 예정
-              </span>
-            ),
-          },
-        ]}
-      />
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 }
