@@ -6,6 +6,13 @@ from app.api.tasting import router as tasting_router
 from app.api.review import router as review_router
 from app.api.sense import router as sense_router
 
+# --- 반드시 추가해야 하는 모델 import ---
+from app.models.sool import Sool
+from app.models.review import Review
+from app.models.sense import Sense
+from app.models.tasting import Tasting
+from app.models.tasting_note import TastingNote
+
 
 app = FastAPI(title="SOOL API MVP")
 

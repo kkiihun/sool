@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from app.models.review import Review
 from app.core.database import SessionLocal
-from app.schemas.review_schema import ReviewCreate, ReviewResponse
+from app.schemas.review import ReviewCreate, ReviewResponse
 
 router = APIRouter(prefix="/review", tags=["Review"])
 
@@ -27,7 +27,7 @@ def create_review(review: ReviewCreate, db: Session = Depends(get_db)):
     db.refresh(new_review)
     return new_review
 
-# 🔹 리뷰 요약 데이터 (새 추가)
+# 🔹 리뷰 요약 데이터
 @router.get("/summary/{sool_id}")
 def get_review_summary(sool_id: int, db: Session = Depends(get_db)):
     reviews = db.query(Review).filter(Review.sool_id == sool_id).all()
@@ -43,5 +43,15 @@ def get_review_summary(sool_id: int, db: Session = Depends(get_db)):
 def get_reviews(sool_id: int, db: Session = Depends(get_db)):
     return db.query(Review).filter(Review.sool_id == sool_id).all()
 
+# 최신 리뷰 기능
+@router.get("/latest", response_model=list[ReviewResponse])
+def get_latest_reviews(db: Session = Depends(get_db)):
+    reviews = (
+        db.query(Review)
+        .order_by(Review.created_at.desc())
+        .limit(10)
+        .all()
+    )
+    return reviews
 
 

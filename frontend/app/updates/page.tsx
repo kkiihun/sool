@@ -29,6 +29,15 @@ export default function UpdatesPage() {
             icon: "⭐",
             content: (
               <span style={{ color: "#e6e6e6", fontSize: "16px" }}>
+                리뷰 별점 시스템 수정 (2025-12-10)
+              </span>
+            ),
+          },
+          {
+            color: "green",
+            icon: "⭐",
+            content: (
+              <span style={{ color: "#e6e6e6", fontSize: "16px" }}>
                 리뷰 시스템 추가 (2025-12-09)
               </span>
             ),

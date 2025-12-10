@@ -34,9 +34,10 @@ export default function SoolDetail({ params }: { params: Promise<{ id: string }>
 
   // 🚀 리뷰 저장
   const submitReview = async () => {
-    if (!rating) return alert("별점을 입력해주세요.");
+  if (!rating) return alert("별점을 입력해주세요.");
 
-    await fetch("http://127.0.0.1:8000/review", {
+  try {
+    const res = await fetch("http://127.0.0.1:8000/review/", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -46,13 +47,25 @@ export default function SoolDetail({ params }: { params: Promise<{ id: string }>
       }),
     });
 
+    // ❗ FastAPI validation 에러 대응
+    if (!res.ok) {
+      const err = await res.json();
+      alert("저장 실패: " + (err.detail ?? "알 수 없는 오류"));
+      return;
+    }
+
     alert("저장 완료!");
+
     setRating(null);
     setNotes("");
 
-    const res = await fetch(`http://127.0.0.1:8000/review/${resolvedId}`);
-    setReviews(await res.json());
-  };
+    const updated = await fetch(`http://127.0.0.1:8000/review/${resolvedId}`);
+    setReviews(await updated.json());
+  } catch (error) {
+    alert("⚠️ 네트워크 오류 발생!");
+  }
+};
+
 
   if (!resolvedId || !data) return <p className="p-6 text-gray-300">⏳ 로딩 중...</p>;
 
@@ -69,12 +82,24 @@ export default function SoolDetail({ params }: { params: Promise<{ id: string }>
       <h2 className="text-xl font-semibold mb-3">리뷰 남기기</h2>
 
       <input
-        type="number"
-        placeholder="별점 (1~5)"
-        value={rating ?? ""}
-        onChange={(e) => setRating(Number(e.target.value))}
-        className="border p-2 w-full bg-gray-900 text-white mb-3"
-      />
+          type="number"
+          placeholder="별점 (1~5)"
+          min={1}
+          max={5}
+          step={1}
+          value={rating ?? ""}
+          onChange={(e) => {
+            const value = Number(e.target.value);
+            setRating(value); // 입력 중에는 제한 없음
+          }}
+          onBlur={() => {
+            if (rating! < 1) setRating(1);
+            if (rating! > 5) setRating(5);
+          }}
+          className="border p-2 w-full bg-gray-900 text-white mb-3"
+        />
+
+
       <textarea
         placeholder="메모 작성..."
         value={notes}
