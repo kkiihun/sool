@@ -1,6 +1,7 @@
-from sqlalchemy import Column, Integer, String, Float, DateTime, ForeignKey
+from sqlalchemy import Column, Integer, Float, DateTime, ForeignKey
 from sqlalchemy.orm import relationship
 from datetime import datetime
+from sqlalchemy import Text
 from app.core.database import Base
 
 class Review(Base):
@@ -9,8 +10,10 @@ class Review(Base):
     id = Column(Integer, primary_key=True, index=True)
     sool_id = Column(Integer, ForeignKey("sool.id"), nullable=False)
     rating = Column(Float, nullable=False)
-    notes = Column(String, nullable=True)   # ← comment 대신 notes 사용
+    notes = Column(Text, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
-    sool = relationship("Sool", back_populates="reviews")
-
+    sool = relationship(
+        "Sool",
+        back_populates="reviews"
+    )

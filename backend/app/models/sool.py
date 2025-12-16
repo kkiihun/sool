@@ -6,16 +6,26 @@ class Sool(Base):
     __tablename__ = "sool"
 
     id = Column(Integer, primary_key=True, index=True)
-    name = Column(String, index=True)
-    category = Column(String)
+
+    name = Column(String(100), nullable=False, index=True)
+    category = Column(String(50))
     abv = Column(Float)
-    region = Column(String)
+    region = Column(String(50))
 
-    description = Column(String, nullable=True)
-    producer = Column(String, nullable=True)
-    ingredients = Column(String, nullable=True)
+    description = Column(String(500))
+    producer = Column(String(100))
+    ingredients = Column(String(255))
 
-    # 🔥 FIXED: relationship 충돌 해결
-    reviews = relationship("Review", back_populates="sool", cascade="all, delete")
+    # 🔹 감각 노트
+    sense_notes = relationship(
+        "Sense",
+        back_populates="sool",
+        cascade="all, delete-orphan"
+    )
 
-    sense_notes = relationship("Sense", back_populates="sool", cascade="all, delete")
+    # 🔹 리뷰 (🔥 이게 빠져 있었음)
+    reviews = relationship(
+        "Review",
+        back_populates="sool",
+        cascade="all, delete-orphan"
+    )

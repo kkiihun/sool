@@ -23,7 +23,8 @@ class Sense(Base):
 
     rating = Column(Float, nullable=True)
     notes = Column(Text, nullable=True)
-    date = Column(String, nullable=True)
 
-    # ✅ relationship는 오직 하나
+    # ✅ MariaDB 대응 (VARCHAR 길이 필수)
+    date = Column(String(10), nullable=True)
+
     sool = relationship("Sool", back_populates="sense_notes")

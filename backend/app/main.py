@@ -1,11 +1,13 @@
 from fastapi import FastAPI, Query
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi import FastAPI
 from app.core.database import SessionLocal, Base, engine
 from app.api.sool import router as sool_router
 from app.api.tasting import router as tasting_router
 from app.api.review import router as review_router
 from app.api.sense import router as sense_router
 from app.api import sool, sense, review, update_log
+from app.api import auth
 
 # --- 반드시 추가해야 하는 모델 import ---
 from app.models.sool import Sool
@@ -47,6 +49,7 @@ app.include_router(tasting_router)
 app.include_router(review_router)
 app.include_router(sense_router)
 app.include_router(update_log.router)
+app.include_router(auth.router)
 
 @app.get("/")
 def root():

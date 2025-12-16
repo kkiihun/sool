@@ -1,12 +1,24 @@
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, declarative_base
 
-DATABASE_URL = "sqlite:///./sool.db"  # PostgreSQL로 이후 변경
+DATABASE_URL = "mysql+pymysql://sooluser:soolpass@127.0.0.1:3306/sool"
 
-engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+# ✅ MariaDB 엔진 생성 (SQLite 옵션 제거)
+engine = create_engine(
+    DATABASE_URL,
+    pool_pre_ping=True,
+    echo=True   # 추가
+)
+
+SessionLocal = sessionmaker(
+    autocommit=False,
+    autoflush=False,
+    bind=engine
+)
+
 Base = declarative_base()
 
+# FastAPI Dependency
 def get_db():
     db = SessionLocal()
     try:

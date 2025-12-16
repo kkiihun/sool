@@ -1,9 +1,9 @@
-from sqlalchemy import Column, Integer, String, Float, ForeignKey
+from sqlalchemy import Column, Integer, Float, ForeignKey, Text
 from sqlalchemy.orm import relationship
 from app.core.database import Base
 
 class TastingNote(Base):
-    __tablename__ = "tasting_note"
+    __tablename__ = "tasting_notes"  # (선택) 복수형 권장
 
     id = Column(Integer, primary_key=True, index=True)
     sool_id = Column(Integer, ForeignKey("sool.id"), nullable=False)
@@ -14,6 +14,6 @@ class TastingNote(Base):
     body = Column(Float, nullable=True)
     finish = Column(Float, nullable=True)
 
-    comment = Column(String, nullable=True)
+    comment = Column(Text, nullable=True)  # ✅ 핵심 수정
 
-    sool = relationship("Sool")  # relation back to Sool table
+    sool = relationship("Sool")
