@@ -1,37 +1,35 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from app.core.database import SessionLocal
-from app.models.user import User
-from app.schemas.auth import SignupRequest, LoginRequest, TokenResponse
+
+from app.core.database import get_db
 from app.core.security import hash_password, verify_password, create_access_token
+from app.models.user import User
+from app.schemas.auth import UserCreate, UserLogin, Token
 
-router = APIRouter(prefix="/auth", tags=["auth"])
-
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
+router = APIRouter(prefix="/auth", tags=["Auth"])
 
 @router.post("/signup")
-def signup(req: SignupRequest, db: Session = Depends(get_db)):
-    if db.query(User).filter(User.email == req.email).first():
+def signup(user: UserCreate, db: Session = Depends(get_db)):
+    exists = db.query(User).filter(User.email == user.email).first()
+    if exists:
         raise HTTPException(status_code=400, detail="Email already registered")
 
-    user = User(
-        email=req.email,
-        password_hash=hash_password(req.password)
+    new_user = User(
+        email=user.email,
+        username=user.username,
+        hashed_password=hash_password(user.password)
     )
-    db.add(user)
+    db.add(new_user)
     db.commit()
-    return {"message": "signup success"}
+    db.refresh(new_user)
 
-@router.post("/login", response_model=TokenResponse)
-def login(req: LoginRequest, db: Session = Depends(get_db)):
-    user = db.query(User).filter(User.email == req.email).first()
-    if not user or not verify_password(req.password, user.password_hash):
+    return {"message": "User created successfully"}
+
+@router.post("/login", response_model=Token)
+def login(user: UserLogin, db: Session = Depends(get_db)):
+    db_user = db.query(User).filter(User.email == user.email).first()
+    if not db_user or not verify_password(user.password, db_user.hashed_password):
         raise HTTPException(status_code=401, detail="Invalid credentials")
 
-    token = create_access_token({"sub": str(user.id)})
+    token = create_access_token({"sub": str(db_user.id)})
     return {"access_token": token}
