@@ -8,6 +8,7 @@ from app.api.review import router as review_router
 from app.api.sense import router as sense_router
 from app.api import sool, sense, review, update_log
 from app.api import auth
+from app.api import users
 
 # --- 반드시 추가해야 하는 모델 import ---
 from app.models.sool import Sool
@@ -50,6 +51,7 @@ app.include_router(review_router)
 app.include_router(sense_router)
 app.include_router(update_log.router)
 app.include_router(auth.router)
+app.include_router(users.router)
 
 @app.get("/")
 def root():

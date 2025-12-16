@@ -1,10 +1,10 @@
 from datetime import datetime, timedelta
-from jose import jwt
+from jose import JWTError, jwt
 from passlib.context import CryptContext
 
-SECRET_KEY = "CHANGE_THIS_SECRET_KEY"
+SECRET_KEY = "CHANGE_ME_TO_SOMETHING_RANDOM"
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24
+ACCESS_TOKEN_EXPIRE_MINUTES = 60
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
