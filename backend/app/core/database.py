@@ -1,24 +1,44 @@
+import os
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, declarative_base
 
-DATABASE_URL = "mysql+pymysql://sooluser:soolpass@127.0.0.1:3306/sool"
+# =========================
+# Database configuration
+# =========================
+DB_HOST = os.getenv("DB_HOST", "db")          # docker-compose service name
+DB_PORT = os.getenv("DB_PORT", "3306")
+DB_USER = os.getenv("DB_USER", "sool")
+DB_PASSWORD = os.getenv("DB_PASSWORD", "soolpass")
+DB_NAME = os.getenv("DB_NAME", "sool")
 
-# ✅ MariaDB 엔진 생성 (SQLite 옵션 제거)
+DATABASE_URL = (
+    f"mysql+pymysql://{DB_USER}:{DB_PASSWORD}"
+    f"@{DB_HOST}:{DB_PORT}/{DB_NAME}"
+)
+
+# =========================
+# SQLAlchemy engine
+# =========================
 engine = create_engine(
     DATABASE_URL,
     pool_pre_ping=True,
-    echo=True   # 추가
+    echo=True,          # 개발 단계에서 SQL 로그 확인용
 )
 
+# =========================
+# Session / Base
+# =========================
 SessionLocal = sessionmaker(
     autocommit=False,
     autoflush=False,
-    bind=engine
+    bind=engine,
 )
 
 Base = declarative_base()
 
-# FastAPI Dependency
+# =========================
+# FastAPI dependency
+# =========================
 def get_db():
     db = SessionLocal()
     try:
