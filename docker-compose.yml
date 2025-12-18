@@ -1,0 +1,34 @@
+services:
+  db:
+    image: mariadb:10.11
+    container_name: sool-mariadb
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpass
+      MYSQL_DATABASE: sool
+      MYSQL_USER: sool
+      MYSQL_PASSWORD: soolpass
+    ports:
+      - "3306:3306"
+    volumes:
+      - sool_mariadb_data:/var/lib/mysql
+
+  backend:
+    build: ./backend
+    container_name: sool-backend
+
+    # 🔹 1. 기본 환경변수는 .env에서 읽고
+    env_file:
+      - .env
+
+    # 🔹 2. docker-compose 환경에서만 DB_HOST를 덮어씀
+    environment:
+      DB_HOST: db   # ⭐ 이 한 줄이 핵심
+
+    depends_on:
+      - db
+
+    ports:
+      - "8000:8000"
+
+volumes:
+  sool_mariadb_data:
