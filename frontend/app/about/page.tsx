@@ -28,18 +28,25 @@ export default function AboutPage() {
       </Title>
 
       {/* 소개 문구 */}
-      <Paragraph style={{ color: "#ccc", fontSize: 16, maxWidth: 720 }}>
-        안녕하세요. 김기훈입니다.<br />
-        저는 감각 데이터를 기반으로 한 <b>SENSE JOURNEY</b> 프로젝트와
-        전통주 기록/추천 시스템 <b>SOOL</b>,
-        그리고 드론·로봇팔 기반 자동화 실험실 <b>LUNARLINE</b>을 만드는
-        1인 개발자입니다.
-        <br />
-        <br />
-        데이터 · 감각 · 자동화라는 세 가지 축을 기반으로,
-        “사람의 경험을 데이터로 기록하고 새로운 가치를 만드는 시스템”을
-        구축하는 것이 제 목표입니다.
-      </Paragraph>
+     <Paragraph style={{ color: "#ccc", fontSize: 16, maxWidth: 720 }}>
+          안녕하세요. 김기훈입니다.<br />
+          저는 <b>전통주 데이터 기반 추천 시스템 SOOL</b>과
+          <b>스키장 혼잡도·운영 데이터 분석 프로젝트</b>를 중심으로,
+          실제 환경에서 발생하는 문제를 데이터로 해결하는
+          1인 개발자·분석가입니다.
+          <br />
+          <br />
+          현재는 위 두 프로젝트를 메인으로 고도화하고 있으며,
+          감각 기록 플랫폼 <b>SENSE JOURNEY</b>와
+          자동화 실험실 <b>LUNARLINE</b>은
+          장기적인 확장을 위한 보조 프로젝트로 준비하고 있습니다.
+          <br />
+          <br />
+          데이터 · 감각 · 자동화라는 세 가지 축을 기반으로,
+          사람의 경험을 데이터로 기록하고
+          실질적인 의사결정과 가치로 연결하는 시스템을 만들고자 합니다.
+        </Paragraph>
+
 
       {/* 주요 링크 */}
       <Title level={4} style={{ color: "#fff", marginTop: 40 }}>
