@@ -85,10 +85,15 @@ PYTHONPATH=. python scripts/import_sool_basic.py
 deactivate
 
 
+```
+
+### Frontend
+
+```bash
 npm install
 npm run dev
 
-
+```
 
 ---
 
