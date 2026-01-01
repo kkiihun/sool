@@ -2,6 +2,7 @@ from fastapi import APIRouter, Query, HTTPException
 from sqlalchemy.orm import Session
 from app.core.database import SessionLocal
 from app.models.sool import Sool
+from sqlalchemy import func
 
 router = APIRouter(
     prefix="/v2/sool",
@@ -105,55 +106,65 @@ def suggest_sool(
     }
 
 # ================================
-# 🔥 Basic recommendation engine
+# 🔥 Advanced SOOL recommendation
 # ================================
 
-@router.get("/recommend", summary="Basic recommendation engine for SOOL")
-def recommend_sool(
+@router.get("/recommend/advanced", summary="Advanced SOOL recommendation (review + scoring)")
+def recommend_advanced(
     q: str = Query(None),
     region: str = Query(None),
-    abv_min: float = Query(None),
-    abv_max: float = Query(None),
     limit: int = Query(10, ge=1, le=50)
 ):
     db: Session = SessionLocal()
 
-    # 우선 전체 불러오고 조건별 scoring
-    sools = db.query(Sool).all()
+    # Sool + Review Join → 평균 평점 & 리뷰수 계산
+    data = (
+        db.query(
+            Sool,
+            func.avg(Review.rating).label("avg_rating"),
+            func.count(Review.id).label("review_count")
+        )
+        .outerjoin(Review, Review.sool_id == Sool.id)
+        .group_by(Sool.id)
+        .all()
+    )
 
     scored = []
-    for s in sools:
+    for sool, avg_rating, review_count in data:
         score = 0
 
-        # 🔥 점수 기반 추천 로직
-        if q and q in s.name:
-            score += 3
+        # 🔥 Step5 기본 매칭 점수 유지
+        if q and q in sool.name: score += 3
+        if region and region in (sool.region or ""): score += 2
 
-        if region and region in (s.region or ""):
-            score += 2
+        # 🔥 Step6: 고도화 점수 반영
+        if avg_rating:
+            score += float(avg_rating) * 1.5    # 평점 가중치
+        if review_count:
+            score += min(review_count, 20) * 0.2   # 과도한 영향 방지
 
-        if abv_min and s.abv and s.abv >= abv_min:
-            score += 1
+        scored.append((score, sool, avg_rating, review_count))
 
-        if abv_max and s.abv and s.abv <= abv_max:
-            score += 1
-
-        # 추후 확장 포인트
-        # review_count, tasting_score, similarity_model ...
-
-        scored.append((score, s))
-
-    # Score 높은 순으로 추천 정렬
     scored.sort(key=lambda x: x[0], reverse=True)
 
-    results = [s[1] for s in scored[:limit]]
+    results = [
+        {
+            "id": s.id,
+            "name": s.name,
+            "score": score,
+            "avg_rating": avg_rating,
+            "review_count": review_count,
+        }
+        for score, s, avg_rating, review_count in scored[:limit]
+    ]
 
     return {
         "query": q,
-        "filters": {"region": region, "abv_min": abv_min, "abv_max": abv_max},
-        "recommended_count": len(results),
-        "items": results
+        "region_filter": region,
+        "count": len(results),
+        "recommendations": results
     }
+
 
 
 # ================================
