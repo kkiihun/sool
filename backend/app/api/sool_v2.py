@@ -12,51 +12,74 @@ router = APIRouter(
 # ================================
 # 🔥 Search API (검색 + pagination + sorting)
 # ================================
-@router.get("/search", summary="Search SOOL by name with pagination & sorting", operation_id="search_sool_v2")
+@router.get("/search", summary="Search SOOL with pagination, sorting & filters", operation_id="search_sool_v2")
 def search_sool(
-    q: str = Query(..., min_length=1),
-    page: int = Query(1, ge=1, description="Page number"),
-    limit: int = Query(20, ge=1, le=100, description="Items per page (max 100)"),
-    sort: str = Query("name", description="Sorting field (default: name)"),
-    order: str = Query("asc", description="Sorting order: asc / desc")
+    q: str = Query(None),  # ← 검색어 없어도 목록 필터 조회 가능하게 변경
+    page: int = Query(1, ge=1),
+    limit: int = Query(20, ge=1, le=100),
+
+    # 📌 추가된 Multi Filters
+    region: str = Query(None, description="ex: 경기, 강원, 서울"),
+    producer: str = Query(None, description="양조장명"),
+    abv_min: float = Query(None, ge=0, description="최소 도수"),
+    abv_max: float = Query(None, ge=0, description="최대 도수"),
+
+    # 정렬
+    sort: str = Query("name"),
+    order: str = Query("asc")
 ):
     db: Session = SessionLocal()
-
-    # Pagination Offset
     offset = (page - 1) * limit
 
-    # Base Query
-    query = db.query(Sool).filter(Sool.name.ilike(f"%{q}%"))
+    # ⚡ base query
+    query = db.query(Sool)
 
     # ------------------------
-    # 🔥 Sorting Logic
+    # 🔍 필터 적용 (조건 있을 때만)
     # ------------------------
+    if q:
+        query = query.filter(Sool.name.ilike(f"%{q}%"))
+
+    if region:
+        query = query.filter(Sool.region.ilike(f"%{region}%"))
+
+    if producer:
+        query = query.filter(Sool.producer.ilike(f"%{producer}%"))
+
+    if abv_min is not None:
+        query = query.filter(Sool.abv >= abv_min)
+
+    if abv_max is not None:
+        query = query.filter(Sool.abv <= abv_max)
+
+    # 정렬 필드 정의
     valid_fields = {
         "name": Sool.name,
         "adv": Sool.abv,
         "region": Sool.region,
         "producer": Sool.producer
     }
-
     sort_column = valid_fields.get(sort, Sool.name)
 
-    if order == "desc":
-        query = query.order_by(sort_column.desc())
-    else:
-        query = query.order_by(sort_column.asc())
+    query = query.order_by(sort_column.desc() if order == "desc" else sort_column.asc())
 
     total = query.count()
     results = query.offset(offset).limit(limit).all()
 
     return {
-        "total": total,
+        "filters": {
+            "q": q, "region": region, "producer": producer,
+            "abv_min": abv_min, "abv_max": abv_max
+        },
         "page": page,
         "limit": limit,
+        "total": total,
         "sort": sort,
         "order": order,
         "pages": (total // limit) + (1 if total % limit > 0 else 0),
         "results": results
     }
+
 
 # ================================
 # 🔥 Suggest API (자동완성)  ⬅⬅⬅ 이 코드 추가!
@@ -79,6 +102,57 @@ def suggest_sool(
     return {
         "count": len(results),
         "items": [{"id": r.id, "name": r.name} for r in results]
+    }
+
+# ================================
+# 🔥 Basic recommendation engine
+# ================================
+
+@router.get("/recommend", summary="Basic recommendation engine for SOOL")
+def recommend_sool(
+    q: str = Query(None),
+    region: str = Query(None),
+    abv_min: float = Query(None),
+    abv_max: float = Query(None),
+    limit: int = Query(10, ge=1, le=50)
+):
+    db: Session = SessionLocal()
+
+    # 우선 전체 불러오고 조건별 scoring
+    sools = db.query(Sool).all()
+
+    scored = []
+    for s in sools:
+        score = 0
+
+        # 🔥 점수 기반 추천 로직
+        if q and q in s.name:
+            score += 3
+
+        if region and region in (s.region or ""):
+            score += 2
+
+        if abv_min and s.abv and s.abv >= abv_min:
+            score += 1
+
+        if abv_max and s.abv and s.abv <= abv_max:
+            score += 1
+
+        # 추후 확장 포인트
+        # review_count, tasting_score, similarity_model ...
+
+        scored.append((score, s))
+
+    # Score 높은 순으로 추천 정렬
+    scored.sort(key=lambda x: x[0], reverse=True)
+
+    results = [s[1] for s in scored[:limit]]
+
+    return {
+        "query": q,
+        "filters": {"region": region, "abv_min": abv_min, "abv_max": abv_max},
+        "recommended_count": len(results),
+        "items": results
     }
 
 
