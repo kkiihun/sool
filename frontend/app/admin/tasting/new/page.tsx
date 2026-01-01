@@ -1,5 +1,7 @@
 "use client";
-import { useState } from "react";
+import { useState } from "react"
+import SliderInput from "@/components/SliderInput";  // 추가
+
 
 export default function NewTastingNotePage() {
   const [form, setForm] = useState({
