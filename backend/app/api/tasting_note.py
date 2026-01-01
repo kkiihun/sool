@@ -30,3 +30,10 @@ def create_note(data: TastingNoteCreate, db: Session = Depends(get_db)):
 @router.get("/note/all")
 def list_notes(db: Session = Depends(get_db)):
     return db.query(TastingNote).all()
+
+# -------------------------------
+# 3) note id 추가
+# -------------------------------
+@router.get("/note/{note_id}", response_model=TastingNoteResponse)
+def get_note(note_id: int, db: Session = Depends(get_db)):
+    return db.query(TastingNote).filter(TastingNote.id == note_id).first()
