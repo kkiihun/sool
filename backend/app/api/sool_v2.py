@@ -3,6 +3,10 @@ from sqlalchemy.orm import Session
 from app.core.database import SessionLocal
 from app.models.sool import Sool
 from sqlalchemy import func
+from app.models.tasting_note import TastingNote
+from app.api.utils.recommender import flavor_vector
+import numpy as np
+
 
 router = APIRouter(
     prefix="/v2/sool",
@@ -208,6 +212,41 @@ def similar_sool(sool_id: int, limit: int = 10):
         ]
     }
 
+# ================================
+# 🔥 Cosine Similarity
+# ================================
+
+@router.get("/similar/flavor/{sool_id}", summary="Flavor similarity based recommendation")
+def similar_by_flavor(sool_id: int, limit: int = 5):
+    db = SessionLocal()
+
+    base_note = db.query(TastingNote).filter(TastingNote.sool_id == sool_id).first()
+    if not base_note:
+        raise HTTPException(status_code=404, detail="No tasting notes found")
+
+    base_vec = np.array(flavor_vector(base_note))
+
+    results = []
+    notes = db.query(TastingNote).filter(TastingNote.sool_id != sool_id).all()
+
+    for note in notes:
+        vec = np.array(flavor_vector(note))
+        similarity = np.dot(base_vec, vec) / (np.linalg.norm(base_vec) * np.linalg.norm(vec))
+        results.append((similarity, note.sool_id))
+
+    results.sort(key=lambda x: x[0], reverse=True)
+    top = results[:limit]
+
+    sools = []
+    for sim, sid in top:
+        sool = db.query(Sool).filter(Sool.id == sid).first()
+        sools.append({"id": sid, "name": sool.name, "similarity": float(sim)})
+
+    return {
+        "base_sool_id": sool_id,
+        "count": len(sools),
+        "recommendations": sools
+    }
 
 
 

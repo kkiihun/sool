@@ -34,6 +34,11 @@ from app.api.sense import router as sense_router
 from app.api import update_log, auth, users
 from app.api import report
 from app.api.sool_v2 import router as sool_v2_router   # ⭐ 핵심 최신 라우터
+from app.api.utils.recommender import flavor_vector
+from app.api.tasting_note import router as tasting_note_router
+
+
+
 
 
 # =====================#
@@ -48,6 +53,7 @@ app.include_router(auth.router)
 app.include_router(users.router)
 app.include_router(report.router)
 app.include_router(sool_v2_router)    # ⭐ 반드시 마지막에 등록, prefix 포함됨
+app.include_router(tasting_note_router)
 
 
 # =====================#
