@@ -165,6 +165,50 @@ def recommend_advanced(
         "recommendations": results
     }
 
+# ================================
+# 🔥 Recommendation similar
+# ================================
+
+@router.get("/similar/{sool_id:int}", summary="Similarity based recommendation for SOOL")
+def similar_sool(sool_id: int, limit: int = 10):
+    db: Session = SessionLocal()
+
+    base = db.query(Sool).filter(Sool.id == sool_id).first()
+    if not base:
+        raise HTTPException(status_code=404, detail="Base SOOL not found")
+
+    others = db.query(Sool).filter(Sool.id != sool_id).all()
+
+    scored = []
+    for item in others:
+        score = 0
+
+        # 🔥 Similarity 계산 로직
+        if item.region == base.region:
+            score += 3
+        if item.producer == base.producer:
+            score += 2
+
+        # 도수 차이가 가까우면 + 점수 (차이가 작을수록 유사)
+        if item.abv and base.abv:
+            diff = abs(item.abv - base.abv)
+            score += max(0, 5 - diff)   # 차이 5도 이내면 점수 부여
+
+        scored.append((score, item))
+
+    scored.sort(key=lambda x: x[0], reverse=True)
+    results = [s[1] for s in scored[:limit]]
+
+    return {
+        "base": {"id": base.id, "name": base.name, "region": base.region, "abv": base.abv},
+        "count": len(results),
+        "similar_items": [
+            {"id": r.id, "name": r.name, "region": r.region, "abv": r.abv}
+            for r in results
+        ]
+    }
+
+
 
 
 # ================================
