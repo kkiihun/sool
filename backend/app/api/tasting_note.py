@@ -37,3 +37,30 @@ def list_notes(db: Session = Depends(get_db)):
 @router.get("/note/{note_id}", response_model=TastingNoteResponse)
 def get_note(note_id: int, db: Session = Depends(get_db)):
     return db.query(TastingNote).filter(TastingNote.id == note_id).first()
+
+
+# UPDATE
+@router.put("/note/{note_id}", response_model=TastingNoteResponse)
+def update_note(note_id: int, data: TastingNoteCreate, db: Session = Depends(get_db)):
+    note = db.query(TastingNote).filter(TastingNote.id == note_id).first()
+    if not note:
+        return {"error": "Note not found"}
+
+    for key, value in data.dict().items():
+        setattr(note, key, value)
+
+    db.commit()
+    db.refresh(note)
+    return note
+
+
+# DELETE
+@router.delete("/note/{note_id}")
+def delete_note(note_id: int, db: Session = Depends(get_db)):
+    note = db.query(TastingNote).filter(TastingNote.id == note_id).first()
+    if not note:
+        return {"error": "Note not found"}
+
+    db.delete(note)
+    db.commit()
+    return {"status": "deleted", "id": note_id}

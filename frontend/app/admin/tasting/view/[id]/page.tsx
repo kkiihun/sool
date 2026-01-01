@@ -37,15 +37,9 @@ export default function TastingDetailPage({ params }: { params: { id: string } }
     datasets: [
       {
         label: "Tasting Profile",
-        data: [
-          note.aroma,
-          note.sweetness,
-          note.acidity,
-          note.body,
-          note.finish,
-        ],
-        backgroundColor: "rgba(0, 150, 255, 0.3)",
-        borderColor: "rgb(0, 150, 255)",
+        data: [note.aroma, note.sweetness, note.acidity, note.body, note.finish],
+        backgroundColor: "rgba(0,150,255,0.3)",
+        borderColor: "rgb(0,150,255)",
         borderWidth: 2,
       },
     ],
@@ -65,13 +59,22 @@ export default function TastingDetailPage({ params }: { params: { id: string } }
         <Radar data={radarData} />
       </div>
 
-      <a
-        href="/admin/tasting/list"
-        className="inline-block bg-gray-600 text-white px-4 py-2 rounded"
-      >
-        ← 목록으로
-      </a>
+      <div className="flex gap-3">
+        <a href="/admin/tasting/list" className="bg-gray-600 text-white px-4 py-2 rounded">← 목록으로</a>
+        <a href={`/admin/tasting/edit/${note.id}`} className="bg-blue-600 text-white px-4 py-2 rounded">수정</a>
 
+        <button
+          onClick={async () => {
+            if (!confirm("정말 삭제할까요?")) return;
+            await fetch(`http://127.0.0.1:8000/v2/tasting/note/${note.id}`, { method: "DELETE" });
+            alert("삭제 완료");
+            location.href = "/admin/tasting/list";
+          }}
+          className="bg-red-600 text-white px-4 py-2 rounded"
+        >
+          삭제
+        </button>
+      </div>
     </div>
   );
 }
