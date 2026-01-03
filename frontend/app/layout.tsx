@@ -25,11 +25,15 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-      >
-        {children}
-      </body>
+      <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
+          <header className="border-b border-gray-800 p-4">
+            <a href="/" className="text-yellow-400 font-bold">
+              🏠 SOOL
+            </a>
+          </header>
+
+          <main>{children}</main>
+        </body>
     </html>
   );
 }
