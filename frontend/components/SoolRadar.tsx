@@ -9,7 +9,10 @@ import {
   ResponsiveContainer,
 } from "recharts";
 
-type Tasting = {
+/* ======================
+   Types (v1 Standard)
+====================== */
+type RadarAvg = {
   aroma?: number | null;
   sweetness?: number | null;
   acidity?: number | null;
@@ -18,34 +21,24 @@ type Tasting = {
 };
 
 export default function SoolRadar({
-  tastings,
+  radar,
 }: {
-  tastings: Tasting[];
+  radar: RadarAvg;
 }) {
-  // ✅ 유효한 감각값만 추출
-  const valid = tastings.filter(
-    (t) =>
-      t.aroma != null &&
-      t.sweetness != null &&
-      t.acidity != null &&
-      t.body != null &&
-      t.finish != null
-  );
+  // ✅ 값이 하나도 없으면 표시 안 함
+  const hasData = Object.values(radar).some((v) => v != null);
 
-  if (valid.length === 0) {
+  if (!hasData) {
     return <p className="text-gray-500">감각 데이터가 부족합니다.</p>;
   }
 
-  const avg = (key: keyof Tasting) =>
-    valid.reduce((sum, t) => sum + Number(t[key]), 0) / valid.length;
-
-  // ✅ Recharts용 데이터로 변환
+  // ✅ Recharts 전용 데이터 (계산 ❌, 매핑만)
   const data = [
-    { label: "Aroma", value: avg("aroma") },
-    { label: "Sweetness", value: avg("sweetness") },
-    { label: "Acidity", value: avg("acidity") },
-    { label: "Body", value: avg("body") },
-    { label: "Finish", value: avg("finish") },
+    { label: "Aroma", value: radar.aroma ?? 0 },
+    { label: "Sweetness", value: radar.sweetness ?? 0 },
+    { label: "Acidity", value: radar.acidity ?? 0 },
+    { label: "Body", value: radar.body ?? 0 },
+    { label: "Finish", value: radar.finish ?? 0 },
   ];
 
   return (
