@@ -1,6 +1,10 @@
 import os
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, declarative_base
+from dotenv import load_dotenv
+
+load_dotenv()  # ← 이 한 줄이 .env 불러오는 핵심
+
 
 # =========================
 # Database configuration
