@@ -1,16 +1,27 @@
+from app.models.sense import Sense
+from app.schemas.sool_schema import SoolSummaryResponse, RadarAvg
+
+
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
+from sqlalchemy import func
 from typing import Optional
 
 from app.core.database import get_db
 from app.models.sool import Sool
-from app.schemas.sool_schema import SoolCreate, SoolResponse, PaginatedSool
+from app.models.tasting_note import TastingNote
+from app.schemas.sool_schema import (
+    SoolCreate,
+    SoolResponse,
+    PaginatedSool,
+    SoolWithStats,
+)
 
 router = APIRouter(prefix="/sool", tags=["Sool"])
 
 
 # ------------------------
-# 📌 CREATE (Insert new sool)
+# 📌 CREATE
 # ------------------------
 @router.post("/", response_model=SoolResponse)
 def create_sool(payload: SoolCreate, db: Session = Depends(get_db)):
@@ -19,7 +30,6 @@ def create_sool(payload: SoolCreate, db: Session = Depends(get_db)):
         raise HTTPException(status_code=400, detail="이미 등록된 술입니다.")
 
     new_sool = Sool(**payload.dict())
-
     db.add(new_sool)
     db.commit()
     db.refresh(new_sool)
@@ -27,7 +37,72 @@ def create_sool(payload: SoolCreate, db: Session = Depends(get_db)):
 
 
 # ------------------------
-# 📌 필터 옵션: 지역 목록
+# 📌 메인 카드 + Radar
+# ------------------------
+@router.get("/catalog", response_model=list[SoolWithStats])
+def list_sool_catalog(db: Session = Depends(get_db)):
+
+    latest_note_subq = (
+        db.query(
+            TastingNote.sool_id,
+            func.max(TastingNote.id).label("latest_id"),
+        )
+        .group_by(TastingNote.sool_id)
+        .subquery()
+    )
+
+    count_subq = (
+        db.query(
+            TastingNote.sool_id,
+            func.count(TastingNote.id).label("review_count"),
+        )
+        .group_by(TastingNote.sool_id)
+        .subquery()
+    )
+
+    rows = (
+        db.query(
+            Sool.id,
+            Sool.name,
+            Sool.category,
+            Sool.abv,
+            Sool.region,
+            func.coalesce(count_subq.c.review_count, 0).label("review_count"),
+            TastingNote.aroma,
+            TastingNote.sweetness,
+            TastingNote.acidity,
+            TastingNote.body,
+            TastingNote.finish,
+        )
+        .outerjoin(count_subq, count_subq.c.sool_id == Sool.id)
+        .outerjoin(latest_note_subq, latest_note_subq.c.sool_id == Sool.id)
+        .outerjoin(TastingNote, TastingNote.id == latest_note_subq.c.latest_id)
+        .order_by(Sool.name.asc())
+        .all()
+    )
+
+    return [
+        SoolWithStats(
+            id=r.id,
+            name=r.name,
+            category=r.category,
+            abv=r.abv,
+            region=r.region,
+            review_count=r.review_count,
+            sense={
+                "aroma": r.aroma,
+                "sweetness": r.sweetness,
+                "acidity": r.acidity,
+                "body": r.body,
+                "finish": r.finish,
+            } if r.aroma is not None else None,
+        )
+        for r in rows
+    ]
+
+
+# ------------------------
+# 📌 지역 목록
 # ------------------------
 @router.get("/regions", response_model=list[str])
 def get_regions(db: Session = Depends(get_db)):
@@ -37,7 +112,7 @@ def get_regions(db: Session = Depends(get_db)):
 
 
 # ------------------------
-# 📌 전체 조회 (페이징 X) → 관리자/백업용
+# 📌 전체 조회
 # ------------------------
 @router.get("/all", response_model=list[SoolResponse])
 def get_all_sool(db: Session = Depends(get_db)):
@@ -45,24 +120,27 @@ def get_all_sool(db: Session = Depends(get_db)):
 
 
 # ------------------------
-# 📌 검색 (2글자 이상)
+# 📌 검색
 # ------------------------
 @router.get("/search", response_model=list[SoolResponse])
-def search_sool(q: str = Query(min_length=2), db: Session = Depends(get_db)):
+def search_sool(
+    q: str = Query(..., min_length=2),
+    db: Session = Depends(get_db),
+):
     return db.query(Sool).filter(Sool.name.like(f"%{q}%")).all()
 
 
 # ------------------------
-# 📌 필터 + 정렬 + 페이지네이션 통합 API
+# 📌 필터 + 페이지네이션
 # ------------------------
 @router.get("/filter", response_model=PaginatedSool)
 def filter_sool(
     q: Optional[str] = None,
     region: Optional[str] = None,
     category: Optional[str] = None,
-    order: Optional[str] = "name",
-    page: int = 1,
-    page_size: int = 24,
+    order: str = "name",
+    page: int = Query(1, ge=1),
+    page_size: int = Query(24, ge=1, le=100),
     db: Session = Depends(get_db),
 ):
     query = db.query(Sool)
@@ -73,7 +151,7 @@ def filter_sool(
     if region and region != "전체":
         query = query.filter(Sool.region == region)
 
-    if category and category != "":
+    if category and category.strip():
         query = query.filter(Sool.category == category)
 
     if order == "abv_low":
@@ -88,11 +166,48 @@ def filter_sool(
 
     return PaginatedSool(total=total, items=items)
 
+# ------------------------
+# 📌 sool_id/summary
+# ------------------------
+@router.get("/{sool_id}/summary", response_model=SoolSummaryResponse)
+def get_sool_summary(sool_id: int, db: Session = Depends(get_db)):
+    # 존재 확인(제품 없으면 404)
+    exists = db.query(Sool.id).filter(Sool.id == sool_id).first()
+    if not exists:
+        raise HTTPException(status_code=404, detail="Sool Not Found")
+
+    row = (
+        db.query(
+            func.count(Sense.id).label("count"),
+            func.avg(Sense.rating).label("avg_rating"),
+            func.avg(Sense.aroma).label("avg_aroma"),
+            func.avg(Sense.sweetness).label("avg_sweetness"),
+            func.avg(Sense.acidity).label("avg_acidity"),
+            func.avg(Sense.body).label("avg_body"),
+            func.avg(Sense.aftertaste).label("avg_aftertaste"),
+        )
+        .filter(Sense.sool_id == sool_id)
+        .one()
+    )
+
+    return SoolSummaryResponse(
+        sool_id=sool_id,
+        avg_rating=float(row.avg_rating) if row.avg_rating is not None else None,
+        count=int(row.count or 0),
+        radar_avg=RadarAvg(
+            aroma=float(row.avg_aroma) if row.avg_aroma is not None else None,
+            sweetness=float(row.avg_sweetness) if row.avg_sweetness is not None else None,
+            acidity=float(row.avg_acidity) if row.avg_acidity is not None else None,
+            body=float(row.avg_body) if row.avg_body is not None else None,
+            finish=float(row.avg_aftertaste) if row.avg_aftertaste is not None else None,
+        ),
+    )
+
 
 # ------------------------
-# 📌 상세 조회
+# 📌 상세 조회 (충돌 방지)
 # ------------------------
-@router.get("/{sool_id}", response_model=SoolResponse)
+@router.get("/by-id/{sool_id}", response_model=SoolResponse)
 def get_sool_detail(sool_id: int, db: Session = Depends(get_db)):
     sool = db.query(Sool).filter(Sool.id == sool_id).first()
 
@@ -100,3 +215,6 @@ def get_sool_detail(sool_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Sool Not Found")
 
     return sool
+
+
+print("🔥 LOADED NEW SOOL ROUTER (catalog version)")
