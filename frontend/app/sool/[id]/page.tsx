@@ -1,166 +1,237 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
+import { Rate } from "antd";
+import SoolRadar from "@/components/SoolRadar";
 
-export default function SoolDetail({ params }: { params: Promise<{ id: string }> }) {
-  const [resolvedId, setResolvedId] = useState<string | null>(null);
-  const [data, setData] = useState<any>(null);
-  const [reviews, setReviews] = useState<any[]>([]);
-  const [rating, setRating] = useState<number | null>(null);
-  const [notes, setNotes] = useState("");
-  const [reportImg, setReportImg] = useState<string | null>(null);  // 🔥 base64 이미지
+/* ======================
+   Types (v1 Standard)
+====================== */
+type Sool = {
+  id: number;
+  name: string;
+  abv?: number;
+  region?: string;
+  category?: string;
+};
 
-  /* ------------------------------
-      1) Next.js Dynamic Route 처리
-  ------------------------------ */
-  useEffect(() => {
-    params.then((p) => setResolvedId(p.id));
-  }, [params]);
+type Tasting = {
+  id: number;
+  rating: number;
+  notes: string;
+};
 
+type RadarAvg = {
+  aroma?: number | null;
+  sweetness?: number | null;
+  acidity?: number | null;
+  body?: number | null;
+  finish?: number | null;
+};
 
-  /* ------------------------------
-      2) 상세 데이터 / 리뷰 / 리포트 fetch
-  ------------------------------ */
-  useEffect(() => {
-    if (!resolvedId) return;
+type Summary = {
+  avg_rating: number | null;
+  count: number;
+  radar_avg: RadarAvg;
+};
 
-    const fetchDetail = async () => {
-      const res = await fetch(`http://127.0.0.1:8000/sool/${resolvedId}`);
-      setData(await res.json());
-    };
+/* ======================
+   Component
+====================== */
+export default function SoolDetail({
+  params,
+}: {
+  params: { id: string };
+}) {
+  const soolId = params.id;
 
-    const fetchReviews = async () => {
-      const res = await fetch(`http://127.0.0.1:8000/review/${resolvedId}`);
-      setReviews(await res.json());
-    };
+  /* ---------- state ---------- */
+  const [sool, setSool] = useState<Sool | null>(null);
+  const [tastings, setTastings] = useState<Tasting[]>([]);
+  const [summary, setSummary] = useState<Summary | null>(null);
 
-    fetchDetail();
-    fetchReviews();
-  }, [resolvedId]);
+  const [rating, setRating] = useState<number>(0);
+  const [notes, setNotes] = useState<string>("");
 
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null); // ✅ 추가
 
-  /* ------------------------------
-      3) 분석 report(base64) 요청
-  ------------------------------ */
-  useEffect(() => {
-    if (!data) return;
-
-    fetch(`http://127.0.0.1:8000/report/${data.name}`)
-      .then(res => res.json())
-      .then(d => setReportImg(`data:image/png;base64,${d.image}`));
-  }, [data]);
-
-
-  /* ------------------------------
-      4) 리뷰 작성
-  ------------------------------ */
-  const submitReview = async () => {
-    if (!rating) return alert("별점을 입력해주세요.");
-
+  /* ======================
+     Data Fetch (v1 + Safe)
+  ====================== */
+  const fetchAll = async () => {
     try {
-      const res = await fetch("http://127.0.0.1:8000/review/", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          rating,
-          notes,
-          sool_id: Number(resolvedId),
-        }),
-      });
+      setLoading(true);
+      setError(null);
 
-      if (!res.ok) {
-        const err = await res.json();
-        alert("저장 실패: " + (err.detail ?? "알 수 없는 오류"));
-        return;
+      const [soolRes, tastingsRes, summaryRes] = await Promise.all([
+        fetch(`http://127.0.0.1:8000/sool/by-id/${soolId}`),
+        fetch(`http://127.0.0.1:8000/tasting/?sool_id=${soolId}`),
+        fetch(`http://127.0.0.1:8000/sool/${soolId}/summary`),
+      ]);
+
+      if (!soolRes.ok) {
+        throw new Error("제품 정보를 불러오지 못했습니다.");
       }
 
-      alert("저장 완료!");
-      setRating(null);
-      setNotes("");
+      setSool(await soolRes.json());
 
-      const updated = await fetch(`http://127.0.0.1:8000/review/${resolvedId}`);
-      setReviews(await updated.json());
+      const tastingData = await tastingsRes.json();
+      setTastings(tastingData.items ?? tastingData ?? []);
 
-    } catch {
-      alert("⚠️ 서버 요청 오류 발생");
+      // ✅ summary는 평가 0건이면 404일 수 있음
+      if (summaryRes.ok) {
+        setSummary(await summaryRes.json());
+      } else {
+        setSummary({
+          avg_rating: null,
+          count: 0,
+          radar_avg: {},
+        });
+      }
+    } catch (e) {
+      console.error(e);
+      setError("데이터를 불러오는 중 오류가 발생했습니다.");
+    } finally {
+      setLoading(false);
     }
   };
 
+  useEffect(() => {
+    fetchAll();
+  }, [soolId]);
 
-  /* ------------------------------
-      Loading UI
-  ------------------------------ */
-  if (!resolvedId || !data) return <p className="p-6 text-gray-400">⏳ 로딩중...</p>;
+  /* ======================
+     Submit Tasting
+  ====================== */
+  const submitTasting = async () => {
+    if (!rating) {
+      alert("별점을 입력하세요");
+      return;
+    }
 
+    const res = await fetch("http://127.0.0.1:8000/tasting/", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        sool_id: Number(soolId),
+        rating,
+        notes,
+        aroma: rating,
+        sweetness: rating,
+        acidity: rating,
+        body: rating,
+        finish: rating,
+      }),
+    });
 
-  /* ------------------------------
-      렌더 UI
-  ------------------------------ */
+    if (!res.ok) {
+      alert("저장 실패");
+      return;
+    }
+
+    setRating(0);
+    setNotes("");
+
+    await fetchAll(); // ✅ 저장 후 전체 갱신
+  };
+
+  /* ======================
+     Render (Safe Order)
+  ====================== */
+  if (loading) {
+    return <p className="p-6 text-gray-400">⏳ 로딩중...</p>;
+  }
+
+  if (error) {
+    return (
+      <div className="p-6 text-red-400">
+        ⚠️ {error}
+      </div>
+    );
+  }
+
+  if (!sool) {
+    return <p className="p-6 text-gray-400">존재하지 않는 제품입니다.</p>;
+  }
+
   return (
-    <div className="p-6 text-white max-w-3xl mx-auto">
+    <div className="p-6 text-white max-w-3xl mx-auto space-y-6">
+      {/* ---------- Header ---------- */}
+      <header>
+        <h1 className="text-3xl font-bold">{sool.name}</h1>
 
-      <h1 className="text-3xl font-bold mb-4">{data.name}</h1>
-      <p>🍶 도수: {data.abv}%</p>
-      <p>📍 지역: {data.region ?? "미등록"}</p>
-      <p>📦 카테고리: {data.category ?? "미분류"}</p>
+        {summary && summary.count > 0 ? (
+          <p className="text-yellow-400 mt-1">
+            ⭐ {summary.avg_rating?.toFixed(1)} / 5 ({summary.count}명 평가)
+          </p>
+        ) : (
+          <p className="text-gray-500 mt-1">⭐ 아직 평가 없음</p>
+        )}
+      </header>
 
-      <hr className="my-6 border-gray-700" />
+      <hr className="border-gray-700" />
 
-      {/* 🔥 분석 리포트 */}
-      <h2 className="text-xl font-bold mb-3">📊 분석 리포트</h2>
-      {reportImg ? (
-        <img src={reportImg} className="rounded-lg shadow-xl border border-gray-700 mb-6" />
-      ) : (
-        <p className="text-gray-400">🔄 분석 생성중...</p>
-      )}
+      {/* ---------- Radar ---------- */}
+      <section>
+        <h2 className="text-xl font-semibold mb-2">🧠 감각 프로파일</h2>
 
-      <hr className="my-6 border-gray-700" />
+        {summary && summary.count > 0 ? (
+          <SoolRadar radar={summary.radar_avg} />
+        ) : (
+          <p className="text-gray-500">아직 감각 데이터가 없습니다.</p>
+        )}
+      </section>
 
-      {/* 리뷰 입력 */}
-      <h2 className="text-xl font-semibold mb-3">✍ 리뷰 남기기</h2>
+      <hr className="border-gray-700" />
 
-      <input
-        type="number"
-        placeholder="별점 (1~5)"
-        min={1} max={5}
-        value={rating ?? ""}
-        onChange={(e) => setRating(Number(e.target.value))}
-        className="border p-2 w-full bg-gray-900 text-white mb-3"
-      />
+      {/* ---------- Input ---------- */}
+      <section>
+        <h2 className="text-xl font-semibold mb-2">✍ 테이스팅 노트</h2>
 
-      <textarea
-        placeholder="메모 작성..."
-        value={notes}
-        onChange={(e) => setNotes(e.target.value)}
-        className="border p-2 w-full bg-gray-900 text-white mb-3"
-      />
+        <Rate
+          value={rating}
+          onChange={setRating}
+          style={{ color: "#facc15", fontSize: 28 }}
+        />
 
-      <button
-        onClick={submitReview}
-        className="bg-blue-600 px-4 py-2 rounded hover:bg-blue-500 transition mb-6"
-      >
-        저장하기
-      </button>
+        <textarea
+          className="border p-2 w-full bg-gray-900 text-white mt-3"
+          placeholder="향, 맛, 질감 등을 기록하세요"
+          value={notes}
+          onChange={(e) => setNotes(e.target.value)}
+        />
 
-      <hr className="my-6 border-gray-700" />
+        <button
+          onClick={submitTasting}
+          className="mt-3 bg-blue-600 px-4 py-2 rounded hover:bg-blue-500"
+        >
+          저장
+        </button>
+      </section>
 
-      {/* 리뷰 목록 */}
-      <h2 className="text-xl font-semibold mb-3">📌 사용자 리뷰</h2>
+      <hr className="border-gray-700" />
 
-      {reviews.length === 0 ? (
-        <p className="text-gray-400">리뷰 없음</p>
-      ) : (
-        reviews.map((r) => (
-          <div key={r.id} className="border border-gray-700 p-3 rounded mb-3">
-            ⭐ {r.rating}
-            <p>{r.notes}</p>
-          </div>
-        ))
-      )}
+      {/* ---------- List ---------- */}
+      <section>
+        <h2 className="text-xl font-semibold mb-3">
+          📌 테이스팅 노트 ({tastings.length})
+        </h2>
 
-      <a href="/" className="block mt-6 underline text-blue-400">
-        ← 목록으로 돌아가기
-      </a>
+        {tastings.length === 0 ? (
+          <p className="text-gray-400">아직 노트가 없습니다.</p>
+        ) : (
+          tastings.map((t) => (
+            <div
+              key={t.id}
+              className="border border-gray-700 p-3 rounded mb-3"
+            >
+              <Rate disabled value={t.rating} />
+              <p className="mt-2 text-gray-300">{t.notes}</p>
+            </div>
+          ))
+        )}
+      </section>
     </div>
   );
 }
