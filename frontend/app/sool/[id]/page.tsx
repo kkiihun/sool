@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { use, useEffect, useState } from "react";
 import { Rate } from "antd";
 import SoolRadar from "@/components/SoolRadar";
 
@@ -41,9 +41,10 @@ type Summary = {
 export default function SoolDetail({
   params,
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }>; // ✅ 문법 수정
 }) {
-  const soolId = params.id;
+  // ✅ Next.js 15: params Promise 언랩
+  const { id: soolId } = use(params);
 
   /* ---------- state ---------- */
   const [sool, setSool] = useState<Sool | null>(null);
@@ -54,7 +55,7 @@ export default function SoolDetail({
   const [notes, setNotes] = useState<string>("");
 
   const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string | null>(null); // ✅ 추가
+  const [error, setError] = useState<string | null>(null);
 
   /* ======================
      Data Fetch (v1 + Safe)
@@ -98,7 +99,10 @@ export default function SoolDetail({
   };
 
   useEffect(() => {
+    // soolId는 항상 있어야 하지만, 안전장치
+    if (!soolId) return;
     fetchAll();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [soolId]);
 
   /* ======================
@@ -133,7 +137,7 @@ export default function SoolDetail({
     setRating(0);
     setNotes("");
 
-    await fetchAll(); // ✅ 저장 후 전체 갱신
+    await fetchAll();
   };
 
   /* ======================
@@ -144,11 +148,7 @@ export default function SoolDetail({
   }
 
   if (error) {
-    return (
-      <div className="p-6 text-red-400">
-        ⚠️ {error}
-      </div>
-    );
+    return <div className="p-6 text-red-400">⚠️ {error}</div>;
   }
 
   if (!sool) {
