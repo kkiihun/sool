@@ -1,4 +1,5 @@
 from sqlalchemy import Column, Integer, String, Boolean
+from sqlalchemy.orm import relationship  # ✅ 추가
 from app.core.database import Base
 
 class User(Base):
@@ -11,3 +12,6 @@ class User(Base):
 
     is_active = Column(Boolean, default=True)
     is_admin = Column(Boolean, default=False)
+
+    # ✅ Sense와 양방향 관계 추가 (Sense.user back_populates 대응)
+    sense_notes = relationship("Sense", back_populates="user")

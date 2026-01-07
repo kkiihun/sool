@@ -1,28 +1,70 @@
 import os
+from datetime import datetime
+
 import pandas as pd
 
+from app.models.user import User  # noqa: F401 (모델 등록용)
 from app.core.database import SessionLocal
 from app.models.sense import Sense
-from app.models.sool import Sool  # 신규 데이터 자동 생성 지원
+from app.models.sool import Sool
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 CSV_PATH = os.path.abspath(os.path.join(BASE_DIR, "../data/sense_clean.csv"))
 
 
-
 def to_float(x):
     try:
-        if pd.isna(x) or x == "":
+        if x is None or pd.isna(x):
             return None
-        return float(str(x).replace(",", "."))
-    except:
+        s = str(x).strip()
+        if s == "" or s.lower() in ("nan", "none", "null"):
+            return None
+        return float(s.replace(",", "."))
+    except Exception:
         return None
+
+
+def clean_str(x, default=None):
+    if x is None or pd.isna(x):
+        return default
+    s = str(x).strip()
+    if s == "" or s.lower() in ("nan", "none", "null"):
+        return default
+    return s
+
+
+def parse_date(x):
+    s = clean_str(x)
+    if not s:
+        return None
+    for fmt in ("%Y-%m-%d", "%Y.%m.%d", "%Y/%m/%d", "%Y-%m-%d %H:%M:%S"):
+        try:
+            return datetime.strptime(s, fmt)
+        except Exception:
+            pass
+    try:
+        return datetime.fromisoformat(s)
+    except Exception:
+        return None
+
+
+def set_sense_date_like(obj, dt):
+    """Sense 모델에 date가 있으면 date에, 없으면 created_at에 저장(있을 때만)."""
+    if hasattr(obj, "date"):
+        # 컬럼 타입이 문자열일 수도 있어서 ISO 문자열로 저장
+        setattr(obj, "date", dt.isoformat(sep=" ") if dt else None)
+        return
+    if hasattr(obj, "created_at") and dt:
+        setattr(obj, "created_at", dt)
 
 
 def main():
     print(f"\n📂 Loading CSV → {CSV_PATH}")
 
     df = pd.read_csv(CSV_PATH)
+    # ✅ 핵심: pandas NaN -> None
+    df = df.where(pd.notnull(df), None)
+
     db = SessionLocal()
 
     inserted_sense = 0
@@ -30,32 +72,40 @@ def main():
     updated_sense = 0
 
     for _, row in df.iterrows():
+        name = clean_str(row.get("name"))
+        if not name:
+            continue
 
-        name = str(row["name"]).strip()
-        category = str(row.get("category") or "").strip()
+        category = clean_str(row.get("category"), "")
         abv = to_float(row.get("abv"))
-        region = str(row.get("region") or "").strip()
+        region = clean_str(row.get("region"), "")
+        notes = clean_str(row.get("notes"))
+        producer = clean_str(row.get("양조장/제조"))
+        dt = parse_date(row.get("date"))
 
-        # 1) sool 존재 여부 확인
+        # 1) sool 존재 여부
         sool = db.query(Sool).filter(Sool.name == name).first()
 
-        # 2) 없으면 신규 생성 🔥
+        # 2) 없으면 신규 생성
         if not sool:
             sool = Sool(
                 name=name,
                 category=category,
                 abv=abv if abv is not None else 0,
                 region=region if region else "미등록",
-                description=row.get("notes", "")[:200] if row.get("notes") else None,
-                producer=row.get("양조장/제조"),
+                description=notes[:200] if notes else None,
+                producer=producer,  # ✅ NaN이면 None
             )
             db.add(sool)
-            db.commit()       # sool.id가 필요하므로 commit
+
+            # ✅ commit 대신 flush로 id 확보 (중간 rollback 리스크/성능 개선)
+            db.flush()
             db.refresh(sool)
+
             created_sool += 1
             print(f"🆕 New SOOL Created → {sool.id}: {name}")
 
-        # 3) sense 테이블에 기존 데이터 있으면 update 로직도 추가
+        # 3) sense upsert
         sense = db.query(Sense).filter(Sense.sool_id == sool.id).first()
 
         if sense:
@@ -70,13 +120,14 @@ def main():
             sense.carbonation = to_float(row.get("carbonation"))
             sense.complexity = to_float(row.get("complexity"))
             sense.rating = to_float(row.get("overall_score"))
-            sense.notes = row.get("notes")
-            sense.date = str(row.get("date")) if not pd.isna(row.get("date")) else None
+            sense.notes = notes
+
+            # ✅ date 컬럼 유무 자동 대응
+            set_sense_date_like(sense, dt)
 
             updated_sense += 1
-
         else:
-            new_sense = Sense(
+            sense_kwargs = dict(
                 sool_id=sool.id,
                 clarity=to_float(row.get("clarity")),
                 color=to_float(row.get("color")),
@@ -89,9 +140,12 @@ def main():
                 carbonation=to_float(row.get("carbonation")),
                 complexity=to_float(row.get("complexity")),
                 rating=to_float(row.get("overall_score")),
-                notes=row.get("notes"),
-                date=str(row.get("date")) if not pd.isna(row.get("date")) else None,
+                notes=notes,
             )
+
+            new_sense = Sense(**sense_kwargs)
+            set_sense_date_like(new_sense, dt)
+
             db.add(new_sense)
             inserted_sense += 1
 
