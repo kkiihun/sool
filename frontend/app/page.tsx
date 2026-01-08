@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState, useEffect } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Layout,
   Menu,
@@ -13,6 +13,7 @@ import {
   Space,
   Button,
   Spin,
+  Alert,
 } from "antd";
 import {
   SearchOutlined,
@@ -32,7 +33,6 @@ export default function Home() {
 
   const [sool, setSool] = useState<any[]>([]);
   const [total, setTotal] = useState(0);
-
   const [recentReviews, setRecentReviews] = useState<any[]>([]);
 
   const [search, setSearch] = useState("");
@@ -44,23 +44,67 @@ export default function Home() {
 
   const [regionOptions, setRegionOptions] = useState<string[]>(["전체"]);
   const [loading, setLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const pageSize = 24;
+
+  // env 기반 백엔드 주소 (fallback용)
+  const API_BASE = useMemo(() => {
+    const base = process.env.NEXT_PUBLIC_API_BASE_URL?.trim();
+    return base ? base.replace(/\/+$/, "") : "";
+  }, []);
+
+  /**
+   * 우선: 같은 도메인 상대경로(Next rewrites로 프록시되면 CORS 없이 안전)
+   * 실패 시: env(API_BASE)로 직접 호출 fallback
+   */
+  async function fetchJsonWithFallback(path: string) {
+    // 1) same-origin (requires rewrites to backend)
+    try {
+      const r1 = await fetch(path, { cache: "no-store" });
+      if (r1.ok) return await r1.json();
+      // rewrites가 없으면 여기서 404/500 등이 날 수 있음 → fallback
+    } catch {
+      // 네트워크/CORS 등 → fallback
+    }
+
+    // 2) fallback to direct backend
+    if (!API_BASE) {
+      throw new Error(
+        `API_BASE is missing. Set NEXT_PUBLIC_API_BASE_URL or configure Next rewrites for "${path}".`
+      );
+    }
+    const r2 = await fetch(`${API_BASE}${path}`, { cache: "no-store" });
+    if (!r2.ok) {
+      throw new Error(`Backend request failed: ${r2.status} ${r2.statusText}`);
+    }
+    return await r2.json();
+  }
 
   /* =========================
      지역 목록
   ========================= */
   useEffect(() => {
+    let alive = true;
+
     async function loadRegions() {
       try {
-        const res = await fetch("http://127.0.0.1:8000/sool/regions");
-        const data = await res.json();
+        setErrorMsg(null);
+        const data = await fetchJsonWithFallback("/sool/regions");
+        if (!alive) return;
         setRegionOptions(["전체", ...(data ?? [])]);
-      } catch {
+      } catch (e: any) {
+        if (!alive) return;
         setRegionOptions(["전체"]);
+        setErrorMsg(e?.message ?? "지역 목록을 불러오지 못했습니다.");
       }
     }
+
     loadRegions();
+    return () => {
+      alive = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   /* =========================
@@ -82,27 +126,44 @@ export default function Home() {
      전통주 목록
   ========================= */
   useEffect(() => {
+    let alive = true;
+
     async function fetchData() {
       setLoading(true);
+      setErrorMsg(null);
 
-      let url = `http://127.0.0.1:8000/sool/filter?page=${page}&page_size=${pageSize}`;
+      const params = new URLSearchParams();
+      params.set("page", String(page));
+      params.set("page_size", String(pageSize));
 
-      if (search.length >= 2) url += `&q=${search}`;
-      if (category) url += `&category=${category}`;
-      if (region !== "전체") url += `&region=${region}`;
-      if (sortOption) url += `&order=${sortOption}`;
+      if (search.trim().length >= 2) params.set("q", search.trim());
+      if (category) params.set("category", category);
+      if (region !== "전체") params.set("region", region);
+      if (sortOption) params.set("order", sortOption);
+
+      const path = `/sool/filter?${params.toString()}`;
 
       try {
-        const res = await fetch(url);
-        const data = await res.json();
+        const data = await fetchJsonWithFallback(path);
+        if (!alive) return;
         setSool(data.items ?? []);
         setTotal(data.total ?? 0);
+      } catch (e: any) {
+        if (!alive) return;
+        setSool([]);
+        setTotal(0);
+        setErrorMsg(e?.message ?? "전통주 목록을 불러오지 못했습니다.");
       } finally {
+        if (!alive) return;
         setLoading(false);
       }
     }
 
     fetchData();
+    return () => {
+      alive = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page, search, category, region, sortOption]);
 
   const resetFilters = () => {
@@ -136,7 +197,7 @@ export default function Home() {
           items={[
             { key: "1", icon: <AppstoreOutlined />, label: <Link href="/about">About</Link> },
             { key: "2", icon: <CompassOutlined />, label: <Link href="/updates">Updates</Link> },
-            { key: "3", icon: <StarOutlined />, label: <Link href="/Tasting">Tasting</Link> },
+            { key: "3", icon: <StarOutlined />, label: <Link href="/tasting">Tasting</Link> },
             { key: "4", icon: <BarChartOutlined />, label: <Link href="/dashboard">Analytics</Link> },
             { key: "5", icon: <HeartOutlined />, label: <Link href="/community">Community</Link> },
             { key: "6", icon: <AppstoreOutlined />, label: <Link href="/admin/tasting/list">Tasting Admin</Link> },
@@ -200,10 +261,29 @@ export default function Home() {
           <Title level={3} style={{ color: "#fff" }}>
             전통주 탐색
           </Title>
+
           <Text style={{ color: "#aaa", display: "block", marginBottom: 20 }}>
             총 <span style={{ color: "#fff", fontWeight: 600 }}>{total}</span>종
           </Text>
 
+          {/* 에러 표시 */}
+          {errorMsg && (
+            <div style={{ marginBottom: 16 }}>
+              <Alert
+                type="error"
+                showIcon
+                message="API 호출 실패"
+                description={
+                  <div style={{ wordBreak: "break-word" }}>
+                    {errorMsg}
+                    <div style={{ marginTop: 8, color: "#666" }}>
+                      (팁) 3000은 되는데 3001만 실패하면 백엔드 CORS 또는 Next rewrites 미설정일 가능성이 큽니다.
+                    </div>
+                  </div>
+                }
+              />
+            </div>
+          )}
 
           {/* 최근 리뷰 */}
           <div style={{ marginBottom: 30, padding: 20, background: "#111" }}>
@@ -224,14 +304,24 @@ export default function Home() {
           {loading ? (
             <Spin size="large" />
           ) : (
-            <div style={{ display: "grid", gap: 20, gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))" }}>
+            <div
+              style={{
+                display: "grid",
+                gap: 20,
+                gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))",
+              }}
+            >
               {sool.map((item) => (
                 <Card key={item.id} style={{ background: "#1a1a1a" }}>
                   <Link href={`/sool/${item.id}`}>
-                    <Title level={5} style={{ color: "#fff" }}>{item.name}</Title>
+                    <Title level={5} style={{ color: "#fff" }}>
+                      {item.name}
+                    </Title>
                   </Link>
                   <Text style={{ color: "#555" }}>⭐ 평가 없음</Text>
-                  <Text style={{ color: "#bbb" }}>🍶 도수: {item.abv}%</Text><br />
+                  <br />
+                  <Text style={{ color: "#bbb" }}>🍶 도수: {item.abv}%</Text>
+                  <br />
                   <Text style={{ color: "#bbb" }}>📍 지역: {item.region ?? "미등록"}</Text>
                 </Card>
               ))}
