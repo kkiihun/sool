@@ -32,3 +32,8 @@ venv/
 # ======================
 .idea/
 .vscode/
+
+
+# Next local env
+.env.local
+frontend/.env.local
