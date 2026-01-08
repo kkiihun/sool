@@ -14,17 +14,18 @@ export default function UpdatesPage() {
   const [updates, setUpdates] = useState<UpdateItem[]>([]);
   const [newMessage, setNewMessage] = useState("");
 
-  const fetchUpdates = async () => {
-    try {
-      const res = await fetch("http://127.0.0.1:8000/updates/");
-      if (!res.ok) throw new Error("업데이트 불러오기 실패");
-      const data: UpdateItem[] = await res.json();
-      setUpdates(data);
-    } catch (err) {
-      console.error(err);
-      alert("업데이트 목록을 불러오지 못했습니다.");
-    }
-  };
+  // frontend/app/updates/page.tsx (문제 라인 교체)
+const fetchUpdates = async () => {
+  try {
+    const res = await fetch("/api/updates", { cache: "no-store" });
+    const data = res.ok ? await res.json() : [];
+    setUpdates(Array.isArray(data) ? data : []);
+  } catch (e) {
+    console.error(e);
+    setUpdates([]); // ✅ 실패해도 화면은 정상
+  }
+};
+
 
   useEffect(() => {
     fetchUpdates();
