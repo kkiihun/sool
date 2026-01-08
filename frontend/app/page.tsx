@@ -197,7 +197,7 @@ export default function Home() {
           items={[
             { key: "1", icon: <AppstoreOutlined />, label: <Link href="/about">About</Link> },
             { key: "2", icon: <CompassOutlined />, label: <Link href="/updates">Updates</Link> },
-            { key: "3", icon: <StarOutlined />, label: <Link href="/tasting">Tasting</Link> },
+            { key: "3", icon: <StarOutlined />, label: <Link href="/Tasting">Tasting</Link> },
             { key: "4", icon: <BarChartOutlined />, label: <Link href="/dashboard">Analytics</Link> },
             { key: "5", icon: <HeartOutlined />, label: <Link href="/community">Community</Link> },
             { key: "6", icon: <AppstoreOutlined />, label: <Link href="/admin/tasting/list">Tasting Admin</Link> },
