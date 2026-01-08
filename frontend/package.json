@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "start": "next start",
+    "build": "node scripts/write-git-env.mjs && next build",
     "dev": "cross-env NODE_OPTIONS=--max-old-space-size=4096 next dev"
   },
   "dependencies": {
