@@ -1,38 +1,28 @@
 "use client";
 
+import { useEffect, useState } from "react";
+
+type BuildInfo = { branch: string; sha: string };
+
 export default function BuildBadge() {
-  const branch = process.env.NEXT_PUBLIC_GIT_BRANCH ?? "unknown-branch";
-  const sha = process.env.NEXT_PUBLIC_GIT_SHA ?? "unknown-sha";
-  const time = process.env.NEXT_PUBLIC_BUILD_TIME ?? "";
+  const [info, setInfo] = useState<BuildInfo>({
+    branch: "loading...",
+    sha: "loading...",
+  });
 
-  const show =
-    process.env.NODE_ENV !== "production" ||
-    process.env.NEXT_PUBLIC_SHOW_BUILD_BADGE === "1";
-
-  if (!show) return null;
+  useEffect(() => {
+    fetch("/api/build", { cache: "no-store" })
+      .then((r) => r.json())
+      .then((d) => setInfo({ branch: d.branch ?? "unknown-branch", sha: d.sha ?? "unknown-sha" }))
+      .catch(() => setInfo({ branch: "unknown-branch", sha: "unknown-sha" }));
+  }, []);
 
   return (
-    <div
-      style={{
-        position: "fixed",
-        left: 12,
-        bottom: 12,
-        zIndex: 9999,
-        fontSize: 12,
-        lineHeight: 1.2,
-        padding: "6px 8px",
-        borderRadius: 10,
-        border: "1px solid rgba(255,255,255,0.18)",
-        background: "rgba(0,0,0,0.55)",
-        backdropFilter: "blur(6px)",
-        color: "rgba(255,255,255,0.9)",
-        fontFamily:
-          "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace",
-      }}
-      title={time ? `build: ${time}` : undefined}
-    >
-      <div style={{ opacity: 0.9 }}>{branch}</div>
-      <div style={{ opacity: 0.7 }}>{sha}</div>
+    <div style={{ position: "fixed", left: 12, bottom: 12, zIndex: 9999 }}>
+      <div style={{ background: "#0b1220", color: "#fff", padding: "8px 10px", borderRadius: 10, fontSize: 12 }}>
+        <div>{info.branch}</div>
+        <div>{info.sha}</div>
+      </div>
     </div>
   );
 }
