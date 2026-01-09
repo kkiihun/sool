@@ -39,12 +39,20 @@ def create_tasting(note: TastingCreate, db: Session = Depends(get_db)):
             detail=f"Sool ID {note.sool_id} not found"
         )
 
-    new_note = TastingNote(**note.dict())
+    # ✅ 모델 컬럼만 남겨서 안전하게 insert
+    data = note.model_dump(exclude_unset=True) if hasattr(note, "model_dump") else note.dict(exclude_unset=True)
+    
+    allowed = set(TastingNote.__table__.columns.keys())
+    data = {k: v for k, v in data.items() if k in allowed}
+
+    
+    new_note = TastingNote(**data)
     db.add(new_note)
     db.commit()
     db.refresh(new_note)
 
     return new_note
+
 
 @router.get("/profile/{sool_id}")
 def tasting_profile(sool_id: int, db: Session = Depends(get_db)):
