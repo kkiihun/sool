@@ -59,27 +59,40 @@ export default function Home() {
    * 실패 시: env(API_BASE)로 직접 호출 fallback
    */
   async function fetchJsonWithFallback(path: string) {
-    // 1) same-origin (requires rewrites to backend)
-    try {
-      const r1 = await fetch(path, { cache: "no-store" });
-      if (r1.ok) return await r1.json();
-      // rewrites가 없으면 여기서 404/500 등이 날 수 있음 → fallback
-    } catch {
-      // 네트워크/CORS 등 → fallback
-    }
+  const withProxy = (p: string) => {
+    if (p.startsWith("/proxy/")) return p;
+    return p.startsWith("/") ? `/proxy${p}` : `/proxy/${p}`;
+  };
 
-    // 2) fallback to direct backend
-    if (!API_BASE) {
-      throw new Error(
-        `API_BASE is missing. Set NEXT_PUBLIC_API_BASE_URL or configure Next rewrites for "${path}".`
-      );
+  // 1) ✅ /proxy로 먼저 시도 (CORS 안전)
+  const proxyPath = withProxy(path);
+  try {
+    const r1 = await fetch(proxyPath, { cache: "no-store" });
+
+    // 에러도 JSON(detail/message)로 내려오는 경우가 많아서 최대한 읽어줌
+    const j1 = await r1.json().catch(() => null);
+
+    if (!r1.ok) {
+      const msg = j1?.detail ?? j1?.message ?? `HTTP ${r1.status}`;
+      throw new Error(msg);
     }
-    const r2 = await fetch(`${API_BASE}${path}`, { cache: "no-store" });
+    return j1;
+  } catch (e) {
+    // 2) fallback: 직접 백엔드 호출 (NEXT_PUBLIC_API_BASE_URL 있을 때만)
+    if (!API_BASE) throw e;
+
+    const r2 = await fetch(`${API_BASE}${path.startsWith("/") ? path : `/${path}`}`, {
+      cache: "no-store",
+    });
+    const j2 = await r2.json().catch(() => null);
+
     if (!r2.ok) {
-      throw new Error(`Backend request failed: ${r2.status} ${r2.statusText}`);
+      const msg = j2?.detail ?? j2?.message ?? `HTTP ${r2.status}`;
+      throw new Error(msg);
     }
-    return await r2.json();
+    return j2;
   }
+}
 
   /* =========================
      지역 목록
@@ -92,7 +105,8 @@ export default function Home() {
         setErrorMsg(null);
         const data = await fetchJsonWithFallback("/sool/regions");
         if (!alive) return;
-        setRegionOptions(["전체", ...(data ?? [])]);
+        const regions = Array.isArray(data) ? data : [];
+        setRegionOptions(["전체", ...regions]);
       } catch (e: any) {
         if (!alive) return;
         setRegionOptions(["전체"]);
@@ -146,8 +160,9 @@ export default function Home() {
       try {
         const data = await fetchJsonWithFallback(path);
         if (!alive) return;
-        setSool(data.items ?? []);
-        setTotal(data.total ?? 0);
+        const items = Array.isArray(data) ? data : (data?.items ?? []);
+        setSool(items);
+        setTotal(data?.total ?? data?.count ?? items.length ?? 0);
       } catch (e: any) {
         if (!alive) return;
         setSool([]);
@@ -272,7 +287,7 @@ export default function Home() {
               <Alert
                 type="error"
                 showIcon
-                message="API 호출 실패"
+                title="API 호출 실패"
                 description={
                   <div style={{ wordBreak: "break-word" }}>
                     {errorMsg}

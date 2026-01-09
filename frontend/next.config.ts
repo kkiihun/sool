@@ -1,11 +1,16 @@
 import type { NextConfig } from "next";
 
-const backend = process.env.BACKEND_URL ?? "http://127.0.0.1:8000";
+const rawBackend = process.env.BACKEND_URL ?? "http://127.0.0.1:8000";
+const backend = rawBackend.replace(/\/+$/, "");
 
 const nextConfig: NextConfig = {
   async rewrites() {
     return [
-      // ✅ 프론트는 /proxy 로만 백엔드 호출
+      // ✅ /proxy/tasting 또는 /proxy/tasting/ 모두 백엔드의 /tasting/ 로 고정
+      { source: "/proxy/tasting", destination: `${backend}/tasting/` },
+      { source: "/proxy/tasting/", destination: `${backend}/tasting/` },
+
+      // ✅ 나머지는 일반 프록시
       { source: "/proxy/:path*", destination: `${backend}/:path*` },
     ];
   },

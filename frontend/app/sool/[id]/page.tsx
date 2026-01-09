@@ -66,9 +66,9 @@ export default function SoolDetail({
       setError(null);
 
       const [soolRes, tastingsRes, summaryRes] = await Promise.all([
-        fetch(`http://127.0.0.1:8000/sool/by-id/${soolId}`),
-        fetch(`http://127.0.0.1:8000/tasting/?sool_id=${soolId}`),
-        fetch(`http://127.0.0.1:8000/sool/${soolId}/summary`),
+        fetch(`/proxy/sool/by-id/${soolId}`),
+        fetch(`/proxy/tasting/?sool_id=${soolId}`),
+        fetch(`/proxy/sool/${soolId}/summary`),
       ]);
 
       if (!soolRes.ok) {
@@ -109,36 +109,41 @@ export default function SoolDetail({
      Submit Tasting
   ====================== */
   const submitTasting = async () => {
-    if (!rating) {
-      alert("별점을 입력하세요");
-      return;
-    }
+  if (!rating) {
+    alert("별점을 입력하세요");
+    return;
+  }
 
-    const res = await fetch("http://127.0.0.1:8000/tasting/", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        sool_id: Number(soolId),
-        rating,
-        notes,
-        aroma: rating,
-        sweetness: rating,
-        acidity: rating,
-        body: rating,
-        finish: rating,
-      }),
-    });
+  const payload = {
+    sool_id: Number(soolId),
+    rating: Number(rating),        // ✅ 필수
+    notes: notes || null,          // ✅ notes로 통일
 
-    if (!res.ok) {
-      alert("저장 실패");
-      return;
-    }
-
-    setRating(0);
-    setNotes("");
-
-    await fetchAll();
+    // 레이더용(일단 rating으로 채우고 싶으면 이렇게)
+    aroma: Number(rating),
+    flavor: Number(rating),
+    body: Number(rating),
+    texture: Number(rating),
+    finish: Number(rating),
   };
+
+  const res = await fetch("/proxy/tasting/", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+
+  if (!res.ok) {
+    const txt = await res.text();
+    alert("저장 실패: " + txt);
+    return;
+  }
+
+  setRating(0);
+  setNotes("");
+  await fetchAll();
+};
+
 
   /* ======================
      Render (Safe Order)
