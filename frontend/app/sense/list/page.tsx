@@ -18,22 +18,32 @@ interface Sense {
   date?: string | null;
 }
 
+// ✅ env로 통일 (현재: http://localhost:8000)
+// ✅ 프록시로 바꾸면 NEXT_PUBLIC_API_BASE_URL=/proxy 로만 바꾸면 됨
+const API_BASE =
+  (process.env.NEXT_PUBLIC_API_BASE_URL ?? "/proxy").replace(/\/$/, "");
+
+const apiUrl = (path: string) => {
+  const p = path.startsWith("/") ? path : `/${path}`;
+  return `${API_BASE}${p}`;
+};
+
 export default function SenseListPage() {
   const [data, setData] = useState<Sense[]>([]);
   const [loading, setLoading] = useState(true);
 
   // 🔥 날짜 포맷 처리 함수 (모든 케이스 처리)
   const formatDate = (date: string | null | undefined) => {
-    if (!date) return "-"; // null, undefined
+    if (!date) return "-";
     if (typeof date !== "string") return "-";
     const trimmed = date.trim();
     if (trimmed === "" || trimmed === "Invalid Date") return "-";
-    return trimmed.slice(0, 10); // YYYY-MM-DD만 반환
+    return trimmed.slice(0, 10);
   };
 
   const fetchData = async () => {
     try {
-      const res = await axios.get("http://127.0.0.1:8000/sense/");
+      const res = await axios.get(apiUrl("/sense/"));
       setData(res.data);
     } catch (err) {
       console.log(err);
@@ -53,7 +63,6 @@ export default function SenseListPage() {
 
   return (
     <div className="p-6 text-white">
-
       {/* 뒤로가기 + 홈버튼 */}
       <div className="flex items-center gap-4 mb-4">
         <BackButton />
@@ -97,7 +106,7 @@ export default function SenseListPage() {
                 <td className="p-2">{item.aroma}</td>
                 <td className="p-2">{item.rating ?? "-"}</td>
 
-                {/* ★★★ 날짜 표시는 반드시 formatDate로 처리해야 함 ★★★ */}
+                {/* ★★★ 날짜 표시는 반드시 formatDate로 처리 ★★★ */}
                 <td className="p-2">{formatDate(item.date)}</td>
 
                 <td className="p-2">

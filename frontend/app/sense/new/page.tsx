@@ -1,9 +1,19 @@
 "use client";
 
 import axios from "axios";
-import { useState, useEffect } from "react";
+import { useState, useEffect, type ChangeEvent, type FormEvent } from "react";
 import Link from "next/link";
 import BackButton from "@/app/components/BackButton";
+
+// ✅ env로 통일 (현재: http://localhost:8000)
+// ✅ 프록시로 바꾸면 NEXT_PUBLIC_API_BASE_URL=/proxy 로만 바꾸면 됨
+const API_BASE =
+  (process.env.NEXT_PUBLIC_API_BASE_URL ?? "/proxy").replace(/\/$/, "");
+
+const apiUrl = (path: string) => {
+  const p = path.startsWith("/") ? path : `/${path}`;
+  return `${API_BASE}${p}`;
+};
 
 export default function SenseForm() {
   const [form, setForm] = useState({
@@ -15,8 +25,10 @@ export default function SenseForm() {
     smoothness: "",
     rating: "",
     notes: "",
-    date: "",          // ✅ 다시 date로
+    date: "", // ✅ date 유지
   });
+
+  const [saving, setSaving] = useState(false);
 
   // 페이지 입장 시 현재 시간 세팅 (datetime-local 형식)
   useEffect(() => {
@@ -26,20 +38,17 @@ export default function SenseForm() {
     setForm((prev) => ({ ...prev, date: iso }));
   }, []);
 
-  const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
-  ) => {
+  const handleChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setForm((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
+    if (saving) return;
 
-    // 화면 값(YYYY-MM-DDTHH:MM)을 DB에 저장할 문자열로 변환
-    const formattedDate = form.date
-      ? form.date.replace("T", " ") + ":00" // → 'YYYY-MM-DD HH:MM:SS'
-      : "";
+    // 화면 값(YYYY-MM-DDTHH:MM)을 DB 저장용 문자열로 변환
+    const formattedDate = form.date ? form.date.replace("T", " ") + ":00" : "";
 
     const payload = {
       sool_id: Number(form.sool_id),
@@ -50,11 +59,13 @@ export default function SenseForm() {
       smoothness: Number(form.smoothness),
       rating: Number(form.rating),
       notes: form.notes,
-      date: formattedDate, // ✅ 백엔드가 기대하는 필드 이름
+      date: formattedDate,
     };
 
     try {
-      await axios.post("http://127.0.0.1:8000/sense/", payload, {
+      setSaving(true);
+
+      await axios.post(apiUrl("/sense/"), payload, {
         headers: { "Content-Type": "application/json" },
       });
 
@@ -77,8 +88,10 @@ export default function SenseForm() {
         date: iso,
       });
     } catch (error: any) {
-      console.log(error.response?.data || error.message);
+      console.log(error?.response?.data || error?.message);
       alert("⚠️ 에러 발생! 콘솔 확인해 주세요.");
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -161,9 +174,10 @@ export default function SenseForm() {
 
         <button
           type="submit"
-          className="bg-blue-600 hover:bg-blue-500 px-4 py-2 rounded text-white w-full"
+          disabled={saving}
+          className="bg-blue-600 hover:bg-blue-500 disabled:bg-blue-900 px-4 py-2 rounded text-white w-full"
         >
-          저장하기
+          {saving ? "저장 중..." : "저장하기"}
         </button>
       </form>
     </div>
