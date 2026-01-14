@@ -4,6 +4,8 @@ load_dotenv()
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from fastapi import HTTPException
+from sqlalchemy import text
 
 # =====================#
 #   DB + ORM
@@ -91,3 +93,19 @@ def root():
 
 # ❗ 기존 /sool/search 는 삭제(중복 & 충돌 위험)
 # 필요하다면 /v1 경로로 별도 운영 추천
+
+@app.get("/health")
+def health():
+    # 앱 프로세스/라우팅이 살아있는지
+    return {"ok": True, "service": "sool-backend"}
+
+@app.get("/ready")
+def ready():
+    # DB까지 실제로 붙는지 (SELECT 1)
+    try:
+        with engine.connect() as conn:
+            conn.execute(text("SELECT 1"))
+        return {"ok": True, "db": "ok"}
+    except Exception as e:
+        # DB가 안 되면 500으로 떨어뜨려서 모니터가 바로 OFF 되게
+        raise HTTPException(status_code=500, detail=f"DB not ready: {e}")
