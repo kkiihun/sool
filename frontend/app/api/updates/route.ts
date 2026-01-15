@@ -47,12 +47,21 @@ export async function POST(req: Request) {
       body: JSON.stringify(body),
       cache: "no-store",
     });
+    
+    // 수정중..(260105)
+    //if (!res.ok) return NextResponse.json({ ok: false }, { status: 200 });
+    if (!res.ok) {
+      const text = await res.text().catch(() => "");
+      return NextResponse.json({ ok: false, status: res.status, detail: text }, { status: res.status });
+    }
 
-    if (!res.ok) return NextResponse.json({ ok: false }, { status: 200 });
 
     const data = await res.json().catch(() => ({ ok: true }));
     return NextResponse.json(data);
-  } catch {
-    return NextResponse.json({ ok: false }, { status: 200 });
+  //} catch {
+    //return NextResponse.json({ ok: false }, { status: 200 });
+  //}
+  } catch (e: any) {
+    return NextResponse.json({ ok: false, error: String(e?.message ?? e) }, { status: 500 });
   }
 }
