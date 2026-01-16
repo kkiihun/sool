@@ -37,3 +37,6 @@ venv/
 # Next local env
 .env.local
 frontend/.env.local
+
+openapi.json
+
