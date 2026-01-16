@@ -2,13 +2,11 @@
 import Link from "next/link";
 import BackButton from "./components/BackButton";
 import { Geist, Geist_Mono } from "next/font/google";
-import AppShellClient from "./components/AppShellClient";
 
 import "./globals.css";
 import "antd/dist/reset.css";
 
 import BuildBadge from "@/components/BuildBadge";
-import AppHeader from "@/components/AppHeader"; // ✅ auth 영역 포함 헤더 컴포넌트로 사용할 거면 유지
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -29,7 +27,17 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="ko" className="h-full">
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased h-full bg-black text-white`}>
-        <AppShellClient>{children}</AppShellClient>
+        {/* ✅ 헤더만 추가 (레이아웃 간섭 X) */}
+        <header className="sticky top-0 z-50 border-b border-white/10 bg-black/70 backdrop-blur">
+          <div className="px-4 py-2 flex items-center justify-start gap-3">
+            <BackButton />
+            <Link href="/" className="text-xs text-white/60 hover:text-white">
+              SOOL
+            </Link>
+          </div>
+        </header>
+
+        <div className="min-h-screen bg-black">{children}</div>
         <BuildBadge />
       </body>
     </html>
