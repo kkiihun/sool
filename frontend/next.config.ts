@@ -12,6 +12,10 @@ const nextConfig: NextConfig = {
 
       // ✅ 나머지는 일반 프록시
       { source: "/proxy/:path*", destination: `${backend}/:path*` },
+
+      { source: "/auth/:path*", destination: "http://127.0.0.1:8000/auth/:path*" },
+      { source: "/users/:path*", destination: "http://127.0.0.1:8000/users/:path*" },
+
     ];
   },
 };
