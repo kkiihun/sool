@@ -30,7 +30,7 @@ export default function LoginPage() {
 
       setToken(token);
       message.success(`로그인 성공! (저장키: ${TOKEN_KEY})`);
-      router.push("/tasting");
+      router.push("/"); // 메인 페이지로 이동
     } catch (e) {
       console.error(e);
       clearToken();
