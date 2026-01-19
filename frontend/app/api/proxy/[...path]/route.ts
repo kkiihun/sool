@@ -1,28 +1,13 @@
 ﻿import { NextRequest, NextResponse } from "next/server";
 
-const BACKEND = (
-  process.env.NEXT_PUBLIC_API_BASE_URL || "http://127.0.0.1:8000"
-).replace(/\/+$/, "");
+const BACKEND = (process.env.BACKEND_URL || "http://127.0.0.1:8000").replace(/\/+$/, "");
+type Ctx = { params: Promise<{ path?: string[] }> | { path?: string[] } };
 
-type Ctx = {
-  params: Promise<{ path?: string[] }> | { path?: string[] };
-};
-
-export async function GET(req: NextRequest, ctx: Ctx) {
-  return forward(req, ctx);
-}
-export async function POST(req: NextRequest, ctx: Ctx) {
-  return forward(req, ctx);
-}
-export async function PUT(req: NextRequest, ctx: Ctx) {
-  return forward(req, ctx);
-}
-export async function PATCH(req: NextRequest, ctx: Ctx) {
-  return forward(req, ctx);
-}
-export async function DELETE(req: NextRequest, ctx: Ctx) {
-  return forward(req, ctx);
-}
+export async function GET(req: NextRequest, ctx: Ctx) { return forward(req, ctx); }
+export async function POST(req: NextRequest, ctx: Ctx) { return forward(req, ctx); }
+export async function PUT(req: NextRequest, ctx: Ctx) { return forward(req, ctx); }
+export async function PATCH(req: NextRequest, ctx: Ctx) { return forward(req, ctx); }
+export async function DELETE(req: NextRequest, ctx: Ctx) { return forward(req, ctx); }
 
 async function forward(req: NextRequest, ctx: Ctx) {
   const resolved = await Promise.resolve(ctx.params);
@@ -32,18 +17,27 @@ async function forward(req: NextRequest, ctx: Ctx) {
   const url = new URL(req.url);
   const targetUrl = `${BACKEND}/${targetPath}${url.search}`;
 
-  // ✅ pass-through headers (authorization, content-type)
-  const headers: Record<string, string> = {};
-  const auth = req.headers.get("authorization");
-  if (auth) headers["authorization"] = auth;
+  const headers = new Headers();
 
+  // content-type
   const contentType = req.headers.get("content-type");
-  if (contentType) headers["content-type"] = contentType;
+  if (contentType) headers.set("content-type", contentType);
+
+  // ✅ 브라우저 쿠키를 백엔드로 전달
+  const cookie = req.headers.get("cookie");
+  if (cookie) {
+    headers.set("cookie", cookie);
+
+    // ✅ cookie 문자열에서 access_token 파싱 → Authorization 헤더로도 전달
+    const m = cookie.match(/(?:^|;\s*)access_token=([^;]+)/);
+    if (m?.[1]) {
+      headers.set("authorization", `Bearer ${m[1]}`);
+    }
+  }
 
   const method = req.method.toUpperCase();
   const init: RequestInit = { method, headers, cache: "no-store" };
 
-  // ✅ GET/HEAD에는 body를 넣지 않음
   if (method !== "GET" && method !== "HEAD") {
     const bodyText = await req.text();
     if (bodyText) init.body = bodyText;
@@ -59,12 +53,35 @@ async function forward(req: NextRequest, ctx: Ctx) {
     );
   }
 
-  const resType = res.headers.get("content-type") || "";
-  if (resType.includes("application/json")) {
-    const data = await res.json().catch(() => null);
-    return NextResponse.json(data, { status: res.status });
+  const body = await res.arrayBuffer();
+  const out = new NextResponse(body, { status: res.status });
+
+  // ✅ 주요 헤더 전달
+  const passThrough = ["content-type", "cache-control", "pragma", "expires"];
+  for (const k of passThrough) {
+    const v = res.headers.get(k);
+    if (v) out.headers.set(k, v);
   }
 
-  const text = await res.text().catch(() => "");
-  return new NextResponse(text, { status: res.status });
+  // ✅ Set-Cookie 전달
+  const anyHeaders: any = res.headers as any;
+  let forwarded = 0;
+
+  if (typeof anyHeaders.getSetCookie === "function") {
+    const cookies = anyHeaders.getSetCookie();
+    forwarded = cookies?.length ?? 0;
+    for (const c of cookies) out.headers.append("set-cookie", c);
+  } else {
+    const setCookie = res.headers.get("set-cookie");
+    if (setCookie) {
+      forwarded = 1;
+      out.headers.append("set-cookie", setCookie);
+    }
+  }
+
+  // ✅ 디버그 헤더
+  out.headers.set("x-proxy-target", targetUrl);
+  out.headers.set("x-proxy-set-cookie-count", String(forwarded));
+
+  return out;
 }
