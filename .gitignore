@@ -40,3 +40,12 @@ frontend/.env.local
 
 openapi.json
 
+
+# local env / overrides
+backend/ .env.*
+docker-compose.override.yml
+
+# local env / overrides
+backend/.env.*
+docker-compose.override.yml
+
