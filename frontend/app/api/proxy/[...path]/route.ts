@@ -1,6 +1,8 @@
-import { NextRequest, NextResponse } from "next/server";
+﻿import { NextRequest, NextResponse } from "next/server";
 
-const BACKEND = (process.env.NEXT_PUBLIC_API_BASE_URL || "http://127.0.0.1:8000").replace(/\/+$/, "");
+const BACKEND = (
+  process.env.NEXT_PUBLIC_API_BASE_URL || "http://127.0.0.1:8000"
+).replace(/\/+$/, "");
 
 type Ctx = {
   params: Promise<{ path?: string[] }> | { path?: string[] };
@@ -30,6 +32,7 @@ async function forward(req: NextRequest, ctx: Ctx) {
   const url = new URL(req.url);
   const targetUrl = `${BACKEND}/${targetPath}${url.search}`;
 
+  // ✅ pass-through headers (authorization, content-type)
   const headers: Record<string, string> = {};
   const auth = req.headers.get("authorization");
   if (auth) headers["authorization"] = auth;
@@ -40,7 +43,7 @@ async function forward(req: NextRequest, ctx: Ctx) {
   const method = req.method.toUpperCase();
   const init: RequestInit = { method, headers, cache: "no-store" };
 
-  // ✅ GET/HEAD는 body 금지
+  // ✅ GET/HEAD에는 body를 넣지 않음
   if (method !== "GET" && method !== "HEAD") {
     const bodyText = await req.text();
     if (bodyText) init.body = bodyText;
