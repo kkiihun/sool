@@ -46,53 +46,47 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
+  const [isAdmin, setIsAdmin] = useState(false);
+
   const pageSize = 24;
 
-  // env 기반 백엔드 주소 (fallback용)
-  const API_BASE = useMemo(() => {
-    const base = process.env.NEXT_PUBLIC_API_BASE_URL?.trim();
-    return base ? base.replace(/\/+$/, "") : "";
-  }, []);
+  // ✅ /api/proxy 기반 통일 fetch (Authorization 포함)
+  async function fetchJson(path: string) {
+    const token = localStorage.getItem("access_token");
+    const headers: HeadersInit = token ? { Authorization: `Bearer ${token}` } : {};
 
-  /**
-   * 우선: 같은 도메인 상대경로(Next rewrites로 프록시되면 CORS 없이 안전)
-   * 실패 시: env(API_BASE)로 직접 호출 fallback
-   */
-  async function fetchJsonWithFallback(path: string) {
-  const withProxy = (p: string) => {
-    if (p.startsWith("/proxy/")) return p;
-    return p.startsWith("/") ? `/proxy${p}` : `/proxy/${p}`;
-  };
+    const clean = path.startsWith("/") ? path.slice(1) : path;
+    const proxyUrl = `/api/proxy/${clean}`;
 
-  // 1) ✅ /proxy로 먼저 시도 (CORS 안전)
-  const proxyPath = withProxy(path);
-  try {
-    const r1 = await fetch(proxyPath, { cache: "no-store" });
+    const res = await fetch(proxyUrl, { cache: "no-store", headers });
+    const json = await res.json().catch(() => null);
 
-    // 에러도 JSON(detail/message)로 내려오는 경우가 많아서 최대한 읽어줌
-    const j1 = await r1.json().catch(() => null);
-
-    if (!r1.ok) {
-      const msg = j1?.detail ?? j1?.message ?? `HTTP ${r1.status}`;
+    if (!res.ok) {
+      const msg = json?.detail ?? json?.message ?? `HTTP ${res.status}`;
       throw new Error(msg);
     }
-    return j1;
-  } catch (e) {
-    // 2) fallback: 직접 백엔드 호출 (NEXT_PUBLIC_API_BASE_URL 있을 때만)
-    if (!API_BASE) throw e;
-
-    const r2 = await fetch(`${API_BASE}${path.startsWith("/") ? path : `/${path}`}`, {
-      cache: "no-store",
-    });
-    const j2 = await r2.json().catch(() => null);
-
-    if (!r2.ok) {
-      const msg = j2?.detail ?? j2?.message ?? `HTTP ${r2.status}`;
-      throw new Error(msg);
-    }
-    return j2;
+    return json;
   }
-}
+
+  // ✅ 관리자 여부 로드 (/users/me)
+  useEffect(() => {
+    let alive = true;
+    async function loadMe() {
+      try {
+        const me = await fetchJson("/users/me");
+        if (!alive) return;
+        setIsAdmin(!!me?.is_admin);
+      } catch {
+        if (!alive) return;
+        setIsAdmin(false);
+      }
+    }
+    loadMe();
+    return () => {
+      alive = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   /* =========================
      지역 목록
@@ -103,7 +97,7 @@ export default function Home() {
     async function loadRegions() {
       try {
         setErrorMsg(null);
-        const data = await fetchJsonWithFallback("/sool/regions");
+        const data = await fetchJson("/sool/regions");
         if (!alive) return;
         const regions = Array.isArray(data) ? data : [];
         setRegionOptions(["전체", ...regions]);
@@ -122,17 +116,11 @@ export default function Home() {
   }, []);
 
   /* =========================
-     최신 리뷰 (Mock 고정)
+     최신 리뷰 (Mock)
   ========================= */
   useEffect(() => {
     setRecentReviews([
-      {
-        id: 1,
-        sool_id: 1,
-        sool_name: "Mock 술",
-        rating: 5,
-        notes: "테스트 리뷰입니다.",
-      },
+      { id: 1, sool_id: 1, sool_name: "Mock 술", rating: 5, notes: "테스트 리뷰입니다." },
     ]);
   }, []);
 
@@ -158,8 +146,9 @@ export default function Home() {
       const path = `/sool/filter?${params.toString()}`;
 
       try {
-        const data = await fetchJsonWithFallback(path);
+        const data = await fetchJson(path);
         if (!alive) return;
+
         const items = Array.isArray(data) ? data : (data?.items ?? []);
         setSool(items);
         setTotal(data?.total ?? data?.count ?? items.length ?? 0);
@@ -178,7 +167,6 @@ export default function Home() {
     return () => {
       alive = false;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page, search, category, region, sortOption]);
 
   const resetFilters = () => {
@@ -189,6 +177,24 @@ export default function Home() {
     setPage(1);
   };
 
+  const menuItems = useMemo(() => {
+    const base = [
+      { key: "1", icon: <AppstoreOutlined />, label: <Link href="/about">About</Link> },
+      { key: "2", icon: <CompassOutlined />, label: <Link href="/updates">Updates</Link> },
+      { key: "3", icon: <StarOutlined />, label: <Link href="/Tasting">Tasting</Link> },
+      { key: "4", icon: <BarChartOutlined />, label: <Link href="/dashboard">Analytics</Link> },
+      { key: "5", icon: <HeartOutlined />, label: <Link href="/community">Community</Link> },
+    ];
+    if (isAdmin) {
+      base.push({
+        key: "6",
+        icon: <AppstoreOutlined />,
+        label: <Link href="/admin/tasting/list">Tasting Admin</Link>,
+      });
+    }
+    return base;
+  }, [isAdmin]);
+
   return (
     <Layout style={{ minHeight: "100vh" }}>
       {/* Sidebar */}
@@ -197,7 +203,7 @@ export default function Home() {
         collapsed={collapsed}
         onCollapse={setCollapsed}
         theme="dark"
-        style={{ background: "#111" }}
+        style={{ background: isAdmin ? "#140c00" : "#111" }}
       >
         <Link href="/" style={{ textDecoration: "none" }}>
           <div style={{ color: "#fff", padding: 20, fontSize: 22 }}>
@@ -205,24 +211,20 @@ export default function Home() {
           </div>
         </Link>
 
-        <Menu
-          theme="dark"
-          mode="inline"
-          defaultSelectedKeys={["1"]}
-          items={[
-            { key: "1", icon: <AppstoreOutlined />, label: <Link href="/about">About</Link> },
-            { key: "2", icon: <CompassOutlined />, label: <Link href="/updates">Updates</Link> },
-            { key: "3", icon: <StarOutlined />, label: <Link href="/Tasting">Tasting</Link> },
-            { key: "4", icon: <BarChartOutlined />, label: <Link href="/dashboard">Analytics</Link> },
-            { key: "5", icon: <HeartOutlined />, label: <Link href="/community">Community</Link> },
-            { key: "6", icon: <AppstoreOutlined />, label: <Link href="/admin/tasting/list">Tasting Admin</Link> },
-          ]}
-        />
+        <Menu theme="dark" mode="inline" defaultSelectedKeys={["1"]} items={menuItems} />
       </Sider>
 
       <Layout>
         {/* Header */}
-        <Header style={{ background: "#111", padding: "15px 30px" }}>
+        <Header
+          style={{
+            background: isAdmin ? "#2a1a00" : "#111",
+            borderBottom: isAdmin
+              ? "1px solid rgba(255, 193, 7, 0.35)"
+              : "1px solid rgba(255,255,255,0.06)",
+            padding: "15px 30px",
+          }}
+        >
           <Space style={{ width: "100%", justifyContent: "space-between" }}>
             <Input
               prefix={<SearchOutlined />}
@@ -281,21 +283,13 @@ export default function Home() {
             총 <span style={{ color: "#fff", fontWeight: 600 }}>{total}</span>종
           </Text>
 
-          {/* 에러 표시 */}
           {errorMsg && (
             <div style={{ marginBottom: 16 }}>
               <Alert
                 type="error"
                 showIcon
-                title="API 호출 실패"
-                description={
-                  <div style={{ wordBreak: "break-word" }}>
-                    {errorMsg}
-                    <div style={{ marginTop: 8, color: "#666" }}>
-                      (팁) 3000은 되는데 3001만 실패하면 백엔드 CORS 또는 Next rewrites 미설정일 가능성이 큽니다.
-                    </div>
-                  </div>
-                }
+                message="API 호출 실패"
+                description={<div style={{ wordBreak: "break-word" }}>{errorMsg}</div>}
               />
             </div>
           )}

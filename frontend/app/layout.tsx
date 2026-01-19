@@ -2,6 +2,7 @@
 import Link from "next/link";
 import BackButton from "./components/BackButton";
 import { Geist, Geist_Mono } from "next/font/google";
+import AppShellClient from "./components/AppShellClient";
 
 import "./globals.css";
 import "antd/dist/reset.css";
@@ -24,34 +25,11 @@ export const metadata: Metadata = {
   description: "Traditional liquor data-driven analysis & recommendation (MVP)",
 };
 
-export default function RootLayout({
-  children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="ko" className="h-full">
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased h-full bg-black text-white`}
-      >
-        {/* ✅ 기존 헤더 유지 + 오른쪽에 AppHeader(로그인 영역)만 추가 */}
-        <header className="sticky top-0 z-50 border-b border-white/10 bg-black/70 backdrop-blur">
-          <div className="px-4 py-2 flex items-center justify-between gap-3">
-            <div className="flex items-center justify-start gap-3">
-              <BackButton />
-              <Link href="/" className="text-xs text-white/60 hover:text-white">
-                SOOL
-              </Link>
-            </div>
-
-            {/* ✅ 오른쪽: 로그인 상태/로그아웃/링크 */}
-            <AppHeader />
-          </div>
-        </header>
-
-        {/* ✅ 기존 구조 그대로 유지 */}
-        <div className="min-h-screen bg-black">{children}</div>
-
+      <body className={`${geistSans.variable} ${geistMono.variable} antialiased h-full bg-black text-white`}>
+        <AppShellClient>{children}</AppShellClient>
         <BuildBadge />
       </body>
     </html>

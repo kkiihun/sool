@@ -2,26 +2,62 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Custom Theme Variables */
+/* =========================================================
+   Global Theme Tokens (SOOL)
+   - 통일된 톤앤매너: page별 인라인 색 제거용
+   - admin 모드: body.admin 클래스 오버라이드
+========================================================= */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Base tokens */
+  --bg: #0b0f14;
+  --panel: #0f1623;
+  --panel2: #0d1420;
+  --text: rgba(255, 255, 255, 0.92);
+  --muted: rgba(255, 255, 255, 0.7);
+  --border: rgba(255, 255, 255, 0.08);
+  --accent: #3b82f6;
+
+  --header-bg: rgba(11, 15, 20, 0.78);
+  --sider-bg: rgba(15, 22, 35, 0.92);
+  --shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+
+  /* ✅ 기존 변수명 유지하되, 토큰을 참조하도록 연결 */
+  --background: var(--bg);
+  --foreground: var(--text);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+/* admin 모드 */
+body.admin {
+  --accent: #f5c84b;
+  --header-bg: rgba(245, 200, 75, 0.1);
+  --sider-bg: rgba(245, 200, 75, 0.06);
+  --border: rgba(245, 200, 75, 0.22);
 }
 
-/* Global Styles */
+/* =========================================================
+   Global Styles
+========================================================= */
+html,
+body {
+  height: 100%;
+}
+
 body {
   background: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
 
+/* 앤트디 기본 배경이 하얗게 튀는 것 방지 */
+.ant-layout,
+.ant-layout-content {
+  background: transparent;
+}
+
+/* =========================================================
+   Forms (기본 폼 스타일을 "다크 UI"에 맞게)
+   ⚠️ 전역 적용이므로 과하게 꾸미지 말고, 토큰 기반으로만
+========================================================= */
 form {
   display: flex;
   flex-direction: column;
@@ -29,24 +65,67 @@ form {
   max-width: 400px;
 }
 
-input, textarea, select {
-  padding: 8px;
-  border: 1px solid #ccc;
-  background: white;
-  color: black;
-  border-radius: 6px;
+input,
+textarea,
+select {
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text);
+  border-radius: 10px;
+  outline: none;
 }
 
+input::placeholder,
+textarea::placeholder {
+  color: rgba(255, 255, 255, 0.35);
+}
+
+input:focus,
+textarea:focus,
+select:focus {
+  border-color: rgba(59, 130, 246, 0.45);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.18);
+}
+
+/* admin 모드 포커스(골드) */
+body.admin input:focus,
+body.admin textarea:focus,
+body.admin select:focus {
+  border-color: rgba(245, 200, 75, 0.5);
+  box-shadow: 0 0 0 3px rgba(245, 200, 75, 0.18);
+}
+
+/* =========================================================
+   Buttons (전역 버튼 기본)
+========================================================= */
 button {
-  background: #111;
-  color: white;
-  border: none;
-  padding: 10px 16px;
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text);
+  border: 1px solid var(--border);
+  padding: 10px 14px;
   cursor: pointer;
-  border-radius: 6px;
+  border-radius: 10px;
   font-weight: 600;
+  transition: transform 0.08s ease, opacity 0.2s ease, border-color 0.2s ease;
 }
 
 button:hover {
-  opacity: 0.8;
+  opacity: 0.92;
+  border-color: rgba(255, 255, 255, 0.16);
+}
+
+button:active {
+  transform: translateY(1px);
+}
+
+/* primary 느낌이 필요하면 class로 따로 쓰기 */
+.btn-primary {
+  background: rgba(59, 130, 246, 0.16);
+  border-color: rgba(59, 130, 246, 0.35);
+}
+
+body.admin .btn-primary {
+  background: rgba(245, 200, 75, 0.14);
+  border-color: rgba(245, 200, 75, 0.35);
 }
