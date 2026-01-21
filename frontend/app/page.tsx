@@ -51,22 +51,24 @@ export default function Home() {
   const pageSize = 24;
 
   // ✅ /api/proxy 기반 통일 fetch (Authorization 포함)
-  async function fetchJson(path: string) {
-    const token = localStorage.getItem("access_token");
-    const headers: HeadersInit = token ? { Authorization: `Bearer ${token}` } : {};
+async function fetchJson(path: string) {
+  const clean = path.startsWith("/") ? path.slice(1) : path;
+  const proxyUrl = `/api/proxy/${clean}`;
 
-    const clean = path.startsWith("/") ? path.slice(1) : path;
-    const proxyUrl = `/api/proxy/${clean}`;
+  const res = await fetch(proxyUrl, {
+    cache: "no-store",
+    credentials: "include",
+  });
 
-    const res = await fetch(proxyUrl, { cache: "no-store", headers });
-    const json = await res.json().catch(() => null);
+  const json = await res.json().catch(() => null);
 
-    if (!res.ok) {
-      const msg = json?.detail ?? json?.message ?? `HTTP ${res.status}`;
-      throw new Error(msg);
-    }
-    return json;
+  if (!res.ok) {
+    const msg = json?.detail ?? json?.message ?? `HTTP ${res.status}`;
+    throw new Error(msg);
   }
+  return json;
+}
+
 
   // ✅ 관리자 여부 로드 (/users/me)
   useEffect(() => {

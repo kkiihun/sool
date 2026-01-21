@@ -1,3 +1,4 @@
+import os
 from datetime import datetime, timedelta
 from jose import JWTError, jwt
 from passlib.context import CryptContext
@@ -8,7 +9,7 @@ from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.models.user import User
 
-SECRET_KEY = "CHANGE_ME_TO_SOMETHING_RANDOM"
+SECRET_KEY = os.getenv("SECRET_KEY", "dev-secret-key")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60
 
