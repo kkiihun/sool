@@ -24,8 +24,13 @@ export function useAppShell() {
 }
 
 async function fetchMe() {
-  const r = await fetch("/proxy/users/me", { cache: "no-store" });
+  const r = await fetch("/api/proxy/users/me", {
+    cache: "no-store",
+    credentials: "include", // ✅ 쿠키 포함
+  });
+
   if (!r.ok) return null;
+
   return (await r.json().catch(() => null)) as Me | null;
 }
 
@@ -35,9 +40,12 @@ export default function AppShellProvider({ children }: { children: React.ReactNo
 
   const refreshMe = async () => {
     setLoadingMe(true);
-    const data = await fetchMe();
-    setMe(data);
-    setLoadingMe(false);
+    try {
+      const data = await fetchMe();
+      setMe(data);
+    } finally {
+      setLoadingMe(false);
+    }
   };
 
   useEffect(() => {

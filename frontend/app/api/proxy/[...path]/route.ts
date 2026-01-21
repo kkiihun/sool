@@ -63,7 +63,7 @@ async function forward(req: NextRequest, ctx: Ctx) {
     if (v) out.headers.set(k, v);
   }
 
-  // ✅ Set-Cookie 전달
+  // ✅ Set-Cookie 전달 (Next 런타임별 호환)
   const anyHeaders: any = res.headers as any;
   let forwarded = 0;
 
