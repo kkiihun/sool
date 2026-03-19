@@ -1,4 +1,5 @@
 from sqlalchemy import Column, Integer, String, Boolean
+from sqlalchemy.orm import relationship
 from app.core.database import Base
 
 class User(Base):
@@ -11,3 +12,17 @@ class User(Base):
 
     is_active = Column(Boolean, default=True)
     is_admin = Column(Boolean, default=False)
+
+    # 🔹 사용자가 작성한 시음 기록 (Sense)
+    sense_notes = relationship(
+        "Sense",
+        back_populates="user",
+        cascade="all, delete-orphan"
+    )
+
+    # 🔹 사용자가 작성한 리뷰 (Review)
+    reviews = relationship(
+        "Review",
+        back_populates="user",
+        cascade="all, delete-orphan"
+    )

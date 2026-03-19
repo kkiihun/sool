@@ -9,10 +9,7 @@ import {
   ResponsiveContainer,
 } from "recharts";
 
-/* ======================
-   Types (v1 Standard)
-====================== */
-type RadarAvg = {
+type Tasting = {
   aroma?: number | null;
   sweetness?: number | null;
   acidity?: number | null;
@@ -21,38 +18,59 @@ type RadarAvg = {
 };
 
 export default function SoolRadar({
-  radar,
+  tastings,
 }: {
-  radar: RadarAvg;
+  tastings: Tasting[];
 }) {
-  // ✅ 값이 하나도 없으면 표시 안 함
-  const hasData = Object.values(radar).some((v) => v != null);
+  const valid = tastings.filter(
+    (t) =>
+      t.aroma != null &&
+      t.sweetness != null &&
+      t.acidity != null &&
+      t.body != null &&
+      t.finish != null
+  );
 
-  if (!hasData) {
-    return <p className="text-gray-500">감각 데이터가 부족합니다.</p>;
+  if (valid.length === 0) {
+    return (
+      <div style={{ height: 280, display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <p style={{ color: "#444", fontStyle: "italic" }}>No sensory data available</p>
+      </div>
+    );
   }
 
-  // ✅ Recharts 전용 데이터 (계산 ❌, 매핑만)
+  const avg = (key: keyof Tasting) =>
+    valid.reduce((sum, t) => sum + Number(t[key]), 0) / valid.length;
+
   const data = [
-    { label: "Aroma", value: radar.aroma ?? 0 },
-    { label: "Sweetness", value: radar.sweetness ?? 0 },
-    { label: "Acidity", value: radar.acidity ?? 0 },
-    { label: "Body", value: radar.body ?? 0 },
-    { label: "Finish", value: radar.finish ?? 0 },
+    { label: "Aroma", value: avg("aroma") },
+    { label: "Sweetness", value: avg("sweetness") },
+    { label: "Acidity", value: avg("acidity") },
+    { label: "Body", value: avg("body") },
+    { label: "Finish", value: avg("finish") },
   ];
 
   return (
-    <div style={{ width: "100%", height: 280 }}>
+    <div style={{ width: "100%", height: 280, marginTop: 20 }}>
       <ResponsiveContainer>
-        <RadarChart data={data}>
-          <PolarGrid stroke="#444" />
-          <PolarAngleAxis dataKey="label" stroke="#aaa" />
-          <PolarRadiusAxis domain={[0, 5]} stroke="#666" />
+        <RadarChart data={data} cx="50%" cy="50%" outerRadius="80%">
+          <PolarGrid stroke="#333" />
+          <PolarAngleAxis 
+            dataKey="label" 
+            tick={{ fill: "#888", fontSize: 12, fontWeight: 500 }} 
+          />
+          <PolarRadiusAxis 
+            domain={[0, 5]} 
+            tick={false} 
+            axisLine={false} 
+          />
           <Radar
+            name="Sool"
             dataKey="value"
-            stroke="#facc15"
-            fill="#facc15"
-            fillOpacity={0.4}
+            stroke="#d4af37"
+            strokeWidth={2}
+            fill="#d4af37"
+            fillOpacity={0.3}
           />
         </RadarChart>
       </ResponsiveContainer>
