@@ -178,7 +178,7 @@ export default function SoolDetail({
 
   if (loading) return (
     <div style={{ display: "flex", justifyContent: "center", alignItems: "center", height: "100vh", background: "#0a0a0a" }}>
-      <Space direction="vertical" align="center">
+      <Space orientation="vertical" align="center">
         <Spin size="large" />
         <Text style={{ color: "#d4af37", marginTop: 20, letterSpacing: 2 }}>ARCHIVE CONSULTATION IN PROGRESS...</Text>
       </Space>
@@ -240,7 +240,7 @@ export default function SoolDetail({
       <div style={{ maxWidth: 1400, margin: "0 auto", padding: "80px 40px", position: "relative", zIndex: 1 }}>
         <Row gutter={[80, 80]}>
           <Col span={24}>
-            <Space direction="vertical" size={0}>
+            <Space orientation="vertical" size={0}>
               <Badge count={sool.category} style={{ backgroundColor: "#d4af37", color: "#000", fontWeight: 800, border: "none", marginBottom: 16 }} />
               <Title style={{ color: "#fff", fontSize: 80, fontWeight: 900, margin: 0, lineHeight: 0.9 }}>{sool.name}</Title>
               <div style={{ marginTop: 24, display: "flex", alignItems: "center", gap: 32 }}>
@@ -280,7 +280,7 @@ export default function SoolDetail({
                 {sool.description || "The detailed lineage and tasting profile of this spirit are being meticulously documented by our historians. Experience its depth through our sensory analysis."}
               </Paragraph>
               <Divider style={{ borderColor: "#222", margin: "48px 0" }} />
-              <Space direction="vertical">
+              <Space orientation="vertical">
                 <Text style={{ color: "#444", letterSpacing: 2, fontSize: 10 }}>COMPOSITION</Text>
                 <Text style={{ color: "#888", fontSize: 16 }}>{sool.ingredients || "Traditional selection of organic grains and artisanal yeast."}</Text>
               </Space>
@@ -290,7 +290,7 @@ export default function SoolDetail({
           <Col xs={24} lg={10}>
             <Card style={{ background: "#111", border: "1px solid #222", borderRadius: 32, padding: 20 }} styles={{ body: { padding: 24 } }}>
               <Title level={4} style={{ color: "#fff", marginBottom: 32 }}>LOG A NEW ENTRY</Title>
-              <Space direction="vertical" size={32} style={{ width: "100%" }}>
+              <Space orientation="vertical" size={32} style={{ width: "100%" }}>
                 <div>
                   <Text style={{ color: "#444", fontSize: 10, letterSpacing: 2, display: "block", marginBottom: 12 }}>OVERALL IMPRESSION</Text>
                   <Rate value={rating} onChange={setRating} style={{ fontSize: 32, color: "#d4af37" }} />
@@ -338,7 +338,7 @@ export default function SoolDetail({
               {senses.length === 0 ? (
                 <Empty description={<Text style={{ color: "#444" }}>No records found.</Text>} />
               ) : (
-                <Space direction="vertical" size={20} style={{ width: "100%" }}>
+                <Space orientation="vertical" size={20} style={{ width: "100%" }}>
                   {senses.slice().reverse().map((s) => (
                     <div key={s.id} style={{ background: "rgba(255,255,255,0.02)", padding: 24, borderRadius: 24, border: "1px solid rgba(255,255,255,0.05)" }}>
                       <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 12 }}>

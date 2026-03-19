@@ -219,7 +219,7 @@ export default function DiscoveryPage() {
                   <FireOutlined style={{ color: "#d4af37" }} />
                   Hot Picks
                 </Title>
-                <Space direction="vertical" size="large" style={{ width: "100%" }}>
+                <Space orientation="vertical" size="large" style={{ width: "100%" }}>
                   <div style={{ background: "#1a1a1a", padding: 20, borderRadius: 16, border: "1px solid #333" }}>
                     <Text style={{ color: "#888", display: "block", marginBottom: 8 }}>MOST REVIEWED THIS WEEK</Text>
                     <Title level={5} style={{ color: "#fff", margin: 0 }}>나루 약주</Title>
