@@ -12,6 +12,7 @@ class User(Base):
 
     is_active = Column(Boolean, default=True)
     is_admin = Column(Boolean, default=False)
+    status = Column(String(20), default="active") # active, suspended, locked
 
     # 🔹 사용자가 작성한 시음 기록 (Sense)
     sense_notes = relationship(

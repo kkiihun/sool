@@ -71,6 +71,13 @@ export default function Home() {
   const API_URL = getApiUrl();
   const pageSize = 12;
 
+  const resolveImageUrl = (url: string) => {
+    if (!url) return null;
+    if (url.startsWith('http')) return url;
+    if (url.startsWith('/static')) return `${API_URL}${encodeURI(url)}`;
+    return url;
+  };
+
   useEffect(() => {
     async function loadRegions() {
       try {
@@ -266,12 +273,16 @@ export default function Home() {
               style={{ color: "#888" }}
             />
             <div style={{ width: 1, height: 20, background: "#333" }} />
-            <Text style={{ color: "#fff", fontWeight: 500 }}>{user ? user.username : "Guest User"}</Text>
-            <Badge dot color={user ? "#52c41a" : "#d4af37"}>
-              <div style={{ width: 32, height: 32, borderRadius: "50%", background: "#333", border: "1px solid #444", display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <UserOutlined style={{ color: user ? "#fff" : "#666" }} />
-              </div>
-            </Badge>
+            <Link href={user ? "/profile" : "/login"}>
+              <Space size="small" style={{ cursor: 'pointer' }}>
+                <Text style={{ color: "#fff", fontWeight: 500 }}>{user ? user.username : "Guest User"}</Text>
+                <Badge dot color={user ? "#52c41a" : "#d4af37"}>
+                  <div style={{ width: 32, height: 32, borderRadius: "50%", background: "#333", border: "1px solid #444", display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <UserOutlined style={{ color: user ? "#fff" : "#666" }} />
+                  </div>
+                </Badge>
+              </Space>
+            </Link>
           </Space>
         </Header>
 
@@ -371,9 +382,17 @@ export default function Home() {
                         overflow: "hidden",
                         border: "1px solid #222"
                       }}>
-                        <div style={{ fontSize: 64, filter: "drop-shadow(0 10px 20px rgba(0,0,0,0.8))" }}>
-                          {item.category === "막걸리" ? "🍶" : "🥃"}
-                        </div>
+                        {item.image_url ? (
+                          <img 
+                            src={resolveImageUrl(item.image_url) || ""} 
+                            alt={item.name} 
+                            style={{ width: "100%", height: "100%", objectFit: "cover" }} 
+                          />
+                        ) : (
+                          <div style={{ fontSize: 64, filter: "drop-shadow(0 10px 20px rgba(0,0,0,0.8))" }}>
+                            {item.category === "막걸리" ? "🍶" : "🥃"}
+                          </div>
+                        )}
                         <div style={{ 
                           position: "absolute", 
                           bottom: 0, 

@@ -40,6 +40,48 @@ def update_user_me(
     db.refresh(current_user)
     return {"message": "Profile updated successfully", "username": current_user.username}
 
+@router.put("/{user_id}/status")
+def update_user_status(
+    user_id: int,
+    payload: dict,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    if not current_user.is_admin:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    new_status = payload.get("status")
+    if new_status not in ["active", "suspended", "locked"]:
+        raise HTTPException(status_code=400, detail="Invalid status")
+        
+    user.status = new_status
+    db.commit()
+    return {"message": f"User status updated to {new_status}"}
+
+@router.delete("/{user_id}")
+def delete_user(
+    user_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    if not current_user.is_admin:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    if user.id == current_user.id:
+        raise HTTPException(status_code=400, detail="Cannot delete your own account")
+        
+    db.delete(user)
+    db.commit()
+    return {"message": "User deleted successfully"}
+
 @router.get("/all")
 def get_all_users(
     current_user: User = Depends(get_current_user),
@@ -55,7 +97,8 @@ def get_all_users(
             "email": u.email,
             "username": u.username,
             "is_admin": u.is_admin,
-            "is_active": u.is_active
+            "is_active": u.is_active,
+            "status": u.status or "active"
         } for u in users
     ]
 

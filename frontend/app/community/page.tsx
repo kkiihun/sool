@@ -158,7 +158,7 @@ export default function CommunityPage() {
           <Card 
             title={<span style={{ color: "#fff" }}>Trending Now</span>}
             style={{ background: "#111", border: "1px solid #222", borderRadius: 24, marginBottom: 24 }}
-            headStyle={{ borderBottom: "1px solid #222" }}
+            styles={{ header: { borderBottom: "1px solid #222" } }}
           >
             <Space orientation="vertical" size="middle" style={{ width: "100%" }}>
               {[

@@ -150,10 +150,15 @@ npm run dev
 
 
    1. 서비스 실행:
-   1     docker-compose up -d --build
+      docker-compose up -d --build
 
    2. 초기 데이터 로드 (Seeding):
-   1     docker exec -it sool-backend bash -c "PYTHONPATH=. python scripts/import_sool_basic.py"
+      docker exec -it sool-backend bash -c "PYTHONPATH=. python scripts/import_sool_basic.py"
+
    3. 접속:
-       * Frontend: http://localhost:3000 (http://localhost:3000)
+       * Frontend: http://localhost:3300 (http://localhost:3000)
        * Backend API: http://localhost:8000 (http://localhost:8000)
+
+   4. 관리자 아이디
+      Id : test@gmail.com
+      PW : 111111

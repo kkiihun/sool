@@ -28,20 +28,34 @@ import {
   ArrowLeftOutlined,
   SaveOutlined,
 } from "@ant-design/icons";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useAuth } from "../../components/AuthProvider";
 import dayjs from "dayjs";
+import { Select } from "antd";
 
 const { Sider, Header, Content, Footer } = Layout;
 const { Title, Text, Paragraph } = Typography;
 const { TextArea } = Input;
+const { Option } = Select;
 
 export default function SenseForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const preSelectedSoolId = searchParams.get("sool_id");
+  
+  const { user } = useAuth();
   const [collapsed, setCollapsed] = useState(false);
   const [form] = Form.useForm();
   const [submitting, setSubmitting] = useState(false);
+  const [soolOptions, setSoolOptions] = useState<any[]>([]);
+  const [fetchingSool, setFetchingSool] = useState(false);
 
-  const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+  const getApiUrl = () => {
+    if (process.env.NEXT_PUBLIC_API_URL) return process.env.NEXT_PUBLIC_API_URL;
+    return "http://127.0.0.1:8000";
+  };
+
+  const API_URL = getApiUrl();
 
   useEffect(() => {
     form.setFieldsValue({
@@ -52,33 +66,67 @@ export default function SenseForm() {
       sweetness: 3,
       smoothness: 3,
       rating: 5,
+      sool_id: preSelectedSoolId ? Number(preSelectedSoolId) : undefined,
     });
-  }, [form]);
+    
+    if (preSelectedSoolId) {
+      handleSearch(""); // Load initial list
+    }
+  }, [form, preSelectedSoolId]);
+
+  const handleSearch = async (value: string) => {
+    setFetchingSool(true);
+    try {
+      const url = value.length > 0 
+        ? `${API_URL}/v2/sool/suggest?q=${encodeURIComponent(value)}`
+        : `${API_URL}/sool/all`;
+      
+      const res = await fetch(url);
+      if (res.ok) {
+        const data = await res.json();
+        const items = Array.isArray(data) ? data : data.items || [];
+        setSoolOptions(items);
+      }
+    } catch (err) {
+      console.error("Search failed", err);
+    } finally {
+      setFetchingSool(false);
+    }
+  };
 
   const onFinish = async (values: any) => {
+    const token = localStorage.getItem('sool_token');
+    if (!token) {
+      message.error("Please login to save tasting notes.");
+      return;
+    }
+
     setSubmitting(true);
     const payload = {
       ...values,
       sool_id: Number(values.sool_id),
-      date: values.date.format("YYYY-MM-DD HH:mm:ss"),
     };
 
     try {
       const res = await fetch(`${API_URL}/sense/`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
         body: JSON.stringify(payload),
       });
 
       if (res.ok) {
         message.success("Tasting note preserved in the vault.");
-        router.push("/sense/list");
+        router.push("/Tasting");
       } else {
-        throw new Error("Failed to save");
+        const errData = await res.json();
+        throw new Error(errData.detail || "Failed to save");
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error(error);
-      message.error("An error occurred while saving your note.");
+      message.error(`Save failed: ${error.message}`);
     } finally {
       setSubmitting(false);
     }
@@ -118,6 +166,10 @@ export default function SenseForm() {
             { key: "analytics", icon: <BarChartOutlined />, label: <Link href="/dashboard">Analytics</Link> },
             { key: "updates", icon: <CompassOutlined />, label: <Link href="/updates">Updates</Link> },
             { key: "community", icon: <HeartOutlined />, label: <Link href="/community">Community</Link> },
+            ...(user?.is_admin ? [
+              { key: "divider", type: "divider" as const, style: { backgroundColor: "#222" } },
+              { key: "admin", icon: <AppstoreOutlined />, label: <Link href="/admin">Admin Dashboard</Link> }
+            ] : []),
           ]}
         />
       </Sider>
@@ -165,14 +217,26 @@ export default function SenseForm() {
                   <Row gutter={24}>
                     <Col span={12}>
                       <Form.Item
-                        label={<span style={{ color: "#888" }}>Spirit ID</span>}
+                        label={<span style={{ color: "#888" }}>Spirit Selection</span>}
                         name="sool_id"
-                        rules={[{ required: true, message: "Please enter Spirit ID" }]}
+                        rules={[{ required: true, message: "Please select a spirit" }]}
                       >
-                        <InputNumber 
-                          style={{ width: "100%", background: "#1a1a1a", border: "1px solid #333", color: "#fff" }} 
-                          placeholder="e.g. 12"
-                        />
+                        <Select
+                          showSearch
+                          placeholder="Search spirit name..."
+                          filterOption={false}
+                          onSearch={handleSearch}
+                          loading={fetchingSool}
+                          style={{ background: "#1a1a1a", color: "#fff" }}
+                          styles={{ popup: { root: { background: "#1a1a1a", border: "1px solid #333" } } }}
+                          onFocus={() => handleSearch("")}
+                        >
+                          {soolOptions.map((s) => (
+                            <Option key={s.id} value={s.id}>
+                              <span style={{ color: "#fff" }}>{s.name}</span>
+                            </Option>
+                          ))}
+                        </Select>
                       </Form.Item>
                     </Col>
                     <Col span={12}>

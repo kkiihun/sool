@@ -31,6 +31,7 @@ import {
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import SoolRadar from "@/components/SoolRadar";
+import { useAuth } from "@/app/components/AuthProvider";
 
 const { Title, Text, Paragraph } = Typography;
 const { TextArea } = Input;
@@ -64,6 +65,7 @@ export default function SoolDetail({
   params: Promise<{ id: string }>;
 }) {
   const router = useRouter();
+  const { user } = useAuth();
   const resolvedParams = use(params);
   const soolId = resolvedParams?.id;
   
@@ -108,7 +110,7 @@ export default function SoolDetail({
 
         // 2. 테이스팅 노트 가져오기 (실패해도 중단하지 않음)
         try {
-          const senseRes = await fetch(`${API_URL}/sense/list?sool_id=${soolId}`, { 
+          const senseRes = await fetch(`${API_URL}/sense/list?sool_id=${Number(soolId)}`, { 
             cache: 'no-store',
             headers: { 'Accept': 'application/json' }
           });
@@ -137,13 +139,20 @@ export default function SoolDetail({
       return;
     }
 
+    const token = localStorage.getItem('sool_token');
+    if (!token) {
+      message.error("Please sign in to record a tasting note.");
+      return;
+    }
+
     try {
       setSubmitting(true);
       const res = await fetch(`${API_URL}/sense/`, {
         method: "POST",
         headers: { 
           "Content-Type": "application/json",
-          "Accept": "application/json" 
+          "Accept": "application/json",
+          "Authorization": `Bearer ${token}`
         },
         body: JSON.stringify({
           sool_id: Number(soolId),
