@@ -160,5 +160,8 @@ npm run dev
        * Backend API: http://localhost:8000 (http://localhost:8000)
 
    4. 관리자 아이디
-      Id : test@gmail.com
-      PW : 111111
+      Id : admin@sool.com
+      PW : admin1234
+   
+   5. 서비스 다운:
+      docker-compose down
