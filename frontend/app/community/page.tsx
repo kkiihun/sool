@@ -110,7 +110,7 @@ export default function CommunityPage() {
     <div className="page-transition">
       <Row gutter={[32, 32]}>
         <Col xs={24} lg={16}>
-          <Space direction="vertical" size={24} style={{ width: "100%" }}>
+<Space direction="vertical" size={24} style={{ width: "100%" }}>
             {feed.map((item) => (
               <Card 
                 key={item.id}
@@ -158,7 +158,7 @@ export default function CommunityPage() {
           <Card 
             title={<span style={{ color: "#fff" }}>Trending Now</span>}
             style={{ background: "#111", border: "1px solid #222", borderRadius: 24, marginBottom: 24 }}
-            headStyle={{ borderBottom: "1px solid #222" }}
+            styles={{ header: { borderBottom: "1px solid #222" } }}
           >
             <Space direction="vertical" size="middle" style={{ width: "100%" }}>
               {[
@@ -316,7 +316,7 @@ export default function CommunityPage() {
         style={{ borderRadius: 20 }}
         styles={{ content: { background: "#111", border: "1px solid #333" }, header: { background: "#111", borderBottom: "1px solid #222" } }}
       >
-        <Space direction="vertical" size="large" style={{ width: "100%", padding: "20px 0" }}>
+<Space direction="vertical" size="large" style={{ width: "100%", padding: "20px 0" }}>
           <div>
             <Text style={{ color: "#888", display: "block", marginBottom: 8 }}>Spirit ID</Text>
             <Input 

@@ -1,8 +1,9 @@
-﻿import type { Metadata } from "next";
+import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 
 import "./globals.css";
 import "antd/dist/reset.css";
+import { AuthProvider } from "./components/AuthProvider";
 
 import BuildBadge from "@/components/BuildBadge";
 import AppShellClient from "./components/AppShellClient";
@@ -18,8 +19,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "SOOL",
-  description: "Traditional liquor data-driven analysis & recommendation (MVP)",
+  title: "SOOL — Premium Traditional Spirits",
+  description: "Explore the rich heritage of Korean traditional spirits.",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -28,8 +29,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased h-full bg-black text-white`}
       >
-        {/* ✅ App 전체 구조는 AppShellClient가 책임 */}
-        <AppShellClient>{children}</AppShellClient>
+        <AuthProvider>
+          {/* ✅ App 전체 구조는 AppShellClient가 책임 */}
+          <AppShellClient>{children}</AppShellClient>
+        </AuthProvider>
 
         <BuildBadge />
       </body>

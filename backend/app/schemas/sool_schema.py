@@ -7,6 +7,10 @@ class SoolBase(BaseModel):
     category: Optional[str] = None
     abv: Optional[float] = None
     region: Optional[str] = None
+    description: Optional[str] = None
+    producer: Optional[str] = None
+    ingredients: Optional[str] = None
+    image_url: Optional[str] = None
 
     class Config:
         from_attributes = True   # Pydantic v2 대응

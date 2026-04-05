@@ -9,6 +9,20 @@ from fastapi.security import OAuth2PasswordBearer
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
 
+def get_optional_user(
+    token: str | None = Depends(OAuth2PasswordBearer(tokenUrl="/auth/login", auto_error=False)),
+    db: Session = Depends(get_db),
+):
+    if not token:
+        return None
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        user_id: str | None = payload.get("sub")
+        if user_id is None:
+            return None
+        return db.query(User).filter(User.id == int(user_id)).first()
+    except JWTError:
+        return None
 
 def get_current_user(
     token: str = Depends(oauth2_scheme),

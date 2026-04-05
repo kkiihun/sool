@@ -12,29 +12,7 @@
 ## 프로젝트 개요
 - 전통주 정형 데이터 모델링 (sool / sense / user 기반)
 - DB → API → Frontend 엔드투엔드 파이프라인 구축
-- 분석 기반 추천 시스템으로 확장 가능한 구조
-
----
-
-## Docker Setup (추천)
-
-Docker를 사용하여 프로젝트를 즉시 구동할 수 있습니다. (MariaDB 포함)
-
-### 1. 서비스 실행
-```bash
-docker-compose up -d --build
-```
-
-### 2. 초기 데이터 임포트 (Seeding)
-DB가 생성된 후, 다음 명령어를 실행하여 전통주 기초 데이터를 로드합니다.
-```bash
-docker exec -it sool-backend bash -c "PYTHONPATH=. python scripts/import_sool_basic.py"
-```
-
-### 3. 접속 정보
-- **Frontend**: [http://localhost:3000](http://localhost:3000)
-- **Backend API**: [http://localhost:8000](http://localhost:8000)
-- **Database**: `localhost:3306` (User: `sool`, Password: `soolpass`)
+- 분석 기반 추천 시스템 확장 가능 구조
 
 ---
 
@@ -127,3 +105,26 @@ docker exec -it sool-backend bash -c "PYTHONPATH=. python scripts/import_sool_ba
    3. 접속:
        * Frontend: http://localhost:3000 (http://localhost:3000)
        * Backend API: http://localhost:8000 (http://localhost:8000)
+
+
+  실행 방법
+
+  프로젝트 루트 디렉토리에서 아래 명령어를 순서대로 실행하세요.
+
+
+   1. 서비스 실행:
+      docker-compose up --build -d
+
+   2. 초기 데이터 로드 (Seeding):
+      docker exec -it sool-backend bash -c "PYTHONPATH=. python scripts/import_sool_basic.py"
+
+   3. 접속:
+       * Frontend: http://localhost:3300 (http://localhost:3000)
+       * Backend API: http://localhost:8000 (http://localhost:8000)
+
+   4. 관리자 아이디
+      Id : admin@sool.com
+      PW : admin1234
+   
+   5. 서비스 다운:
+      docker-compose down

@@ -27,8 +27,10 @@ import {
   RocketOutlined,
   ThunderboltOutlined,
   EyeOutlined,
+  UserOutlined,
 } from "@ant-design/icons";
 import { useRouter } from "next/navigation";
+import { Tag } from "antd";
 
 const { Sider, Header, Content, Footer } = Layout;
 const { Title, Text, Paragraph } = Typography;
@@ -110,7 +112,7 @@ export default function AboutPage() {
               </div>
 
               <Card style={{ background: "#111", border: "1px solid #222", borderRadius: 24 }}>
-                <Space direction="vertical" size="large" style={{ width: "100%" }}>
+<Space direction="vertical" size="large" style={{ width: "100%" }}>
                   <div>
                     <Title level={5} style={{ color: "#fff", marginBottom: 12 }}>Vision</Title>
                     <Paragraph style={{ color: "#888", fontSize: 15, lineHeight: 1.8 }}>
@@ -151,7 +153,7 @@ export default function AboutPage() {
                 Strategic Portfolio
               </Title>
 
-              <Space direction="vertical" size="middle" style={{ width: "100%" }}>
+<Space direction="vertical" size="middle" style={{ width: "100%" }}>
                 {[
                   {
                     title: "SOOL",

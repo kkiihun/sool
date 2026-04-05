@@ -160,7 +160,7 @@ export default function DashboardPage() {
                     title={<span style={{ color: "#666", fontSize: 14, textTransform: "uppercase", letterSpacing: 1 }}>{kpi.title}</span>}
                     value={kpi.value}
                     precision={idx === 1 ? 1 : 0}
-                    valueStyle={{ color: "#fff", fontSize: 28, fontWeight: 700 }}
+                    styles={{ content: { color: "#fff", fontSize: 28, fontWeight: 700 } }}
                     prefix={<span style={{ color: "#d4af37", marginRight: 12 }}>{kpi.icon}</span>}
                     suffix={<span style={{ fontSize: 14, color: "#444", marginLeft: 8 }}>{kpi.suffix}</span>}
                   />
@@ -171,10 +171,10 @@ export default function DashboardPage() {
 
           <Row gutter={[24, 24]}>
             <Col xs={24} lg={14}>
-              <Card 
+              <Card
                 title={<span style={{ color: "#fff" }}>Region Distribution</span>}
                 style={{ background: "#111", border: "1px solid #222", borderRadius: 20 }}
-                headStyle={{ borderBottom: "1px solid #222" }}
+                styles={{ header: { borderBottom: "1px solid #222" } }}
               >
                 <div style={{ height: 400, width: "100%" }}>
                   <ResponsiveContainer>
@@ -194,10 +194,10 @@ export default function DashboardPage() {
             </Col>
 
             <Col xs={24} lg={10}>
-              <Card 
+              <Card
                 title={<span style={{ color: "#fff" }}>Category Breakdown</span>}
                 style={{ background: "#111", border: "1px solid #222", borderRadius: 20 }}
-                headStyle={{ borderBottom: "1px solid #222" }}
+                styles={{ header: { borderBottom: "1px solid #222" } }}
               >
                 <div style={{ height: 400, width: "100%" }}>
                   <ResponsiveContainer>

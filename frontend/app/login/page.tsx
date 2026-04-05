@@ -1,81 +1,121 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { Form, Input, Button, Typography, Card, Space, message } from "antd";
+import { UserOutlined, LockOutlined, ArrowLeftOutlined, MailOutlined } from "@ant-design/icons";
 import Link from "next/link";
-import { Button, Form, Input, Typography, message } from "antd";
-import { setToken, TOKEN_KEY, clearToken } from "@/lib/auth";
+import { useRouter } from "next/navigation";
+import { useAuth } from "../components/AuthProvider";
+
+const { Title, Text } = Typography;
 
 export default function LoginPage() {
-  const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const router = useRouter();
+  const { login } = useAuth();
+  const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
 
-  const onFinish = async (values: { email: string; password: string }) => {
+  const onFinish = async (values: any) => {
     setLoading(true);
     try {
-      const res = await fetch("/auth/login", {
+      const res = await fetch(`${API_URL}/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(values),
       });
 
-      if (!res.ok) {
-        const text = await res.text().catch(() => "");
-        throw new Error(text || `login failed: ${res.status}`);
+      if (res.ok) {
+        const data = await res.json();
+        await login(data.access_token);
+      } else {
+        const error = await res.json();
+        message.error(error.detail || "Login failed. Check your credentials.");
       }
-
-      const data = await res.json();
-      const token = data?.access_token;
-      if (!token) throw new Error("No access_token");
-
-      setToken(token);
-      message.success(`로그인 성공! (저장키: ${TOKEN_KEY})`);
-      router.push("/"); // 메인 페이지로 이동
-    } catch (e) {
-      console.error(e);
-      clearToken();
-      message.error("로그인 실패(이메일/비번 확인)");
+    } catch (err) {
+      message.error("Server connection failed.");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-neutral-950 flex items-center justify-center p-6">
-      <div className="w-full max-w-md rounded-2xl bg-neutral-900 border border-neutral-800 p-6 shadow">
-        <Typography.Title level={2} style={{ color: "white", marginBottom: 16 }}>
-          Login
-        </Typography.Title>
+    <div style={{ 
+      minHeight: "100vh", 
+      display: "flex", 
+      alignItems: "center", 
+      justifyContent: "center",
+      background: "linear-gradient(135deg, #0a0a0a 0%, #1a1608 100%)",
+      padding: 20
+    }}>
+      <Card 
+        style={{ 
+          width: 400, 
+          background: "rgba(17, 17, 17, 0.8)", 
+          backdropFilter: "blur(20px)",
+          border: "1px solid #222", 
+          borderRadius: 24,
+          boxShadow: "0 20px 50px rgba(0,0,0,0.5)"
+        }}
+        styles={{ body: { padding: 40 } }}
+      >
+        <Link href="/">
+          <Button type="text" icon={<ArrowLeftOutlined />} style={{ color: "#666", marginBottom: 20 }}>Back to Gallery</Button>
+        </Link>
+        
+        <div style={{ textAlign: "center", marginBottom: 40 }}>
+          <span style={{ fontSize: 40 }}>🥃</span>
+          <Title level={2} style={{ color: "#fff", margin: "12px 0 0" }}>Welcome Back</Title>
+          <Text style={{ color: "#666" }}>Enter your credentials to access the vault.</Text>
+        </div>
 
-        <Form layout="vertical" onFinish={onFinish}>
+        <Form layout="vertical" onFinish={onFinish} size="large">
           <Form.Item
-            label={<span className="text-gray-200">Email</span>}
             name="email"
-            rules={[{ required: true, message: "이메일을 입력해줘" }, { type: "email", message: "이메일 형식이 아님" }]}
+            rules={[{ required: true, message: "Please enter your email" }, { type: "email" }]}
           >
-            <Input placeholder="you@example.com" />
+            <Input 
+              prefix={<MailOutlined style={{ color: "#d4af37" }} />} 
+              placeholder="Email address" 
+              style={{ background: "#111", border: "1px solid #333", color: "#fff", borderRadius: 12 }}
+            />
           </Form.Item>
 
           <Form.Item
-            label={<span className="text-gray-200">Password</span>}
             name="password"
-            rules={[{ required: true, message: "비밀번호를 입력해줘" }]}
+            rules={[{ required: true, message: "Please enter your password" }]}
           >
-            <Input.Password placeholder="••••••••" />
+            <Input.Password 
+              prefix={<LockOutlined style={{ color: "#d4af37" }} />} 
+              placeholder="Password" 
+              style={{ background: "#111", border: "1px solid #333", color: "#fff", borderRadius: 12 }}
+            />
           </Form.Item>
 
-          <Button type="primary" htmlType="submit" loading={loading} block>
-            Login
-          </Button>
-
-          <div className="mt-3 text-sm text-gray-300">
-            계정 없음?{" "}
-            <Link className="text-blue-400 hover:text-blue-300" href="/signup">
-              회원가입
-            </Link>
-          </div>
+          <Form.Item style={{ marginTop: 40 }}>
+            <Button 
+              type="primary" 
+              htmlType="submit" 
+              block 
+              loading={loading}
+              style={{ 
+                height: 50, 
+                background: "#d4af37", 
+                color: "#000", 
+                border: "none", 
+                fontWeight: 700, 
+                borderRadius: 12 
+              }}
+            >
+              Sign In
+            </Button>
+          </Form.Item>
         </Form>
-      </div>
+
+        <div style={{ textAlign: "center", marginTop: 24 }}>
+          <Text style={{ color: "#444" }}>Don't have an account? </Text>
+          <Link href="/signup" style={{ color: "#d4af37", fontWeight: 600 }}>Create one</Link>
+        </div>
+      </Card>
     </div>
   );
 }

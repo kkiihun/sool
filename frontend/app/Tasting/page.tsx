@@ -1,7 +1,9 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { useState } from "react";
+import { useAuth } from "../components/AuthProvider";
+import { useEffect, useState } from "react";
 import {
   Layout,
   Menu,
@@ -11,7 +13,13 @@ import {
   Col,
   Button,
   Space,
+  Table,
+  Rate,
+  Spin,
+  Empty,
+  Badge,
 } from "antd";
+
 import {
   AppstoreOutlined,
   CompassOutlined,
@@ -19,22 +27,91 @@ import {
   HeartOutlined,
   BarChartOutlined,
   PlusOutlined,
-  OrderedListOutlined,
   BulbOutlined,
 } from "@ant-design/icons";
 
 const { Sider, Header, Content, Footer } = Layout;
 const { Title, Text, Paragraph } = Typography;
 
-type Me = {
-  id: number;
-  email: string;
-  username: string;
-  is_admin: boolean;
-};
-
 export default function TastingPage() {
+  const router = useRouter();
+  const { user, loading: authLoading } = useAuth();
   const [collapsed, setCollapsed] = useState(false);
+  const [notes, setNotes] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const getApiUrl = () => {
+    if (process.env.NEXT_PUBLIC_API_URL) return process.env.NEXT_PUBLIC_API_URL;
+    return "http://127.0.0.1:8000";
+  };
+
+  const API_URL = getApiUrl();
+
+  const fetchNotes = async () => {
+    const token = localStorage.getItem('sool_token');
+    if (!token) {
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const res = await fetch(`${API_URL}/sense/`, {
+        method: 'GET',
+        headers: { 
+          'Authorization': `Bearer ${token}`,
+          'Accept': 'application/json'
+        }
+      });
+      
+      if (res.ok) {
+        setNotes(await res.json());
+      } else if (res.status === 401) {
+        localStorage.removeItem('sool_token');
+      }
+    } catch (err) {
+      console.error("Connection Refused:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!authLoading) {
+      fetchNotes();
+    }
+  }, [authLoading]);
+
+  const columns = [
+    {
+      title: "SPIRIT",
+      dataIndex: "sool_name",
+      key: "sool_name",
+      render: (name: string, record: any) => (
+        <Link href={`/sool/${record.sool_id}`} style={{ color: "#fff", fontWeight: 600 }}>{name}</Link>
+      )
+    },
+    {
+      title: "RATING",
+      dataIndex: "rating",
+      key: "rating",
+      render: (r: number) => <Rate disabled value={r / 2} style={{ fontSize: 12, color: "#d4af37" }} />
+    },
+    {
+      title: "NOTES",
+      dataIndex: "notes",
+      key: "notes",
+      ellipsis: true,
+      render: (n: string) => <Text style={{ color: "#666" }}>{n || "No comments recorded."}</Text>
+    },
+    {
+      title: "DATE",
+      dataIndex: "created_at",
+      key: "created_at",
+      render: (d: string) => <Text style={{ color: "#444", fontSize: 12 }}>{new Date(d).toLocaleDateString()}</Text>
+    }
+  ];
+
+  if (authLoading) return <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#0a0a0a' }}><Spin size="large" /></div>;
 
   return (
     <Layout style={{ minHeight: "100vh", backgroundColor: "#0a0a0a" }}>
@@ -53,14 +130,7 @@ export default function TastingPage() {
           zIndex: 100
         }}
       >
-        <div style={{ 
-          height: 80, 
-          display: "flex", 
-          alignItems: "center", 
-          justifyContent: "center",
-          borderBottom: "1px solid #222",
-          marginBottom: 20
-        }}>
+        <div style={{ height: 80, display: "flex", alignItems: "center", justifyContent: "center", borderBottom: "1px solid #222", marginBottom: 20 }}>
           <Link href="/" style={{ textDecoration: "none", display: "flex", alignItems: "center", gap: 8 }}>
             <span style={{ fontSize: 28 }}>🥃</span>
             {!collapsed && <span style={{ color: "#fff", fontSize: 20, fontWeight: 700, letterSpacing: 1.5 }}>SOOL</span>}
@@ -78,6 +148,10 @@ export default function TastingPage() {
             { key: "analytics", icon: <BarChartOutlined />, label: <Link href="/dashboard">Analytics</Link> },
             { key: "updates", icon: <CompassOutlined />, label: <Link href="/updates">Updates</Link> },
             { key: "community", icon: <HeartOutlined />, label: <Link href="/community">Community</Link> },
+            ...(user?.is_admin ? [
+              { key: "divider", type: "divider" as const, style: { backgroundColor: "#222" } },
+              { key: "admin", icon: <AppstoreOutlined />, label: <Link href="/admin">Admin Dashboard</Link> }
+            ] : []),
           ]}
         />
       </Sider>
@@ -96,116 +170,54 @@ export default function TastingPage() {
           top: 0,
           zIndex: 90
         }}>
-          <Title level={4} style={{ color: "#fff", margin: 0 }}>Tasting Journal</Title>
-          <Text style={{ color: "#666" }}>Your Sensory Journey</Text>
+          <Title level={4} style={{ color: "#fff", margin: 0 }}>Sensory Vault</Title>
+          <Link href={user ? "/profile" : "/login"}>
+              <Space size="small" style={{ cursor: 'pointer' }}>
+                <Text style={{ color: "#fff", fontWeight: 500 }}>{user ? user.username : "Guest"}</Text>
+                <Badge dot color={user ? "#52c41a" : "#d4af37"}>
+                  <div style={{ width: 32, height: 32, borderRadius: "50%", background: "#333", border: "1px solid #444", display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <StarOutlined style={{ color: user ? "#fff" : "#666" }} />
+                  </div>
+                </Badge>
+              </Space>
+            </Link>
         </Header>
 
         <Content style={{ padding: "60px 80px" }}>
-          {/* Hero Section */}
-          <div style={{ marginBottom: 60, maxWidth: 800 }}>
-            <Title style={{ color: "#fff", fontSize: 48, fontWeight: 800, margin: 0 }}>
-              Master the Art of <span style={{ color: "#d4af37" }}>Tasting</span>
-            </Title>
-            <Paragraph style={{ color: "#888", fontSize: 18, lineHeight: 1.8, marginTop: 20 }}>
-              Record the intricate nuances of aroma, flavor, and texture. 
-              Build your personal library of sensory experiences and discover your unique palate.
-              Your data-driven notes help us provide more accurate recommendations.
-            </Paragraph>
-          </div>
+          {!user ? (
+            <div style={{ textAlign: 'center', padding: '100px 0' }}>
+              <Empty description={<Text style={{ color: '#666' }}>Sign in to start your tasting journal.</Text>} />
+              <Link href="/login"><Button type="primary" style={{ marginTop: 20, background: '#d4af37', color: '#000', border: 'none' }}>Sign In</Button></Link>
+            </div>
+          ) : (
+            <>
+              <div style={{ marginBottom: 60, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+                <div>
+                  <Title style={{ color: "#fff", fontSize: 48, fontWeight: 800, margin: 0 }}>
+                    My Sensory <span style={{ color: "#d4af37" }}>Archive</span>
+                  </Title>
+                  <Text style={{ color: "#666", fontSize: 18 }}>You have recorded {notes.length} unique tasting experiences.</Text>
+                </div>
+                <Link href="/sense/new">
+                  <Button type="primary" size="large" icon={<PlusOutlined />} style={{ background: "#d4af37", color: "#000", border: "none", fontWeight: 700, borderRadius: 12, height: 50 }}>
+                    NEW ENTRY
+                  </Button>
+                </Link>
+              </div>
 
-          <Row gutter={[32, 32]}>
-            <Col xs={24} md={12}>
-              <Link href="/sense/new">
-                <Card 
-                  hoverable
-                  style={{ 
-                    background: "#111", 
-                    border: "1px solid #222", 
-                    borderRadius: 24,
-                    height: "100%",
-                    transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)"
-                  }}
-                  styles={{ body: { padding: 40 } }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.borderColor = "#d4af37";
-                    e.currentTarget.style.transform = "translateY(-8px)";
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.borderColor = "#222";
-                    e.currentTarget.style.transform = "translateY(0)";
-                  }}
-                >
-                  <div style={{ 
-                    width: 64, 
-                    height: 64, 
-                    borderRadius: 16, 
-                    background: "rgba(212,175,55,0.1)", 
-                    display: "flex", 
-                    alignItems: "center", 
-                    justifyContent: "center",
-                    marginBottom: 32
-                  }}>
-                    <PlusOutlined style={{ fontSize: 24, color: "#d4af37" }} />
-                  </div>
-                  <Title level={3} style={{ color: "#fff", marginBottom: 16 }}>New Entry</Title>
-                  <Text style={{ color: "#666", fontSize: 16 }}>
-                    Start a fresh tasting session. Record visual, olfactive, and gustative properties.
-                  </Text>
-                  <div style={{ marginTop: 32 }}>
-                    <Button type="primary" size="large" style={{ background: "#d4af37", color: "#000", border: "none", fontWeight: 700, borderRadius: 8 }}>
-                      Record Now
-                    </Button>
-                  </div>
+              {loading ? <Spin size="large" /> : (
+                <Card style={{ background: "#111", border: "1px solid #222", borderRadius: 24, overflow: 'hidden' }}>
+                  <Table 
+                    dataSource={notes} 
+                    columns={columns} 
+                    rowKey="id"
+                    pagination={{ pageSize: 10 }}
+                    className="custom-table"
+                  />
                 </Card>
-              </Link>
-            </Col>
-
-            <Col xs={24} md={12}>
-              <Link href="/sense/list">
-                <Card 
-                  hoverable
-                  style={{ 
-                    background: "#111", 
-                    border: "1px solid #222", 
-                    borderRadius: 24,
-                    height: "100%",
-                    transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)"
-                  }}
-                  styles={{ body: { padding: 40 } }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.borderColor = "#d4af37";
-                    e.currentTarget.style.transform = "translateY(-8px)";
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.borderColor = "#222";
-                    e.currentTarget.style.transform = "translateY(0)";
-                  }}
-                >
-                  <div style={{ 
-                    width: 64, 
-                    height: 64, 
-                    borderRadius: 16, 
-                    background: "rgba(212,175,55,0.1)", 
-                    display: "flex", 
-                    alignItems: "center", 
-                    justifyContent: "center",
-                    marginBottom: 32
-                  }}>
-                    <OrderedListOutlined style={{ fontSize: 24, color: "#d4af37" }} />
-                  </div>
-                  <Title level={3} style={{ color: "#fff", marginBottom: 16 }}>Your Collection</Title>
-                  <Text style={{ color: "#666", fontSize: 16 }}>
-                    Browse through your previous tasting notes and track how your palate evolves.
-                  </Text>
-                  <div style={{ marginTop: 32 }}>
-                    <Button type="text" size="large" style={{ color: "#d4af37", fontWeight: 700, border: "1px solid #d4af37", borderRadius: 8 }}>
-                      View History
-                    </Button>
-                  </div>
-                </Card>
-              </Link>
-            </Col>
-          </Row>
+              )}
+            </>
+          )}
 
           {/* Quick Tips */}
           <div style={{ 
@@ -222,8 +234,8 @@ export default function TastingPage() {
               <Col xs={24} md={20}>
                 <Title level={4} style={{ color: "#fff" }}>Expert Tip</Title>
                 <Text style={{ color: "#888", fontSize: 16 }}>
-                  To get the most accurate results, try tasting in a neutral environment and take small sips. 
-                  Pay attention to the "Finish" — how long the flavor lingers on your palate after swallowing.
+                  Focus on the "Body" of the spirit. Is it light like water, or full and coating like syrup? 
+                  The mouthfeel is a key differentiator in traditional spirits.
                 </Text>
               </Col>
             </Row>
@@ -238,9 +250,15 @@ export default function TastingPage() {
           borderTop: "1px solid #222",
           marginTop: 60
         }}>
-          SOOL — THE ART OF THE SENSES
+          SOOL — PRESERVING THE ART OF TASTING
         </Footer>
       </Layout>
+      <style jsx global>{`
+        .custom-table .ant-table { background: transparent !important; color: #aaa !important; }
+        .custom-table .ant-table-thead > tr > th { background: #1a1a1a !important; color: #666 !important; border-bottom: 1px solid #222 !important; text-transform: uppercase; font-size: 11px; letter-spacing: 1px; }
+        .custom-table .ant-table-tbody > tr > td { border-bottom: 1px solid #222 !important; background: transparent !important; }
+        .custom-table .ant-table-tbody > tr:hover > td { background: #161616 !important; }
+      `}</style>
     </Layout>
   );
 }

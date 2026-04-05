@@ -24,7 +24,11 @@ import {
   ReloadOutlined,
   BarChartOutlined,
   FilterOutlined,
+  UserOutlined,
+  LockOutlined,
 } from "@ant-design/icons";
+import { useRouter } from "next/navigation";
+import { useAuth } from "./components/AuthProvider";
 
 const { Sider, Header, Content, Footer } = Layout;
 const { Title, Text } = Typography;
@@ -45,6 +49,8 @@ const SORT_OPTIONS = [
 ];
 
 export default function Home() {
+  const router = useRouter();
+  const { user, logout } = useAuth();
   const [collapsed, setCollapsed] = useState(false);
   const [sool, setSool] = useState<any[]>([]);
   const [total, setTotal] = useState(0);
@@ -65,9 +71,14 @@ export default function Home() {
   const API_URL = getApiUrl();
   const pageSize = 12;
 
-  useEffect(() => {
-    let alive = true;
+  const resolveImageUrl = (url: string) => {
+    if (!url) return null;
+    if (url.startsWith('http')) return url;
+    if (url.startsWith('/static')) return `${API_URL}${encodeURI(url)}`;
+    return url;
+  };
 
+  useEffect(() => {
     async function loadRegions() {
       try {
         const res = await fetch(`${API_URL}/sool/regions`, { headers: { 'Accept': 'application/json' } });
@@ -119,24 +130,6 @@ export default function Home() {
     setPage(1);
   };
 
-  const menuItems = useMemo(() => {
-    const base = [
-      { key: "1", icon: <AppstoreOutlined />, label: <Link href="/about">About</Link> },
-      { key: "2", icon: <CompassOutlined />, label: <Link href="/updates">Updates</Link> },
-      { key: "3", icon: <StarOutlined />, label: <Link href="/Tasting">Tasting</Link> },
-      { key: "4", icon: <BarChartOutlined />, label: <Link href="/dashboard">Analytics</Link> },
-      { key: "5", icon: <HeartOutlined />, label: <Link href="/community">Community</Link> },
-    ];
-    if (isAdmin) {
-      base.push({
-        key: "6",
-        icon: <AppstoreOutlined />,
-        label: <Link href="/admin/tasting/list">Tasting Admin</Link>,
-      });
-    }
-    return base;
-  }, [isAdmin]);
-
   return (
     <Layout style={{ minHeight: "100vh", backgroundColor: "#0a0a0a" }}>
       <Sider
@@ -151,38 +144,94 @@ export default function Home() {
           position: "fixed",
           height: "100vh",
           left: 0,
-          zIndex: 100
+          zIndex: 100,
+          display: "flex",
+          flexDirection: "column"
         }}
       >
-        <div style={{ 
-          height: 80, 
-          display: "flex", 
-          alignItems: "center", 
-          justifyContent: "center",
-          borderBottom: "1px solid #222",
-          marginBottom: 20
-        }}>
-          <Link href="/" style={{ textDecoration: "none", display: "flex", alignItems: "center", gap: 8 }}>
-            <span style={{ fontSize: 28 }}>🥃</span>
-            {!collapsed && <span style={{ color: "#fff", fontSize: 20, fontWeight: 700, letterSpacing: 1.5 }}>SOOL</span>}
-          </Link>
+        <div style={{ flex: 1 }}>
+          <div style={{ 
+            height: 80, 
+            display: "flex", 
+            alignItems: "center", 
+            justifyContent: "center",
+            borderBottom: "1px solid #222",
+            marginBottom: 20
+          }}>
+            <Link href="/" style={{ textDecoration: "none", display: "flex", alignItems: "center", gap: 8 }}>
+              <span style={{ fontSize: 28 }}>🥃</span>
+              {!collapsed && <span style={{ color: "#fff", fontSize: 20, fontWeight: 700, letterSpacing: 1.5 }}>SOOL</span>}
+            </Link>
+          </div>
+
+          <Menu
+            theme="dark"
+            mode="inline"
+            defaultSelectedKeys={["explore"]}
+            style={{ background: "transparent", border: "none" }}
+            items={[
+              { key: "explore", icon: <AppstoreOutlined />, label: "Explore" },
+              { key: "tasting", icon: <StarOutlined />, label: <Link href="/Tasting">Tasting Notes</Link> },
+              { key: "analytics", icon: <BarChartOutlined />, label: <Link href="/dashboard">Analytics</Link> },
+              { key: "updates", icon: <CompassOutlined />, label: <Link href="/updates">Discovery</Link> },
+              { key: "community", icon: <HeartOutlined />, label: <Link href="/community">Community</Link> },
+              ...(user ? [
+                { key: "profile", icon: <UserOutlined />, label: <Link href="/profile">My Page</Link> }
+              ] : []),
+              ...(user?.is_admin ? [
+                { key: "divider", type: "divider" as const, style: { backgroundColor: "#222" } },
+                { key: "admin", icon: <AppstoreOutlined />, label: <Link href="/admin">Admin Dashboard</Link> }
+              ] : []),
+            ]}
+          />
         </div>
 
-        <Menu
-          theme="dark"
-          mode="inline"
-          defaultSelectedKeys={["explore"]}
-          style={{ background: "transparent", border: "none" }}
-          items={[
-            { key: "explore", icon: <AppstoreOutlined />, label: "Explore" },
-            { key: "tasting", icon: <StarOutlined />, label: <Link href="/Tasting">Tasting Notes</Link> },
-            { key: "analytics", icon: <BarChartOutlined />, label: <Link href="/dashboard">Analytics</Link> },
-            { key: "updates", icon: <CompassOutlined />, label: <Link href="/updates">Updates</Link> },
-            { key: "community", icon: <HeartOutlined />, label: <Link href="/community">Community</Link> },
-            { key: "divider", type: "divider", style: { backgroundColor: "#222" } },
-            { key: "admin", icon: <AppstoreOutlined />, label: <Link href="/admin/tasting/list">Admin</Link> },
-          ]}
-        />
+        <div style={{ 
+          padding: "20px", 
+          borderTop: "1px solid #222", 
+          marginBottom: 40,
+          textAlign: collapsed ? "center" : "left" 
+        }}>
+          {user ? (
+            <Space orientation="vertical" size="middle" style={{ width: "100%" }}>
+              {!collapsed && (
+                <div>
+                  <Text style={{ color: "#fff", display: "block", fontWeight: 600 }}>{user.username}</Text>
+                  <Text style={{ color: "#444", fontSize: 12 }}>{user.email}</Text>
+                </div>
+              )}
+              <Button 
+                type="text" 
+                danger 
+                icon={<LockOutlined />} 
+                onClick={logout}
+                block={!collapsed}
+                style={{ display: "flex", alignItems: "center", justifyContent: collapsed ? "center" : "flex-start", padding: 0 }}
+              >
+                {!collapsed && "Logout"}
+              </Button>
+            </Space>
+          ) : (
+            <Link href="/login">
+              <Button 
+                type="primary" 
+                block={!collapsed}
+                icon={<UserOutlined />}
+                style={{ 
+                  background: "#d4af37", 
+                  color: "#000", 
+                  border: "none", 
+                  fontWeight: 700,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center"
+                }}
+              >
+                {!collapsed && "Sign In"}
+              </Button>
+            </Link>
+          )}
+        </div>
       </Sider>
 
       <Layout style={{ marginLeft: collapsed ? 80 : 240, background: "transparent", transition: "all 0.2s" }}>
@@ -225,10 +274,16 @@ export default function Home() {
               style={{ color: "#888" }}
             />
             <div style={{ width: 1, height: 20, background: "#333" }} />
-            <Text style={{ color: "#fff", fontWeight: 500 }}>Guest User</Text>
-            <Badge dot color="#d4af37">
-              <div style={{ width: 32, height: 32, borderRadius: "50%", background: "#333", border: "1px solid #444" }} />
-            </Badge>
+            <Link href={user ? "/profile" : "/login"}>
+              <Space size="small" style={{ cursor: 'pointer' }}>
+                <Text style={{ color: "#fff", fontWeight: 500 }}>{user ? user.username : "Guest User"}</Text>
+                <Badge dot color={user ? "#52c41a" : "#d4af37"}>
+                  <div style={{ width: 32, height: 32, borderRadius: "50%", background: "#333", border: "1px solid #444", display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <UserOutlined style={{ color: user ? "#fff" : "#666" }} />
+                  </div>
+                </Badge>
+              </Space>
+            </Link>
           </Space>
         </Header>
 
@@ -265,16 +320,17 @@ export default function Home() {
                   value={category}
                   onChange={setCategory}
                   options={CATEGORIES}
-                  dropdownStyle={{ background: "#1a1a1a", border: "1px solid #333" }}
+                  styles={{ popup: { root: { background: "#1a1a1a", border: "1px solid #333" } } }}
                 />
               </div>
-              <Select
-                variant="borderless"
-                style={{ width: 160, background: "#1a1a1a", borderRadius: 8, border: "1px solid #333" }}
-                value={region}
-                onChange={setRegion}
-                options={regionOptions.map((r) => ({ label: r, value: r }))}
-              />
+                <Select
+                  variant="borderless"
+                  style={{ width: 160, background: "#1a1a1a", borderRadius: 8, border: "1px solid #333" }}
+                  value={region}
+                  onChange={setRegion}
+                  options={regionOptions.map((r) => ({ label: r, value: r }))}
+                  styles={{ popup: { root: { background: "#1a1a1a", border: "1px solid #333" } } }}
+                />
             </Space>
 
             <Select
@@ -283,6 +339,7 @@ export default function Home() {
               value={sortOption}
               onChange={setSortOption}
               options={SORT_OPTIONS}
+              styles={{ popup: { root: { background: "#1a1a1a", border: "1px solid #333" } } }}
             />
           </div>
 
@@ -326,9 +383,17 @@ export default function Home() {
                         overflow: "hidden",
                         border: "1px solid #222"
                       }}>
-                        <div style={{ fontSize: 64, filter: "drop-shadow(0 10px 20px rgba(0,0,0,0.8))" }}>
-                          {item.category === "막걸리" ? "🍶" : "🥃"}
-                        </div>
+                        {item.image_url ? (
+                          <img 
+                            src={resolveImageUrl(item.image_url) || ""} 
+                            alt={item.name} 
+                            style={{ width: "100%", height: "100%", objectFit: "cover" }} 
+                          />
+                        ) : (
+                          <div style={{ fontSize: 64, filter: "drop-shadow(0 10px 20px rgba(0,0,0,0.8))" }}>
+                            {item.category === "막걸리" ? "🍶" : "🥃"}
+                          </div>
+                        )}
                         <div style={{ 
                           position: "absolute", 
                           bottom: 0, 

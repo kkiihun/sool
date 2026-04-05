@@ -25,7 +25,6 @@ router = APIRouter(prefix="/sool", tags=["Sool"])
 # ------------------------
 @router.post("/", response_model=SoolResponse)
 def create_sool(payload: SoolCreate, db: Session = Depends(get_db)):
-
     if db.query(Sool).filter(Sool.name == payload.name).first():
         raise HTTPException(status_code=400, detail="이미 등록된 술입니다.")
 
@@ -34,6 +33,29 @@ def create_sool(payload: SoolCreate, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(new_sool)
     return new_sool
+
+@router.put("/{sool_id}", response_model=SoolResponse)
+def update_sool(sool_id: int, payload: SoolCreate, db: Session = Depends(get_db)):
+    db_sool = db.query(Sool).filter(Sool.id == sool_id).first()
+    if not db_sool:
+        raise HTTPException(status_code=404, detail="Sool not found")
+    
+    for key, value in payload.dict().items():
+        setattr(db_sool, key, value)
+    
+    db.commit()
+    db.refresh(db_sool)
+    return db_sool
+
+@router.delete("/{sool_id}")
+def delete_sool(sool_id: int, db: Session = Depends(get_db)):
+    db_sool = db.query(Sool).filter(Sool.id == sool_id).first()
+    if not db_sool:
+        raise HTTPException(status_code=404, detail="Sool not found")
+    
+    db.delete(db_sool)
+    db.commit()
+    return {"message": "Sool deleted successfully"}
 
 
 # ------------------------
