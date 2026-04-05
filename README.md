@@ -150,7 +150,7 @@ npm run dev
 
 
    1. 서비스 실행:
-      docker-compose up -d --build
+      docker-compose up --build -d
 
    2. 초기 데이터 로드 (Seeding):
       docker exec -it sool-backend bash -c "PYTHONPATH=. python scripts/import_sool_basic.py"
