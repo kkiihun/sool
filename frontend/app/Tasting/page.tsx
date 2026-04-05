@@ -26,6 +26,13 @@ import {
 const { Sider, Header, Content, Footer } = Layout;
 const { Title, Text, Paragraph } = Typography;
 
+type Me = {
+  id: number;
+  email: string;
+  username: string;
+  is_admin: boolean;
+};
+
 export default function TastingPage() {
   const [collapsed, setCollapsed] = useState(false);
 

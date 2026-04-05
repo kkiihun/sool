@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState, useEffect } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Layout,
   Menu,
@@ -66,6 +66,8 @@ export default function Home() {
   const pageSize = 12;
 
   useEffect(() => {
+    let alive = true;
+
     async function loadRegions() {
       try {
         const res = await fetch(`${API_URL}/sool/regions`, { headers: { 'Accept': 'application/json' } });
@@ -77,6 +79,7 @@ export default function Home() {
         console.error("Failed to load regions:", err);
       }
     }
+
     loadRegions();
   }, [API_URL]);
 
@@ -115,6 +118,24 @@ export default function Home() {
     setSortOption("name");
     setPage(1);
   };
+
+  const menuItems = useMemo(() => {
+    const base = [
+      { key: "1", icon: <AppstoreOutlined />, label: <Link href="/about">About</Link> },
+      { key: "2", icon: <CompassOutlined />, label: <Link href="/updates">Updates</Link> },
+      { key: "3", icon: <StarOutlined />, label: <Link href="/Tasting">Tasting</Link> },
+      { key: "4", icon: <BarChartOutlined />, label: <Link href="/dashboard">Analytics</Link> },
+      { key: "5", icon: <HeartOutlined />, label: <Link href="/community">Community</Link> },
+    ];
+    if (isAdmin) {
+      base.push({
+        key: "6",
+        icon: <AppstoreOutlined />,
+        label: <Link href="/admin/tasting/list">Tasting Admin</Link>,
+      });
+    }
+    return base;
+  }, [isAdmin]);
 
   return (
     <Layout style={{ minHeight: "100vh", backgroundColor: "#0a0a0a" }}>
