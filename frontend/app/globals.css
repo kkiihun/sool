@@ -2,130 +2,112 @@
 @tailwind components;
 @tailwind utilities;
 
-/* =========================================================
-   Global Theme Tokens (SOOL)
-   - 통일된 톤앤매너: page별 인라인 색 제거용
-   - admin 모드: body.admin 클래스 오버라이드
-========================================================= */
+/* Premium Dark Theme Variables */
 :root {
-  /* Base tokens */
-  --bg: #0b0f14;
-  --panel: #0f1623;
-  --panel2: #0d1420;
-  --text: rgba(255, 255, 255, 0.92);
-  --muted: rgba(255, 255, 255, 0.7);
-  --border: rgba(255, 255, 255, 0.08);
-  --accent: #3b82f6;
-
-  --header-bg: rgba(11, 15, 20, 0.78);
-  --sider-bg: rgba(15, 22, 35, 0.92);
-  --shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
-
-  /* ✅ 기존 변수명 유지하되, 토큰을 참조하도록 연결 */
-  --background: var(--bg);
-  --foreground: var(--text);
+  --background: #0a0a0a;
+  --foreground: #ededed;
+  --accent: #d4af37;
+  --card-bg: #111111;
+  --border: #222222;
 }
 
-/* admin 모드 */
-body.admin {
-  --accent: #f5c84b;
-  --header-bg: rgba(245, 200, 75, 0.1);
-  --sider-bg: rgba(245, 200, 75, 0.06);
-  --border: rgba(245, 200, 75, 0.22);
+@layer base {
+  body {
+    background: var(--background);
+    color: var(--foreground);
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
 }
 
-/* =========================================================
-   Global Styles
-========================================================= */
-html,
-body {
-  height: 100%;
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
 }
-
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+::-webkit-scrollbar-track {
+  background: #0a0a0a;
 }
-
-/* 앤트디 기본 배경이 하얗게 튀는 것 방지 */
-.ant-layout,
-.ant-layout-content {
-  background: transparent;
-}
-
-/* =========================================================
-   Forms (기본 폼 스타일을 "다크 UI"에 맞게)
-   ⚠️ 전역 적용이므로 과하게 꾸미지 말고, 토큰 기반으로만
-========================================================= */
-form {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  max-width: 400px;
-}
-
-input,
-textarea,
-select {
-  padding: 10px 12px;
-  border: 1px solid var(--border);
-  background: rgba(255, 255, 255, 0.04);
-  color: var(--text);
+::-webkit-scrollbar-thumb {
+  background: #222;
   border-radius: 10px;
-  outline: none;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #333;
 }
 
-input::placeholder,
-textarea::placeholder {
-  color: rgba(255, 255, 255, 0.35);
+/* Ant Design Overrides */
+.ant-layout {
+  background: transparent !important;
 }
 
-input:focus,
-textarea:focus,
-select:focus {
-  border-color: rgba(59, 130, 246, 0.45);
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.18);
+.ant-card {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
 }
 
-/* admin 모드 포커스(골드) */
-body.admin input:focus,
-body.admin textarea:focus,
-body.admin select:focus {
-  border-color: rgba(245, 200, 75, 0.5);
-  box-shadow: 0 0 0 3px rgba(245, 200, 75, 0.18);
+.ant-card:hover {
+  border-color: var(--accent) !important;
+  box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.5) !important;
 }
 
-/* =========================================================
-   Buttons (전역 버튼 기본)
-========================================================= */
-button {
-  background: rgba(255, 255, 255, 0.06);
-  color: var(--text);
-  border: 1px solid var(--border);
-  padding: 10px 14px;
-  cursor: pointer;
-  border-radius: 10px;
-  font-weight: 600;
-  transition: transform 0.08s ease, opacity 0.2s ease, border-color 0.2s ease;
+.ant-pagination-item {
+  background: transparent !important;
+  border-color: #333 !important;
 }
 
-button:hover {
-  opacity: 0.92;
-  border-color: rgba(255, 255, 255, 0.16);
+.ant-pagination-item a {
+  color: #888 !important;
 }
 
-button:active {
-  transform: translateY(1px);
+.ant-pagination-item-active {
+  border-color: var(--accent) !important;
 }
 
-/* primary 느낌이 필요하면 class로 따로 쓰기 */
-.btn-primary {
-  background: rgba(59, 130, 246, 0.16);
-  border-color: rgba(59, 130, 246, 0.35);
+.ant-pagination-item-active a {
+  color: var(--accent) !important;
 }
 
-body.admin .btn-primary {
-  background: rgba(245, 200, 75, 0.14);
-  border-color: rgba(245, 200, 75, 0.35);
+.ant-pagination-prev .ant-pagination-item-link,
+.ant-pagination-next .ant-pagination-item-link {
+  background: transparent !important;
+  border-color: #333 !important;
+  color: #888 !important;
+}
+
+.ant-select-dropdown {
+  background-color: #1a1a1a !important;
+  border: 1px solid #333 !important;
+  padding: 4px !important;
+}
+
+.ant-select-item {
+  color: #aaa !important;
+  border-radius: 4px !important;
+  margin-bottom: 2px !important;
+}
+
+.ant-select-item-option-selected {
+  background-color: #333 !important;
+  color: var(--accent) !important;
+}
+
+.ant-select-item-option-active {
+  background-color: #222 !important;
+}
+
+/* Transitions */
+.page-transition {
+  animation: fadeIn 0.5s ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Responsive Grid Fix */
+.sool-grid {
+  display: grid;
+  gap: 32px;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
 }

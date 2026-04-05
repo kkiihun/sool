@@ -1,238 +1,257 @@
-// frontend/app/updates/page.tsx
 "use client";
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { ArrowLeftOutlined, PlusOutlined } from "@ant-design/icons";
+import {
+  Layout,
+  Menu,
+  Typography,
+  Card,
+  Row,
+  Col,
+  Spin,
+  Badge,
+  Button,
+  Space,
+  Timeline,
+} from "antd";
+import {
+  AppstoreOutlined,
+  CompassOutlined,
+  StarOutlined,
+  HeartOutlined,
+  BarChartOutlined,
+  ArrowLeftOutlined,
+  FireOutlined,
+  SoundOutlined,
+  ClockCircleOutlined,
+} from "@ant-design/icons";
+import { useRouter } from "next/navigation";
 
-interface UpdateItem {
-  message: string;
-  timestamp: string; // "2025-12-10 23:11:22"
+const { Sider, Header, Content, Footer } = Layout;
+const { Title, Text, Paragraph } = Typography;
+
+interface Sool {
+  id: number;
+  name: string;
+  category: string;
+  abv: number;
+  region: string;
 }
 
-export default function UpdatesPage() {
-  const [updates, setUpdates] = useState<UpdateItem[]>([]);
-  const [newMessage, setNewMessage] = useState("");
-  const [loadingList, setLoadingList] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+interface Review {
+  id: number;
+  sool_name: string;
+  rating: number;
+  notes: string;
+  timestamp: string;
+}
 
-  const fetchUpdates = async () => {
-    setLoadingList(true);
-    setErrorMsg(null);
+export default function DiscoveryPage() {
+  const router = useRouter();
+  const [collapsed, setCollapsed] = useState(false);
+  const [newSool, setNewSool] = useState<Sool[]>([]);
+  const [recentActivity, setRecentActivity] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
-    try {
-      const res = await fetch("/api/updates", { cache: "no-store" });
-
-      if (!res.ok) {
-        const text = await res.text().catch(() => "");
-        console.error("GET /api/updates failed:", res.status, text);
-        setUpdates([]);
-        setErrorMsg(`목록 불러오기 실패 (status ${res.status})`);
-        return;
-      }
-
-      const data = await res.json().catch(() => []);
-      // 백엔드가 배열을 주는 형태를 기대. 혹시 {items: []} 형태면 대응.
-      const items = Array.isArray(data) ? data : data?.items;
-
-      setUpdates(Array.isArray(items) ? items : []);
-    } catch (e) {
-      console.error("GET /api/updates error:", e);
-      setUpdates([]);
-      setErrorMsg("목록 불러오기 실패 (네트워크/서버 확인)");
-    } finally {
-      setLoadingList(false);
-    }
-  };
+  const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
   useEffect(() => {
-    fetchUpdates();
-  }, []);
+    async function fetchData() {
+      try {
+        const [soolRes, activityRes] = await Promise.all([
+          fetch(`${API_URL}/sool/new-arrivals`),
+          fetch(`${API_URL}/sense/list?limit=5`),
+        ]);
 
-  const handleAdd = async () => {
-    if (saving) return; // 중복 클릭/중복 호출 방지
-    const msg = newMessage.trim();
-    if (!msg) {
-      alert("내용을 입력해주세요.");
-      return;
-    }
-
-    setSaving(true);
-    setErrorMsg(null);
-
-    try {
-      const res = await fetch("/api/updates", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: newMessage.trim() }),
-      });
-
-      if (!res.ok) {
-        const detail = await res.text().catch(() => "");
-        throw new Error(detail || "저장 실패");
+        if (soolRes.ok) setNewSool(await soolRes.json());
+        if (activityRes.ok) setRecentActivity(await activityRes.json());
+      } catch (err) {
+        console.error("Failed to fetch discovery data:", err);
+      } finally {
+        setLoading(false);
       }
-
-      setNewMessage("");
-      await fetchUpdates(); // 여기서만 동기화 (prepend 제거)
-    } catch (e) {
-      console.error("POST /api/updates error:", e);
-      setErrorMsg("업데이트 저장 실패 (백엔드/DB/프록시 확인)");
-      alert("업데이트 저장 중 오류가 발생했습니다.");
-    } finally {
-      setSaving(false);
     }
-  };
-
-    // JSX input 부분만 수정
-     
-    <input
-      value={newMessage}
-      onChange={(e) => setNewMessage(e.target.value)}
-      placeholder="예) 2026-01-15: Updates POST 경로를 /api/updates로 통일"
-      style={{ /* 동일 */ }}
-      onKeyDown={(e) => {
-        if (e.key === "Enter") {
-          // ✅ Enter 단독: 아무 반응 없게(또는 줄바꿈 안되게)
-          if (!(e.ctrlKey || e.metaKey)) {
-            e.preventDefault();
-            return;
-          }
-          // ✅ Ctrl+Enter(Win) / Cmd+Enter(Mac)만 저장
-          e.preventDefault();
-          handleAdd();
-        }
-      }}
-    />
-
-      // 수정 전
-      /*
-      const created = await res.json().catch(() => null);
-
-      // created가 UpdateItem 형태면 바로 prepend, 아니면 재조회로 확실히 동기화
-      if (created && typeof created?.message === "string") {
-        setUpdates((prev) => [created as UpdateItem, ...prev]);
-      } else {
-        await fetchUpdates();
-      }
-
-      setNewMessage("");
-    } catch (e) {
-      console.error("POST /api/updates error:", e);
-      setErrorMsg("업데이트 저장 실패 (백엔드/DB/프록시 확인)");
-      alert("업데이트 저장 중 오류가 발생했습니다.");
-    } finally {
-      setSaving(false);
-    }
-  };
-    */
-
+    fetchData();
+  }, [API_URL]);
 
   return (
-    <div style={{ padding: 40, color: "#fff" }}>
-      {/* 🔙 홈으로 돌아가기 */}
-      <div style={{ marginBottom: 20 }}>
-        <Link href="/" style={{ color: "#6aaaff", fontSize: 14 }}>
-          <ArrowLeftOutlined style={{ marginRight: 6 }} />
-          홈으로 돌아가기
-        </Link>
-      </div>
-
-      <h1 style={{ fontSize: 32, fontWeight: 700, marginBottom: 12 }}>
-        Updates
-      </h1>
-
-      <p style={{ color: "#888", marginBottom: 24 }}>
-        개발 이력/삽질 로그를 1줄씩 쌓는 페이지 (DB 저장)
-      </p>
-
-      {/* 에러 배너 */}
-      {errorMsg && (
-        <div
-          style={{
-            marginBottom: 16,
-            padding: "10px 12px",
-            borderRadius: 8,
-            border: "1px solid #7f1d1d",
-            background: "#1f0b0b",
-            color: "#fecaca",
-          }}
-        >
-          {errorMsg}
+    <Layout style={{ minHeight: "100vh", backgroundColor: "#0a0a0a" }}>
+      <Sider
+        collapsible
+        collapsed={collapsed}
+        onCollapse={setCollapsed}
+        theme="dark"
+        width={240}
+        style={{ 
+          background: "#0a0a0a", 
+          borderRight: "1px solid #222",
+          position: "fixed",
+          height: "100vh",
+          left: 0,
+          zIndex: 100
+        }}
+      >
+        <div style={{ height: 80, display: "flex", alignItems: "center", justifyContent: "center", borderBottom: "1px solid #222", marginBottom: 20 }}>
+          <Link href="/" style={{ textDecoration: "none", display: "flex", alignItems: "center", gap: 8 }}>
+            <span style={{ fontSize: 28 }}>🥃</span>
+            {!collapsed && <span style={{ color: "#fff", fontSize: 20, fontWeight: 700, letterSpacing: 1.5 }}>SOOL</span>}
+          </Link>
         </div>
-      )}
-
-      {/* 입력 영역 */}
-      <div style={{ display: "flex", gap: 8, marginBottom: 24 }}>
-        <input
-          value={newMessage}
-          onChange={(e) => setNewMessage(e.target.value)}
-          placeholder="예) 2026-MM-DD: Updates POST 경로를 /api/updates로 통일"
-          style={{
-            flex: 1,
-            padding: "8px 12px",
-            borderRadius: 6,
-            border: "1px solid #444",
-            background: "#111",
-            color: "#eee",
-          }}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) handleAdd();
-          }}
+        <Menu
+          theme="dark"
+          mode="inline"
+          selectedKeys={["updates"]}
+          style={{ background: "transparent", border: "none" }}
+          items={[
+            { key: "explore", icon: <AppstoreOutlined />, label: <Link href="/">Explore</Link> },
+            { key: "tasting", icon: <StarOutlined />, label: <Link href="/Tasting">Tasting Notes</Link> },
+            { key: "analytics", icon: <BarChartOutlined />, label: <Link href="/dashboard">Analytics</Link> },
+            { key: "updates", icon: <CompassOutlined />, label: "Discovery" },
+            { key: "community", icon: <HeartOutlined />, label: <Link href="/community">Community</Link> },
+          ]}
         />
+      </Sider>
 
-        <button
-          onClick={handleAdd}
-          disabled={saving}
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 6,
-            padding: "8px 16px",
-            borderRadius: 6,
-            border: "none",
-            background: saving ? "#334155" : "#3b82f6",
-            color: "#fff",
-            cursor: saving ? "not-allowed" : "pointer",
-            opacity: saving ? 0.75 : 1,
-          }}
-          title="Ctrl+Enter 로도 추가 가능"
-        >
-          <PlusOutlined />
-          {saving ? "저장중..." : "추가"}
-        </button>
-      </div>
+      <Layout style={{ marginLeft: collapsed ? 80 : 240, background: "transparent", transition: "all 0.2s" }}>
+        <Header style={{ 
+          background: "rgba(10, 10, 10, 0.8)", 
+          backdropFilter: "blur(10px)",
+          padding: "0 40px",
+          height: 80,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          borderBottom: "1px solid #222",
+          position: "sticky",
+          top: 0,
+          zIndex: 90
+        }}>
+          <Space>
+            <Button type="text" icon={<ArrowLeftOutlined />} onClick={() => router.back()} style={{ color: "#888" }} />
+            <Title level={4} style={{ color: "#fff", margin: 0 }}>Discovery Center</Title>
+          </Space>
+          <Badge count="LIVE" style={{ backgroundColor: "#d4af37", color: "#000", fontWeight: 700, border: "none" }} />
+        </Header>
 
-      {/* 리스트 */}
-      {loadingList ? (
-        <p style={{ color: "#888" }}>불러오는 중...</p>
-      ) : updates.length === 0 ? (
-        <p style={{ color: "#888" }}>아직 등록된 업데이트가 없습니다.</p>
-      ) : (
-        <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
-          {updates.map((item, idx) => (
-            <li
-              key={`${item.timestamp}-${idx}`}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 8,
-                marginBottom: 12,
-              }}
-            >
-              <span style={{ color: "#facc15", marginRight: 4 }}>⭐</span>
-              <span style={{ color: "#e6e6e6" }}>{item.message}</span>
-              <span style={{ color: "#888", fontSize: 14, marginLeft: 8 }}>
-                ({item.timestamp})
-              </span>
-            </li>
-          ))}
-        </ul>
-      )}
+        <Content style={{ padding: "60px 80px" }}>
+          {/* Section 1: New Arrivals */}
+          <div style={{ marginBottom: 80 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 32 }}>
+              <div>
+                <Title style={{ color: "#fff", fontSize: 48, fontWeight: 900, margin: 0 }}>
+                  What's <span style={{ color: "#d4af37" }}>New</span>
+                </Title>
+                <Text style={{ color: "#666", fontSize: 18 }}>The latest additions to our curated heritage collection.</Text>
+              </div>
+              <Link href="/">
+                <Button type="link" style={{ color: "#d4af37", fontSize: 16 }}>Explore All Collections →</Button>
+              </Link>
+            </div>
 
-      <div style={{ marginTop: 18, color: "#666", fontSize: 12 }}>
-        팁: 입력 후 <b>Ctrl+Enter</b> 로 빠르게 추가 가능
-      </div>
-    </div>
+            {loading ? (
+              <Spin size="large" />
+            ) : (
+              <Row gutter={[32, 32]}>
+                {newSool.map((item) => (
+                  <Col xs={24} sm={12} lg={6} key={item.id}>
+                    <Link href={`/sool/${item.id}`}>
+                      <Card 
+                        hoverable
+                        style={{ background: "#111", border: "1px solid #222", borderRadius: 20, overflow: "hidden" }}
+                        styles={{ body: { padding: 24 } }}
+                      >
+                        <div style={{ aspectRatio: "1/1", background: "linear-gradient(45deg, #1a1a1a, #050505)", borderRadius: 12, marginBottom: 20, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 48 }}>
+                          {item.category === "막걸리" ? "🍶" : "🥃"}
+                        </div>
+                        <Badge status="processing" color="#d4af37" text={<span style={{ color: "#888", fontSize: 12 }}>JUST ADDED</span>} />
+                        <Title level={4} style={{ color: "#fff", margin: "12px 0 4px" }}>{item.name}</Title>
+                        <Text style={{ color: "#555" }}>{item.region} • {item.abv}%</Text>
+                      </Card>
+                    </Link>
+                  </Col>
+                ))}
+              </Row>
+            )}
+          </div>
+
+          <Row gutter={64}>
+            {/* Section 2: Live Feed */}
+            <Col xs={24} lg={14}>
+              <div style={{ background: "#111", padding: 40, borderRadius: 32, border: "1px solid #222" }}>
+                <Title level={3} style={{ color: "#fff", marginBottom: 32, display: "flex", alignItems: "center", gap: 16 }}>
+                  <SoundOutlined style={{ color: "#d4af37" }} />
+                  Community Pulse
+                </Title>
+                <Timeline 
+                  mode="left"
+                  pending={<Text style={{ color: "#444" }}>Awaiting more sensory data...</Text>}
+                  reverse={false}
+                  items={recentActivity.map((act) => ({
+                    color: "#d4af37",
+                    label: <Text style={{ color: "#444" }}>{act.created_at ? new Date(act.created_at).toLocaleTimeString() : "Just now"}</Text>,
+                    children: (
+                      <div style={{ marginBottom: 24 }}>
+                        <Text style={{ color: "#fff", fontSize: 16, fontWeight: 600, display: "block" }}>
+                          New Tasting Note on <span style={{ color: "#d4af37" }}>Spirit #{act.sool_id}</span>
+                        </Text>
+                        <Paragraph style={{ color: "#888", marginTop: 8, fontStyle: "italic" }}>
+                          "{act.notes || "Recorded a visual and aromatic profile."}"
+                        </Paragraph>
+                        <Space>
+                          <StarOutlined style={{ color: "#d4af37" }} />
+                          <Text style={{ color: "#d4af37" }}>{act.rating}/10</Text>
+                        </Space>
+                      </div>
+                    )
+                  }))}
+                />
+              </div>
+            </Col>
+
+            {/* Section 3: Trending Stats */}
+            <Col xs={24} lg={10}>
+              <Card 
+                style={{ background: "#111", border: "1px solid #222", borderRadius: 32, marginBottom: 32 }}
+                styles={{ body: { padding: 32 } }}
+              >
+                <Title level={4} style={{ color: "#fff", marginBottom: 24, display: "flex", alignItems: "center", gap: 12 }}>
+                  <FireOutlined style={{ color: "#d4af37" }} />
+                  Hot Picks
+                </Title>
+                <Space direction="vertical" size="large" style={{ width: "100%" }}>
+                  <div style={{ background: "#1a1a1a", padding: 20, borderRadius: 16, border: "1px solid #333" }}>
+                    <Text style={{ color: "#888", display: "block", marginBottom: 8 }}>MOST REVIEWED THIS WEEK</Text>
+                    <Title level={5} style={{ color: "#fff", margin: 0 }}>나루 약주</Title>
+                    <Text style={{ color: "#d4af37" }}>42 New Reviews</Text>
+                  </div>
+                  <div style={{ background: "#1a1a1a", padding: 20, borderRadius: 16, border: "1px solid #333" }}>
+                    <Text style={{ color: "#888", display: "block", marginBottom: 8 }}>HIGHEST RATING TREND</Text>
+                    <Title level={5} style={{ color: "#fff", margin: 0 }}>일품 안동소주</Title>
+                    <Text style={{ color: "#d4af37" }}>Average 9.8/10</Text>
+                  </div>
+                </Space>
+              </Card>
+
+              <div style={{ textAlign: "center", padding: 40, border: "1px dashed #222", borderRadius: 32 }}>
+                <ClockCircleOutlined style={{ fontSize: 32, color: "#222", marginBottom: 16 }} />
+                <Text style={{ color: "#444", display: "block" }}>Stay tuned for more updates on the heritage map.</Text>
+              </div>
+            </Col>
+          </Row>
+        </Content>
+
+        <Footer style={{ 
+          background: "transparent", 
+          color: "#444", 
+          textAlign: "center", 
+          padding: "40px 0",
+          borderTop: "1px solid #222",
+          marginTop: 60
+        }}>
+          SOOL DISCOVERY — UNVEILING THE HIDDEN HERITAGE
+        </Footer>
+      </Layout>
+    </Layout>
   );
 }

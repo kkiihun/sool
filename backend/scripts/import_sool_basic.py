@@ -2,8 +2,14 @@
 
 import pandas as pd
 import re
-from app.core.database import SessionLocal
+from app.core.database import SessionLocal, Base, engine
+# 모든 모델을 임포트하여 SQLAlchemy가 관계를 해석할 수 있게 합니다.
 from app.models.sool import Sool
+from app.models.user import User
+from app.models.sense import Sense
+from app.models.review import Review
+from app.models.tasting import Tasting
+from app.models.tasting_note import TastingNote
 
 CSV_PATH = "data/sool_basic_clean.csv"
 

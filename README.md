@@ -16,11 +16,31 @@
 
 ---
 
+## Docker Setup (추천)
+
+Docker를 사용하여 프로젝트를 즉시 구동할 수 있습니다. (MariaDB 포함)
+
+### 1. 서비스 실행
+```bash
+docker-compose up -d --build
+```
+
+### 2. 초기 데이터 임포트 (Seeding)
+DB가 생성된 후, 다음 명령어를 실행하여 전통주 기초 데이터를 로드합니다.
+```bash
+docker exec -it sool-backend bash -c "PYTHONPATH=. python scripts/import_sool_basic.py"
+```
+
+### 3. 접속 정보
+- **Frontend**: [http://localhost:3000](http://localhost:3000)
+- **Backend API**: [http://localhost:8000](http://localhost:8000)
+- **Database**: `localhost:3306` (User: `sool`, Password: `soolpass`)
+
+---
+
 ## 기술 스택
 - Backend: FastAPI, SQLAlchemy
-- Database:
-  - **MariaDB (Docker, v1 / Windows dev 기준)**
-  - SQLite (초기 MVP 버전)
+- Database: MariaDB (Docker 기반)
 - Frontend: Next.js, Tailwind CSS
 - Data / Analysis: Pandas
 
@@ -83,5 +103,27 @@
 ## 1) DB + Backend 실행 (Docker)
 프로젝트 루트에서:
 
-```bash
-docker compose up -d --build
+본 프로젝트는  
+**데이터 분석가 / 백엔드 포지션 지원을 위한 포트폴리오**로,
+
+- 데이터 모델링
+- API 설계
+- 분석 파이프라인 구축
+- 서비스 구조 설계
+
+역량을 **실제 구현 결과물**로 증명하는 것을 목표로 합니다.
+
+
+  실행 방법
+
+  프로젝트 루트 디렉토리에서 아래 명령어를 순서대로 실행하세요.
+
+
+   1. 서비스 실행:
+   1     docker-compose up -d --build
+
+   2. 초기 데이터 로드 (Seeding):
+   1     docker exec -it sool-backend bash -c "PYTHONPATH=. python scripts/import_sool_basic.py"
+   3. 접속:
+       * Frontend: http://localhost:3000 (http://localhost:3000)
+       * Backend API: http://localhost:8000 (http://localhost:8000)

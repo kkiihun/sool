@@ -3,9 +3,10 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "dev": "NODE_OPTIONS='--max-old-space-size=4096' next dev",
+    "build": "next build",
     "start": "next start",
-    "build": "node scripts/write-git-env.mjs && next build",
-    "dev": "cross-env NODE_OPTIONS=--max-old-space-size=4096 next dev"
+    "lint": "next lint"
   },
   "dependencies": {
     "@ant-design/icons": "^6.1.0",

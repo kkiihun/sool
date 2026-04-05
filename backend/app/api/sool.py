@@ -205,6 +205,64 @@ def get_sool_summary(sool_id: int, db: Session = Depends(get_db)):
 
 
 # ------------------------
+# 📌 신상 주류 (최근 등록 10개)
+# ------------------------
+@router.get("/new-arrivals", response_model=list[SoolResponse])
+def get_new_arrivals(db: Session = Depends(get_db)):
+    return db.query(Sool).order_by(Sool.id.desc()).limit(10).all()
+
+
+# ------------------------
+# 📌 통계 (대시보드용)
+# ------------------------
+@router.get("/stats")
+def get_sool_stats(db: Session = Depends(get_db)):
+    try:
+        total_count = db.query(Sool).count()
+        avg_abv_val = db.query(func.avg(Sool.abv)).scalar()
+        avg_abv = round(float(avg_abv_val), 1) if avg_abv_val is not None else 0
+        
+        # 카테고리 분포
+        cat_dist = (
+            db.query(Sool.category, func.count(Sool.id))
+            .group_by(Sool.category)
+            .all()
+        )
+        category_data = [{"name": c[0] or "Unknown", "value": c[1]} for c in cat_dist]
+        
+        # 지역 분포 (상위 10개)
+        reg_dist = (
+            db.query(Sool.region, func.count(Sool.id))
+            .group_by(Sool.region)
+            .order_by(func.count(Sool.id).desc())
+            .limit(10)
+            .all()
+        )
+        region_data = [{"name": r[0] or "Unknown", "value": r[1]} for r in reg_dist]
+        
+        # 리뷰 총수
+        total_reviews = db.query(Sense).count()
+        
+        return {
+            "total_sool": total_count,
+            "avg_abv": avg_abv,
+            "total_reviews": total_reviews,
+            "category_distribution": category_data,
+            "region_distribution": region_data,
+        }
+    except Exception as e:
+        print(f"Error in /stats: {e}")
+        return {
+            "total_sool": 0,
+            "avg_abv": 0,
+            "total_reviews": 0,
+            "category_distribution": [],
+            "region_distribution": [],
+            "error": str(e)
+        }
+
+
+# ------------------------
 # 📌 상세 조회 (충돌 방지)
 # ------------------------
 @router.get("/by-id/{sool_id}", response_model=SoolResponse)
