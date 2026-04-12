@@ -1,6 +1,5 @@
 from .sool import Sool
-from .sense import Sense
+from .tasting_note import TastingNote
 from .review import Review
 
-
-__all__ = ["Sool"]
+__all__ = ["Sool", "TastingNote", "Review"]

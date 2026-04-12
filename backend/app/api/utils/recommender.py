@@ -6,10 +6,11 @@ def flavor_vector(note):
     Index order must be consistent with model:
     [aroma, sweetness, acidity, body, finish]
     """
+    # note가 TastingNote 인스턴스이거나 유사한 객체인 경우
     return [
-        float(note.aroma or 0),
-        float(note.sweetness or 0),
-        float(note.acidity or 0),
-        float(note.body or 0),
-        float(note.finish or 0)
+        float(getattr(note, "aroma", 0) or 0),
+        float(getattr(note, "sweetness", 0) or 0),
+        float(getattr(note, "acidity", 0) or 0),
+        float(getattr(note, "body", 0) or 0),
+        float(getattr(note, "finish", 0) or 0)
     ]

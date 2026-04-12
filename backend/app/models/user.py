@@ -14,9 +14,9 @@ class User(Base):
     is_admin = Column(Boolean, default=False)
     status = Column(String(20), default="active") # active, suspended, locked
 
-    # 🔹 사용자가 작성한 시음 기록 (Sense)
-    sense_notes = relationship(
-        "Sense",
+    # 🔹 사용자가 작성한 시음 기록 (Standardized)
+    tasting_notes = relationship(
+        "TastingNote",
         back_populates="user",
         cascade="all, delete-orphan"
     )

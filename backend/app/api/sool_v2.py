@@ -19,7 +19,7 @@ router = APIRouter(
 # ================================
 @router.get("/search", summary="Search SOOL with pagination, sorting & filters", operation_id="search_sool_v2")
 def search_sool(
-    q: str = Query(None),  # ← 검색어 없어도 목록 필터 조회 가능하게 변경
+    q: str = Query(None),
     page: int = Query(1, ge=1),
     limit: int = Query(20, ge=1, le=100),
 
@@ -60,7 +60,7 @@ def search_sool(
     # 정렬 필드 정의
     valid_fields = {
         "name": Sool.name,
-        "adv": Sool.abv,
+        "abv": Sool.abv,
         "region": Sool.region,
         "producer": Sool.producer
     }
@@ -87,7 +87,7 @@ def search_sool(
 
 
 # ================================
-# 🔥 Suggest API (자동완성)  ⬅⬅⬅ 이 코드 추가!
+# 🔥 Suggest API (자동완성)
 # ================================
 @router.get("/suggest", summary="Autocomplete suggestion for SOOL name")
 def suggest_sool(
@@ -113,7 +113,7 @@ def suggest_sool(
 # 🔥 Advanced SOOL recommendation
 # ================================
 
-@router.get("/recommend/advanced", summary="Advanced SOOL recommendation (review + scoring)")
+@router.get("/recommend/advanced", summary="Advanced SOOL recommendation (TastingNote + scoring)")
 def recommend_advanced(
     q: str = Query(None),
     region: str = Query(None),
@@ -121,14 +121,14 @@ def recommend_advanced(
 ):
     db: Session = SessionLocal()
 
-    # Sool + Review Join → 평균 평점 & 리뷰수 계산
+    # Sool + TastingNote Join → 평균 평점 & 리뷰수 계산
     data = (
         db.query(
             Sool,
-            func.avg(Review.rating).label("avg_rating"),
-            func.count(Review.id).label("review_count")
+            func.avg(TastingNote.rating).label("avg_rating"),
+            func.count(TastingNote.id).label("review_count")
         )
-        .outerjoin(Review, Review.sool_id == Sool.id)
+        .outerjoin(TastingNote, TastingNote.sool_id == Sool.id)
         .group_by(Sool.id)
         .all()
     )
@@ -137,15 +137,15 @@ def recommend_advanced(
     for sool, avg_rating, review_count in data:
         score = 0
 
-        # 🔥 Step5 기본 매칭 점수 유지
+        # 기본 매칭 점수
         if q and q in sool.name: score += 3
         if region and region in (sool.region or ""): score += 2
 
-        # 🔥 Step6: 고도화 점수 반영
+        # 고도화 점수 반영
         if avg_rating:
             score += float(avg_rating) * 1.5    # 평점 가중치
         if review_count:
-            score += min(review_count, 20) * 0.2   # 과도한 영향 방지
+            score += min(review_count, 20) * 0.2   # 리뷰수 영향 반영
 
         scored.append((score, sool, avg_rating, review_count))
 
@@ -156,7 +156,7 @@ def recommend_advanced(
             "id": s.id,
             "name": s.name,
             "score": score,
-            "avg_rating": avg_rating,
+            "avg_rating": float(avg_rating) if avg_rating else None,
             "review_count": review_count,
         }
         for score, s, avg_rating, review_count in scored[:limit]
@@ -187,16 +187,16 @@ def similar_sool(sool_id: int, limit: int = 10):
     for item in others:
         score = 0
 
-        # 🔥 Similarity 계산 로직
+        # Similarity 계산 로직
         if item.region == base.region:
             score += 3
         if item.producer == base.producer:
             score += 2
 
-        # 도수 차이가 가까우면 + 점수 (차이가 작을수록 유사)
+        # 도수 차이가 가까우면 + 점수
         if item.abv and base.abv:
             diff = abs(item.abv - base.abv)
-            score += max(0, 5 - diff)   # 차이 5도 이내면 점수 부여
+            score += max(0, 5 - diff)
 
         scored.append((score, item))
 
@@ -231,7 +231,13 @@ def similar_by_flavor(sool_id: int, limit: int = 5):
 
     for note in notes:
         vec = np.array(flavor_vector(note))
-        similarity = np.dot(base_vec, vec) / (np.linalg.norm(base_vec) * np.linalg.norm(vec))
+        # Zero vector check to avoid division by zero
+        norm_base = np.linalg.norm(base_vec)
+        norm_vec = np.linalg.norm(vec)
+        if norm_base == 0 or norm_vec == 0:
+            similarity = 0
+        else:
+            similarity = np.dot(base_vec, vec) / (norm_base * norm_vec)
         results.append((similarity, note.sool_id))
 
     results.sort(key=lambda x: x[0], reverse=True)
@@ -240,7 +246,8 @@ def similar_by_flavor(sool_id: int, limit: int = 5):
     sools = []
     for sim, sid in top:
         sool = db.query(Sool).filter(Sool.id == sid).first()
-        sools.append({"id": sid, "name": sool.name, "similarity": float(sim)})
+        if sool:
+            sools.append({"id": sid, "name": sool.name, "similarity": float(sim)})
 
     return {
         "base_sool_id": sool_id,

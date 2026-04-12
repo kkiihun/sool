@@ -1,6 +1,4 @@
-from app.models.sense import Sense
 from app.schemas.sool_schema import SoolSummaryResponse, RadarAvg
-
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
@@ -28,7 +26,7 @@ def create_sool(payload: SoolCreate, db: Session = Depends(get_db)):
     if db.query(Sool).filter(Sool.name == payload.name).first():
         raise HTTPException(status_code=400, detail="이미 등록된 술입니다.")
 
-    new_sool = Sool(**payload.dict())
+    new_sool = Sool(**payload.model_dump())
     db.add(new_sool)
     db.commit()
     db.refresh(new_sool)
@@ -40,7 +38,7 @@ def update_sool(sool_id: int, payload: SoolCreate, db: Session = Depends(get_db)
     if not db_sool:
         raise HTTPException(status_code=404, detail="Sool not found")
     
-    for key, value in payload.dict().items():
+    for key, value in payload.model_dump().items():
         setattr(db_sool, key, value)
     
     db.commit()
@@ -200,15 +198,15 @@ def get_sool_summary(sool_id: int, db: Session = Depends(get_db)):
 
     row = (
         db.query(
-            func.count(Sense.id).label("count"),
-            func.avg(Sense.rating).label("avg_rating"),
-            func.avg(Sense.aroma).label("avg_aroma"),
-            func.avg(Sense.sweetness).label("avg_sweetness"),
-            func.avg(Sense.acidity).label("avg_acidity"),
-            func.avg(Sense.body).label("avg_body"),
-            func.avg(Sense.aftertaste).label("avg_aftertaste"),
+            func.count(TastingNote.id).label("count"),
+            func.avg(TastingNote.rating).label("avg_rating"),
+            func.avg(TastingNote.aroma).label("avg_aroma"),
+            func.avg(TastingNote.sweetness).label("avg_sweetness"),
+            func.avg(TastingNote.acidity).label("avg_acidity"),
+            func.avg(TastingNote.body).label("avg_body"),
+            func.avg(TastingNote.finish).label("avg_finish"),
         )
-        .filter(Sense.sool_id == sool_id)
+        .filter(TastingNote.sool_id == sool_id)
         .one()
     )
 
@@ -221,7 +219,7 @@ def get_sool_summary(sool_id: int, db: Session = Depends(get_db)):
             sweetness=float(row.avg_sweetness) if row.avg_sweetness is not None else None,
             acidity=float(row.avg_acidity) if row.avg_acidity is not None else None,
             body=float(row.avg_body) if row.avg_body is not None else None,
-            finish=float(row.avg_aftertaste) if row.avg_aftertaste is not None else None,
+            finish=float(row.avg_finish) if row.avg_finish is not None else None,
         ),
     )
 
@@ -262,8 +260,35 @@ def get_sool_stats(db: Session = Depends(get_db)):
         )
         region_data = [{"name": r[0] or "Unknown", "value": r[1]} for r in reg_dist]
         
+        # 🧠 맛 지표 통계 추가 (카테고리별 맛 평균)
+        flavor_stats = (
+            db.query(
+                Sool.category,
+                func.avg(TastingNote.aroma).label("aroma"),
+                func.avg(TastingNote.sweetness).label("sweetness"),
+                func.avg(TastingNote.acidity).label("acidity"),
+                func.avg(TastingNote.body).label("body"),
+                func.avg(TastingNote.finish).label("finish")
+            )
+            .join(TastingNote, TastingNote.sool_id == Sool.id)
+            .group_by(Sool.category)
+            .all()
+        )
+        
+        flavor_data = []
+        for f in flavor_stats:
+            if f.category:
+                flavor_data.append({
+                    "category": f.category,
+                    "aroma": round(float(f.aroma or 0), 2),
+                    "sweetness": round(float(f.sweetness or 0), 2),
+                    "acidity": round(float(f.acidity or 0), 2),
+                    "body": round(float(f.body or 0), 2),
+                    "finish": round(float(f.finish or 0), 2),
+                })
+
         # 리뷰 총수
-        total_reviews = db.query(Sense).count()
+        total_reviews = db.query(TastingNote).count()
         
         return {
             "total_sool": total_count,
@@ -271,6 +296,7 @@ def get_sool_stats(db: Session = Depends(get_db)):
             "total_reviews": total_reviews,
             "category_distribution": category_data,
             "region_distribution": region_data,
+            "flavor_stats": flavor_data,
         }
     except Exception as e:
         print(f"Error in /stats: {e}")
@@ -280,6 +306,7 @@ def get_sool_stats(db: Session = Depends(get_db)):
             "total_reviews": 0,
             "category_distribution": [],
             "region_distribution": [],
+            "flavor_stats": [],
             "error": str(e)
         }
 
@@ -295,6 +322,3 @@ def get_sool_detail(sool_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Sool Not Found")
 
     return sool
-
-
-print("🔥 LOADED NEW SOOL ROUTER (catalog version)")

@@ -39,4 +39,3 @@ seaborn==0.13.1
 # hash_bcrypt
 # =========================
 passlib[bcrypt]==1.7.4
-bcrypt==3.2.2

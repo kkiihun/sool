@@ -20,6 +20,13 @@ import {
   Breadcrumb,
   Badge,
   Rate,
+  Tabs,
+  Select,
+  Popconfirm,
+  Form,
+  Modal,
+  Input,
+  InputNumber,
 } from "antd";
 import {
   AppstoreOutlined,
@@ -41,11 +48,9 @@ import {
 } from "@ant-design/icons";
 import { useRouter } from "next/navigation";
 import { useAuth } from "../components/AuthProvider";
-import { Tabs, Select, Popconfirm, Form, Modal, Input, InputNumber } from "antd";
 
 const { Sider, Header, Content, Footer } = Layout;
 const { Title, Text } = Typography;
-const { Option } = Select;
 const { TextArea } = Input;
 
 export default function AdminPage() {
@@ -247,9 +252,10 @@ export default function AdminPage() {
           onChange={(val) => updateStatus(record.id, val)}
           disabled={record.id === user?.id}
         >
-          <Option value="active"><CheckCircleOutlined style={{ color: '#52c41a', marginRight: 8 }} /> Active</Option>
-          <Option value="suspended"><StopOutlined style={{ color: '#faad14', marginRight: 8 }} /> Suspended</Option>
-          <Option value="locked"><LockOutlined style={{ color: '#ff4d4f', marginRight: 8 }} /> Locked</Option>
+          <Select.Option value="active"><CheckCircleOutlined style={{ color: '#52c41a', marginRight: 8 }} /> Active</Select.Option>
+          <Select.Option value="suspended"><StopOutlined style={{ color: '#faad14', marginRight: 8 }} /> Suspended</Select.Option>
+          <Select.Option value="locked"><LockOutlined style={{ color: '#ff4d4f', marginRight: 8 }} /> Locked</Select.Option>
+
         </Select>
       ) 
     },
@@ -398,11 +404,11 @@ export default function AdminPage() {
                 <Col span={12}>
                   <Form.Item name="category" label={<Text style={{ color: '#888' }}>Category</Text>}>
                     <Select dropdownStyle={{ background: '#1a1a1a' }}>
-                      <Option value="막걸리">막걸리</Option>
-                      <Option value="약주">약주</Option>
-                      <Option value="청주">청주</Option>
-                      <Option value="증류주">증류주</Option>
-                      <Option value="과실주">과실주</Option>
+                      <Select.Option value="막걸리">막걸리</Select.Option>
+                      <Select.Option value="약주">약주</Select.Option>
+                      <Select.Option value="청주">청주</Select.Option>
+                      <Select.Option value="증류주">증류주</Select.Option>
+                      <Select.Option value="과실주">과실주</Select.Option>
                     </Select>
                   </Form.Item>
                 </Col>
