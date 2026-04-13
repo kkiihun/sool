@@ -168,11 +168,14 @@ def filter_sool(
     if q and len(q) >= 2:
         query = query.filter(Sool.name.like(f"%{q}%"))
 
-    if region and region != "전체":
+    if region and region not in ["전체", "전체 지역"]:
         query = query.filter(Sool.region == region)
 
     if category and category.strip():
-        query = query.filter(Sool.category == category)
+        if category == "탁주":
+            query = query.filter(Sool.category.in_(["탁주", "막걸리"]))
+        else:
+            query = query.filter(Sool.category == category)
 
     if order == "abv_low":
         query = query.order_by(Sool.abv.asc())

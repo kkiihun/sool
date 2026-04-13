@@ -3,8 +3,6 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
-  Layout,
-  Menu,
   Typography,
   Card,
   Row,
@@ -22,12 +20,6 @@ import {
   Tag,
 } from "antd";
 import {
-  AppstoreOutlined,
-  CompassOutlined,
-  StarOutlined,
-  HeartOutlined,
-  BarChartOutlined,
-  ArrowLeftOutlined,
   MessageOutlined,
   ShareAltOutlined,
   PlusOutlined,
@@ -37,8 +29,8 @@ import {
   FireOutlined,
 } from "@ant-design/icons";
 import { useRouter } from "next/navigation";
+import { useAuth } from "@/app/components/AuthProvider";
 
-const { Sider, Header, Content, Footer } = Layout;
 const { Title, Text, Paragraph } = Typography;
 const { TextArea } = Input;
 
@@ -53,7 +45,7 @@ interface FeedItem {
 
 export default function CommunityPage() {
   const router = useRouter();
-  const [collapsed, setCollapsed] = useState(false);
+  const { user } = useAuth();
   const [feed, setFeed] = useState<FeedItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -84,15 +76,19 @@ export default function CommunityPage() {
       message.warning("Please fill in all fields.");
       return;
     }
+    const token = localStorage.getItem('sool_token');
     try {
       const res = await fetch(`${API_URL}/sense/`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
         body: JSON.stringify({
           sool_id: Number(newPost.sool_id),
           notes: newPost.notes,
           rating: newPost.rating,
-          aroma: 3, sweetness: 3, acidity: 3, body: 3, aftertaste: 3 // Default values for simple post
+          aroma: 3, sweetness: 3, acidity: 3, body: 3, aftertaste: 3
         }),
       });
       if (res.ok) {
@@ -110,7 +106,7 @@ export default function CommunityPage() {
     <div className="page-transition">
       <Row gutter={[32, 32]}>
         <Col xs={24} lg={16}>
-<Space direction="vertical" size={24} style={{ width: "100%" }}>
+          <Space direction="vertical" size={24} style={{ width: "100%" }}>
             {feed.map((item) => (
               <Card 
                 key={item.id}
@@ -142,7 +138,7 @@ export default function CommunityPage() {
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderTop: "1px solid #222", paddingTop: 24 }}>
                   <Space size="large">
                     <Rate disabled value={item.rating / 2} style={{ fontSize: 14, color: "#d4af37" }} />
-                    <Text style={{ color: "#d4af37", fontWeight: 700 }}>{item.rating}/10</Text>
+                    <Text style={{ color: "#d4af37", fontWeight: 700 }}>{(item.rating/2).toFixed(1)}/5.0</Text>
                   </Space>
                   <Space size="middle">
                     <Button type="text" icon={<MessageOutlined />} style={{ color: "#444" }}>Comment</Button>
@@ -207,106 +203,46 @@ export default function CommunityPage() {
   );
 
   return (
-    <Layout style={{ minHeight: "100vh", backgroundColor: "#0a0a0a" }}>
-      <Sider
-        collapsible
-        collapsed={collapsed}
-        onCollapse={setCollapsed}
-        theme="dark"
-        width={240}
-        style={{ 
-          background: "#0a0a0a", 
-          borderRight: "1px solid #222",
-          position: "fixed",
-          height: "100vh",
-          left: 0,
-          zIndex: 100
-        }}
-      >
-        <div style={{ height: 80, display: "flex", alignItems: "center", justifyContent: "center", borderBottom: "1px solid #222", marginBottom: 20 }}>
-          <Link href="/" style={{ textDecoration: "none", display: "flex", alignItems: "center", gap: 8 }}>
-            <span style={{ fontSize: 28 }}>🥃</span>
-            {!collapsed && <span style={{ color: "#fff", fontSize: 20, fontWeight: 700, letterSpacing: 1.5 }}>SOOL</span>}
-          </Link>
+    <div style={{ padding: "60px 80px", background: "transparent" }}>
+      <div style={{ marginBottom: 60, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+        <div>
+          <Title style={{ color: "#fff", fontSize: 48, fontWeight: 900, margin: 0 }}>
+            Community <span style={{ color: "#d4af37" }}>Hub</span>
+          </Title>
+          <Text style={{ color: "#666", fontSize: 18 }}>Connect with fellow connoisseurs and share your journey.</Text>
         </div>
-        <Menu
-          theme="dark"
-          mode="inline"
-          selectedKeys={["community"]}
-          style={{ background: "transparent", border: "none" }}
-          items={[
-            { key: "explore", icon: <AppstoreOutlined />, label: <Link href="/">Explore</Link> },
-            { key: "tasting", icon: <StarOutlined />, label: <Link href="/Tasting">Tasting Notes</Link> },
-            { key: "analytics", icon: <BarChartOutlined />, label: <Link href="/dashboard">Analytics</Link> },
-            { key: "updates", icon: <CompassOutlined />, label: <Link href="/updates">Discovery</Link> },
-            { key: "community", icon: <HeartOutlined />, label: "Community" },
-          ]}
-        />
-      </Sider>
+        <Button 
+          type="primary" 
+          size="large"
+          icon={<PlusOutlined />} 
+          style={{ background: "#d4af37", color: "#000", border: "none", fontWeight: 700, borderRadius: 12, height: 50 }}
+          onClick={() => setIsModalOpen(true)}
+        >
+          CREATE POST
+        </Button>
+      </div>
 
-      <Layout style={{ marginLeft: collapsed ? 80 : 240, background: "transparent", transition: "all 0.2s" }}>
-        <Header style={{ 
-          background: "rgba(10, 10, 10, 0.8)", 
-          backdropFilter: "blur(10px)",
-          padding: "0 40px",
-          height: 80,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          borderBottom: "1px solid #222",
-          position: "sticky",
-          top: 0,
-          zIndex: 90
-        }}>
-          <Space>
-            <Button type="text" icon={<ArrowLeftOutlined />} onClick={() => router.back()} style={{ color: "#888" }} />
-            <Title level={4} style={{ color: "#fff", margin: 0 }}>Community Hub</Title>
-          </Space>
-          <Button 
-            type="primary" 
-            icon={<PlusOutlined />} 
-            style={{ background: "#d4af37", color: "#000", border: "none", fontWeight: 700 }}
-            onClick={() => setIsModalOpen(true)}
-          >
-            Create Post
-          </Button>
-        </Header>
-
-        <Content style={{ padding: "40px 60px" }}>
-          <Tabs
-            defaultActiveKey="feed"
-            className="custom-tabs"
-            items={[
-              {
-                key: "feed",
-                label: (<span><FireOutlined />Feed</span>),
-                children: loading ? <Spin size="large" /> : <FeedTab />,
-              },
-              {
-                key: "market",
-                label: (<span><ShoppingOutlined />Marketplace</span>),
-                children: <PlaceholderTab icon={<ShoppingOutlined />} title="Marketplace Coming Soon" description="A dedicated space for trading limited editions and rare finds among collectors." />,
-              },
-              {
-                key: "clubs",
-                label: (<span><TeamOutlined />Clubs</span>),
-                children: <PlaceholderTab icon={<TeamOutlined />} title="Tasting Clubs" description="Join local or virtual clubs to share experiences and attend exclusive tasting sessions." />,
-              },
-            ]}
-          />
-        </Content>
-
-        <Footer style={{ 
-          background: "transparent", 
-          color: "#444", 
-          textAlign: "center", 
-          padding: "40px 0",
-          borderTop: "1px solid #222",
-          marginTop: 60
-        }}>
-          SOOL COMMUNITY — SHARED PASSION, TIMELESS TRADITION
-        </Footer>
-      </Layout>
+      <Tabs
+        defaultActiveKey="feed"
+        className="custom-tabs"
+        items={[
+          {
+            key: "feed",
+            label: (<span><FireOutlined />Feed</span>),
+            children: loading ? <Spin size="large" /> : <FeedTab />,
+          },
+          {
+            key: "market",
+            label: (<span><ShoppingOutlined />Marketplace</span>),
+            children: <PlaceholderTab icon={<ShoppingOutlined />} title="Marketplace Coming Soon" description="A dedicated space for trading limited editions and rare finds among collectors." />,
+          },
+          {
+            key: "clubs",
+            label: (<span><TeamOutlined />Clubs</span>),
+            children: <PlaceholderTab icon={<TeamOutlined />} title="Tasting Clubs" description="Join local or virtual clubs to share experiences and attend exclusive tasting sessions." />,
+          },
+        ]}
+      />
 
       <Modal
         title={<span style={{ color: "#fff" }}>Share with the Community</span>}
@@ -316,7 +252,7 @@ export default function CommunityPage() {
         style={{ borderRadius: 20 }}
         styles={{ content: { background: "#111", border: "1px solid #333" }, header: { background: "#111", borderBottom: "1px solid #222" } }}
       >
-<Space direction="vertical" size="large" style={{ width: "100%", padding: "20px 0" }}>
+        <Space direction="vertical" size="large" style={{ width: "100%", padding: "20px 0" }}>
           <div>
             <Text style={{ color: "#888", display: "block", marginBottom: 8 }}>Spirit ID</Text>
             <Input 
@@ -352,23 +288,23 @@ export default function CommunityPage() {
         </Space>
       </Modal>
 
+      <footer style={{ 
+        textAlign: "center", 
+        padding: "80px 0 40px",
+        color: "#444",
+        fontSize: 12,
+        letterSpacing: 2
+      }}>
+        SOOL COMMUNITY — SHARED PASSION, TIMELESS TRADITION
+      </footer>
+
       <style jsx global>{`
-        .custom-tabs .ant-tabs-nav::before {
-          border-bottom: 1px solid #222 !important;
-        }
-        .custom-tabs .ant-tabs-tab {
-          color: #444 !important;
-        }
-        .custom-tabs .ant-tabs-tab-active .ant-tabs-tab-btn {
-          color: #d4af37 !important;
-        }
-        .custom-tabs .ant-tabs-ink-bar {
-          background: #d4af37 !important;
-        }
-        .ant-modal-close {
-          color: #666 !important;
-        }
+        .custom-tabs .ant-tabs-nav::before { border-bottom: 1px solid #222 !important; }
+        .custom-tabs .ant-tabs-tab { color: #444 !important; }
+        .custom-tabs .ant-tabs-tab-active .ant-tabs-tab-btn { color: #d4af37 !important; }
+        .custom-tabs .ant-tabs-ink-bar { background: #d4af37 !important; }
+        .ant-modal-close { color: #666 !important; }
       `}</style>
-    </Layout>
+    </div>
   );
 }

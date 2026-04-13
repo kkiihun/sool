@@ -186,11 +186,19 @@ export default function SoolDetail({
   };
 
   if (loading) return (
-    <div style={{ display: "flex", justifyContent: "center", alignItems: "center", height: "100vh", background: "#0a0a0a" }}>
-      <Space direction="vertical" align="center">
-        <Spin size="large" />
-        <Text style={{ color: "#d4af37", marginTop: 20, letterSpacing: 2 }}>ARCHIVE CONSULTATION IN PROGRESS...</Text>
-      </Space>
+    <div style={{ 
+      display: "flex", 
+      flexDirection: "column",
+      justifyContent: "center", 
+      alignItems: "center", 
+      height: "100vh", 
+      background: "#0a0a0a",
+      gap: "20px"
+    }}>
+      <Spin size="large" />
+      <div style={{ color: "#d4af37", letterSpacing: "2px", fontWeight: "bold" }}>
+        ARCHIVE CONSULTATION IN PROGRESS...
+      </div>
     </div>
   );
 
@@ -249,18 +257,18 @@ export default function SoolDetail({
       <div style={{ maxWidth: 1400, margin: "0 auto", padding: "80px 40px", position: "relative", zIndex: 1 }}>
         <Row gutter={[80, 80]}>
           <Col span={24}>
-            <Space direction="vertical" size={0}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
               <Badge count={sool.category} style={{ backgroundColor: "#d4af37", color: "#000", fontWeight: 800, border: "none", marginBottom: 16 }} />
               <Title style={{ color: "#fff", fontSize: 80, fontWeight: 900, margin: 0, lineHeight: 0.9 }}>{sool.name}</Title>
               <div style={{ marginTop: 24, display: "flex", alignItems: "center", gap: 32 }}>
-                <Space>
+                <Space orientation="horizontal">
                   <Rate disabled allowHalf value={avgRating / 2} style={{ color: "#d4af37" }} />
                   <Text style={{ color: "#d4af37", fontSize: 24, fontWeight: 700 }}>{(avgRating/2).toFixed(1)}</Text>
                 </Space>
                 <div style={{ width: 1, height: 20, background: "#222" }} />
                 <Text style={{ color: "#555", fontSize: 16 }}>{senses.length} CONNOISSEUR NOTES</Text>
               </div>
-            </Space>
+            </div>
           </Col>
 
           <Col xs={24} lg={14}>
@@ -285,7 +293,14 @@ export default function SoolDetail({
 
             <div style={{ marginTop: 60, padding: "0 20px" }}>
               <Title level={3} style={{ color: "#fff", marginBottom: 24 }}>THE STORY</Title>
-              <Paragraph style={{ color: "#888", fontSize: 20, lineHeight: 1.8, fontWeight: 300 }}>
+              <Paragraph style={{ 
+                color: "#888", 
+                fontSize: 18, 
+                lineHeight: 1.8, 
+                fontWeight: 300,
+                wordBreak: "keep-all",
+                overflowWrap: "break-word"
+              }}>
                 {sool.description || "The detailed lineage and tasting profile of this spirit are being meticulously documented by our historians. Experience its depth through our sensory analysis."}
               </Paragraph>
               <Divider style={{ borderColor: "#222", margin: "48px 0" }} />

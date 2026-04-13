@@ -33,8 +33,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           {/* ✅ App 전체 구조는 AppShellClient가 책임 */}
           <AppShellClient>{children}</AppShellClient>
         </AuthProvider>
-
-        <BuildBadge />
       </body>
     </html>
   );

@@ -49,23 +49,23 @@ export default function LoginPage() {
     }}>
       <Card 
         style={{ 
-          width: 400, 
+          width: 500, 
           background: "rgba(17, 17, 17, 0.8)", 
           backdropFilter: "blur(20px)",
           border: "1px solid #222", 
           borderRadius: 24,
           boxShadow: "0 20px 50px rgba(0,0,0,0.5)"
         }}
-        styles={{ body: { padding: 40 } }}
+        styles={{ body: { padding: "50px 60px" } }}
       >
         <Link href="/">
           <Button type="text" icon={<ArrowLeftOutlined />} style={{ color: "#666", marginBottom: 20 }}>Back to Gallery</Button>
         </Link>
         
         <div style={{ textAlign: "center", marginBottom: 40 }}>
-          <span style={{ fontSize: 40 }}>🥃</span>
+          <span style={{ fontSize: 48 }}>🥃</span>
           <Title level={2} style={{ color: "#fff", margin: "12px 0 0" }}>Welcome Back</Title>
-          <Text style={{ color: "#666" }}>Enter your credentials to access the vault.</Text>
+          <Text style={{ color: "#666", fontSize: 16 }}>Enter your credentials to access the vault.</Text>
         </div>
 
         <Form layout="vertical" onFinish={onFinish} size="large">

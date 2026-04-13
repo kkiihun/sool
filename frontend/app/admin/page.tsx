@@ -1,10 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
 import {
-  Layout,
-  Menu,
   Typography,
   Table,
   Tag,
@@ -17,8 +14,6 @@ import {
   Statistic,
   message,
   Switch,
-  Breadcrumb,
-  Badge,
   Rate,
   Tabs,
   Select,
@@ -27,17 +22,13 @@ import {
   Modal,
   Input,
   InputNumber,
+  Badge,
 } from "antd";
 import {
-  AppstoreOutlined,
-  CompassOutlined,
   StarOutlined,
-  HeartOutlined,
-  BarChartOutlined,
   UserOutlined,
   SafetyCertificateOutlined,
   DatabaseOutlined,
-  ArrowLeftOutlined,
   ReloadOutlined,
   EditOutlined,
   DeleteOutlined,
@@ -49,14 +40,12 @@ import {
 import { useRouter } from "next/navigation";
 import { useAuth } from "../components/AuthProvider";
 
-const { Sider, Header, Content, Footer } = Layout;
 const { Title, Text } = Typography;
 const { TextArea } = Input;
 
 export default function AdminPage() {
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
-  const [collapsed, setCollapsed] = useState(false);
   const [users, setUsers] = useState<any[]>([]);
   const [sool, setSool] = useState<any[]>([]);
   const [reviews, setReviews] = useState<any[]>([]);
@@ -248,7 +237,7 @@ export default function AdminPage() {
           style={{ width: 120 }} 
           size="small"
           variant="borderless"
-          dropdownStyle={{ background: '#1a1a1a', border: '1px solid #333' }}
+          styles={{ popup: { root: { background: '#1a1a1a', border: '1px solid #333' } } }}
           onChange={(val) => updateStatus(record.id, val)}
           disabled={record.id === user?.id}
         >
@@ -403,7 +392,7 @@ export default function AdminPage() {
               <Row gutter={16}>
                 <Col span={12}>
                   <Form.Item name="category" label={<Text style={{ color: '#888' }}>Category</Text>}>
-                    <Select dropdownStyle={{ background: '#1a1a1a' }}>
+                    <Select styles={{ popup: { root: { background: '#1a1a1a' } } }}>
                       <Select.Option value="막걸리">막걸리</Select.Option>
                       <Select.Option value="약주">약주</Select.Option>
                       <Select.Option value="청주">청주</Select.Option>
@@ -460,101 +449,48 @@ export default function AdminPage() {
   ];
 
   return (
-    <Layout style={{ minHeight: "100vh", backgroundColor: "#0a0a0a" }}>
-      <Sider
-        collapsible
-        collapsed={collapsed}
-        onCollapse={setCollapsed}
-        theme="dark"
-        width={240}
-        style={{ background: "#0a0a0a", borderRight: "1px solid #222", position: "fixed", height: "100vh", left: 0, zIndex: 100 }}
-      >
-        <div style={{ height: 80, display: "flex", alignItems: "center", justifyContent: "center", borderBottom: "1px solid #222", marginBottom: 20 }}>
-          <Link href="/" style={{ textDecoration: "none", display: "flex", alignItems: "center", gap: 8 }}>
-            <span style={{ fontSize: 28 }}>🥃</span>
-            {!collapsed && <span style={{ color: "#fff", fontSize: 20, fontWeight: 700, letterSpacing: 1.5 }}>SOOL</span>}
-          </Link>
+    <div style={{ padding: "40px 60px", backgroundColor: "#0a0a0a", minHeight: "100vh" }}>
+      <div style={{ marginBottom: 40, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+        <div>
+          <Title level={2} style={{ color: "#fff", margin: 0 }}>Platform <span style={{ color: "#d4af37" }}>Governance</span></Title>
+          <Text style={{ color: "#666" }}>Manage users, spirits, and platform reviews.</Text>
         </div>
-        <Menu
-          theme="dark"
-          mode="inline"
-          selectedKeys={["admin"]}
-          style={{ background: "transparent", border: "none" }}
-          items={[
-            { key: "explore", icon: <AppstoreOutlined />, label: <Link href="/">Explore</Link> },
-            { key: "admin", icon: <SafetyCertificateOutlined />, label: "Admin Console" },
-            { key: "analytics", icon: <BarChartOutlined />, label: <Link href="/dashboard">System Stats</Link> },
-          ]}
-        />
-      </Sider>
+        <Button icon={<ReloadOutlined />} onClick={fetchData} type="default" className="border-white/10 text-white/40 hover:text-white">Refresh Data</Button>
+      </div>
 
-      <Layout style={{ marginLeft: collapsed ? 80 : 240, background: "transparent" }}>
-        <Header style={{ background: "rgba(10, 10, 10, 0.8)", backdropFilter: "blur(10px)", padding: "0 40px", height: 80, display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "1px solid #222", position: "sticky", top: 0, zIndex: 90 }}>
-          <Space>
-            <Button type="text" icon={<ArrowLeftOutlined />} onClick={() => router.push('/')} style={{ color: "#888" }} />
-            <Title level={4} style={{ color: "#fff", margin: 0 }}>Command Center</Title>
-          </Space>
-          <Space size="middle">
-            <Button icon={<ReloadOutlined />} onClick={fetchData} type="text" style={{ color: "#666" }}>Refresh Data</Button>
-            <div style={{ width: 1, height: 20, background: "#333" }} />
-            <Link href="/profile">
-              <Space size="small" style={{ cursor: 'pointer' }}>
-                <Text style={{ color: "#fff", fontWeight: 500 }}>{user?.username}</Text>
-                <Badge dot color="#52c41a">
-                  <div style={{ width: 32, height: 32, borderRadius: "50%", background: "#333", border: "1px solid #444", display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <UserOutlined style={{ color: "#fff" }} />
-                  </div>
-                </Badge>
-              </Space>
-            </Link>
-          </Space>
-        </Header>
-
-        <Content style={{ padding: "40px 60px" }}>
-          <div style={{ marginBottom: 40 }}>
-            <Title level={2} style={{ color: "#fff", margin: 0 }}>Platform <span style={{ color: "#d4af37" }}>Governance</span></Title>
-            <Text style={{ color: "#666" }}>Manage users, spirits, and platform reviews.</Text>
-          </div>
-
-          <Row gutter={[24, 24]} style={{ marginBottom: 40 }}>
-            <Col xs={24} sm={6}>
-              <Card style={{ background: "#111", border: "1px solid #222", borderRadius: 16 }}>
-                <Statistic title={<span style={{ color: "#666" }}>TOTAL USERS</span>} value={users.length} styles={{ content: { color: "#fff" } }} prefix={<UserOutlined style={{ color: "#d4af37" }} />} />
-              </Card>
-            </Col>
-            <Col xs={24} sm={6}>
-              <Card style={{ background: "#111", border: "1px solid #222", borderRadius: 16 }}>
-                <Statistic title={<span style={{ color: "#666" }}>TOTAL SPIRITS</span>} value={sool.length} styles={{ content: { color: "#fff" } }} prefix={<DatabaseOutlined style={{ color: "#d4af37" }} />} />
-              </Card>
-            </Col>
-            <Col xs={24} sm={6}>
-              <Card style={{ background: "#111", border: "1px solid #222", borderRadius: 16 }}>
-                <Statistic title={<span style={{ color: "#666" }}>REVIEWS</span>} value={reviews.length} styles={{ content: { color: "#fff" } }} prefix={<StarOutlined style={{ color: "#d4af37" }} />} />
-              </Card>
-            </Col>
-            <Col xs={24} sm={6}>
-              <Card style={{ background: "#111", border: "1px solid #222", borderRadius: 16 }}>
-                <Statistic title={<span style={{ color: "#666" }}>UPTIME</span>} value={100} suffix="%" styles={{ content: { color: "#52c41a" } }} prefix={<SafetyCertificateOutlined />} />
-              </Card>
-            </Col>
-          </Row>
-
-          <Card 
-            style={{ background: "#111", border: "1px solid #222", borderRadius: 24, overflow: "hidden" }}
-            styles={{ body: { padding: 24 } }}
-          >
-            <Tabs 
-              defaultActiveKey="users" 
-              items={tabItems} 
-              className="admin-tabs"
-            />
+      <Row gutter={[24, 24]} style={{ marginBottom: 40 }}>
+        <Col xs={24} sm={6}>
+          <Card style={{ background: "#111", border: "1px solid #222", borderRadius: 16 }}>
+            <Statistic title={<span style={{ color: "#666" }}>TOTAL USERS</span>} value={users.length} styles={{ content: { color: "#fff" } }} prefix={<UserOutlined style={{ color: "#d4af37" }} />} />
           </Card>
-        </Content>
+        </Col>
+        <Col xs={24} sm={6}>
+          <Card style={{ background: "#111", border: "1px solid #222", borderRadius: 16 }}>
+            <Statistic title={<span style={{ color: "#666" }}>TOTAL SPIRITS</span>} value={sool.length} styles={{ content: { color: "#fff" } }} prefix={<DatabaseOutlined style={{ color: "#d4af37" }} />} />
+          </Card>
+        </Col>
+        <Col xs={24} sm={6}>
+          <Card style={{ background: "#111", border: "1px solid #222", borderRadius: 16 }}>
+            <Statistic title={<span style={{ color: "#666" }}>REVIEWS</span>} value={reviews.length} styles={{ content: { color: "#fff" } }} prefix={<StarOutlined style={{ color: "#d4af37" }} />} />
+          </Card>
+        </Col>
+        <Col xs={24} sm={6}>
+          <Card style={{ background: "#111", border: "1px solid #222", borderRadius: 16 }}>
+            <Statistic title={<span style={{ color: "#666" }}>UPTIME</span>} value={100} suffix="%" styles={{ content: { color: "#52c41a" } }} prefix={<SafetyCertificateOutlined />} />
+          </Card>
+        </Col>
+      </Row>
 
-        <Footer style={{ background: "transparent", color: "#444", textAlign: "center", padding: "40px 0", borderTop: "1px solid #222", marginTop: 60 }}>
-          SOOL ARCHITECT — INTERNAL GOVERNANCE SYSTEM
-        </Footer>
-      </Layout>
+      <Card 
+        style={{ background: "#111", border: "1px solid #222", borderRadius: 24, overflow: "hidden" }}
+        styles={{ body: { padding: 24 } }}
+      >
+        <Tabs 
+          defaultActiveKey="users" 
+          items={tabItems} 
+          className="admin-tabs"
+        />
+      </Card>
 
       <style jsx global>{`
         .custom-table .ant-table { background: transparent !important; color: #aaa !important; }
@@ -573,7 +509,6 @@ export default function AdminPage() {
         .dark-modal .ant-select-selector { background: #1a1a1a !important; border: 1px solid #333 !important; color: #fff !important; }
         .dark-modal .ant-select-arrow { color: #666 !important; }
       `}</style>
-    </Layout>
+    </div>
   );
 }
-

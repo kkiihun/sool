@@ -13,6 +13,8 @@ type ShellCtx = {
   loadingMe: boolean;
   isAdmin: boolean;
   refreshMe: () => Promise<void>;
+  collapsed: boolean;
+  setCollapsed: (v: boolean) => void;
 };
 
 const Ctx = createContext<ShellCtx | null>(null);
@@ -24,9 +26,17 @@ export function useAppShell() {
 }
 
 async function fetchMe() {
+  // localStorage에서 토큰 가져오기 (클라이언트 사이드 환경 확인)
+  const token = typeof window !== "undefined" ? localStorage.getItem("sool_token") : null;
+  
+  if (!token) return null;
+
   const r = await fetch("/api/proxy/users/me", {
     cache: "no-store",
-    credentials: "include", // ✅ 쿠키 포함
+    headers: { 
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json"
+    },
   });
 
   if (!r.ok) return null;
@@ -37,6 +47,7 @@ async function fetchMe() {
 export default function AppShellProvider({ children }: { children: React.ReactNode }) {
   const [me, setMe] = useState<Me | null>(null);
   const [loadingMe, setLoadingMe] = useState(true);
+  const [collapsed, setCollapsed] = useState(false);
 
   const refreshMe = async () => {
     setLoadingMe(true);
@@ -55,8 +66,8 @@ export default function AppShellProvider({ children }: { children: React.ReactNo
 
   const value = useMemo<ShellCtx>(() => {
     const isAdmin = !!me?.is_admin;
-    return { me, loadingMe, isAdmin, refreshMe };
-  }, [me, loadingMe]);
+    return { me, loadingMe, isAdmin, refreshMe, collapsed, setCollapsed };
+  }, [me, loadingMe, collapsed]);
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }
