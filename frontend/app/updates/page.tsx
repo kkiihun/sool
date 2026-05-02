@@ -3,8 +3,6 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
-  Layout,
-  Menu,
   Typography,
   Card,
   Row,
@@ -16,22 +14,15 @@ import {
   Timeline,
 } from "antd";
 import {
-  AppstoreOutlined,
-  CompassOutlined,
   StarOutlined,
-  HeartOutlined,
-  BarChartOutlined,
-  ArrowLeftOutlined,
   FireOutlined,
   SoundOutlined,
   ClockCircleOutlined,
-  UserOutlined,
   LoadingOutlined,
 } from "@ant-design/icons";
 import { useRouter } from "next/navigation";
 import { useAuth } from "../components/AuthProvider";
 
-const { Sider, Header, Content, Footer } = Layout;
 const { Title, Text, Paragraph } = Typography;
 
 interface Sool {
@@ -53,12 +44,15 @@ interface Review {
 export default function DiscoveryPage() {
   const router = useRouter();
   const { user } = useAuth();
-  const [collapsed, setCollapsed] = useState(false);
   const [newSool, setNewSool] = useState<Sool[]>([]);
   const [recentActivity, setRecentActivity] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
+  const getApiUrl = () => {
+    if (typeof window !== "undefined") return "/proxy";
+    return process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
+  };
+  const API_URL = getApiUrl();
 
   useEffect(() => {
     async function fetchData() {
@@ -83,202 +77,124 @@ export default function DiscoveryPage() {
   }, [API_URL]);
 
   return (
-    <Layout style={{ minHeight: "100vh", backgroundColor: "#0a0a0a" }}>
-      <Sider
-        collapsible
-        collapsed={collapsed}
-        onCollapse={setCollapsed}
-        theme="dark"
-        width={240}
-        style={{ 
-          background: "#0a0a0a", 
-          borderRight: "1px solid #222",
-          position: "fixed",
-          height: "100vh",
-          left: 0,
-          zIndex: 100
-        }}
-      >
-        <div style={{ height: 80, display: "flex", alignItems: "center", justifyContent: "center", borderBottom: "1px solid #222", marginBottom: 20 }}>
-          <Link href="/" style={{ textDecoration: "none", display: "flex", alignItems: "center", gap: 8 }}>
-            <span style={{ fontSize: 28 }}>🥃</span>
-            {!collapsed && <span style={{ color: "#fff", fontSize: 20, fontWeight: 700, letterSpacing: 1.5 }}>SOOL</span>}
+    <div className="max-w-[1600px] mx-auto py-12 px-8">
+      {/* Section 1: New Arrivals */}
+      <div className="mb-20">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 mb-10">
+          <div>
+            <Title className="!text-white !m-0 !text-5xl font-black">
+              What's <span className="text-amber-500">New</span>
+            </Title>
+            <Text className="text-white/40 text-lg">The latest additions to our curated heritage collection.</Text>
+          </div>
+          <Link href="/">
+            <Button type="link" className="text-amber-500 hover:text-amber-400 font-bold p-0 text-lg">
+              Explore All Collections →
+            </Button>
           </Link>
         </div>
-        <Menu
-          theme="dark"
-          mode="inline"
-          selectedKeys={["updates"]}
-          style={{ background: "transparent", border: "none" }}
-          items={[
-            { key: "explore", icon: <AppstoreOutlined />, label: <Link href="/">Explore</Link> },
-            { key: "tasting", icon: <StarOutlined />, label: <Link href="/Tasting">Tasting Notes</Link> },
-            { key: "analytics", icon: <BarChartOutlined />, label: <Link href="/dashboard">Analytics</Link> },
-            { key: "updates", icon: <CompassOutlined />, label: "Discovery" },
-            { key: "community", icon: <HeartOutlined />, label: <Link href="/community">Community</Link> },
-            ...(user?.is_admin ? [
-              { key: "divider", type: "divider" as const, style: { backgroundColor: "#222" } },
-              { key: "admin", icon: <AppstoreOutlined />, label: <Link href="/admin">Admin Dashboard</Link> }
-            ] : []),
-          ]}
-        />
-      </Sider>
 
-      <Layout style={{ marginLeft: collapsed ? 80 : 240, background: "transparent", transition: "all 0.2s" }}>
-        <Header style={{ 
-          background: "rgba(10, 10, 10, 0.8)", 
-          backdropFilter: "blur(10px)",
-          padding: "0 40px",
-          height: 80,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          borderBottom: "1px solid #222",
-          position: "sticky", top: 0, zIndex: 90
-        }}>
-          <Space>
-            <Button type="text" icon={<ArrowLeftOutlined />} onClick={() => router.back()} style={{ color: "#888" }} />
-            <Title level={4} style={{ color: "#fff", margin: 0 }}>Discovery Center</Title>
-          </Space>
-          <Space size="middle">
-            <Badge count="LIVE" style={{ backgroundColor: "#d4af37", color: "#000", fontWeight: 700, border: "none" }} />
-            <div style={{ width: 1, height: 20, background: "#333" }} />
-            <Link href={user ? "/profile" : "/login"}>
-              <Space size="small" style={{ cursor: 'pointer' }}>
-                <Text style={{ color: "#fff", fontWeight: 500 }}>{user ? user.username : "Guest User"}</Text>
-                <Badge dot color={user ? "#52c41a" : "#d4af37"}>
-                  <div style={{ width: 32, height: 32, borderRadius: "50%", background: "#333", border: "1px solid #444", display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <UserOutlined style={{ color: user ? "#fff" : "#666" }} />
-                  </div>
-                </Badge>
-              </Space>
-            </Link>
-          </Space>
-        </Header>
-
-        <Content style={{ padding: "60px 80px" }}>
-          {/* Section 1: New Arrivals */}
-          <div style={{ marginBottom: 80 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 32 }}>
-              <div>
-                <Title style={{ color: "#fff", fontSize: 48, fontWeight: 900, margin: 0 }}>
-                  What's <span style={{ color: "#d4af37" }}>New</span>
-                </Title>
-                <Text style={{ color: "#666", fontSize: 18 }}>The latest additions to our curated heritage collection.</Text>
-              </div>
-              <Link href="/">
-                <Button type="link" style={{ color: "#d4af37", fontSize: 16 }}>Explore All Collections →</Button>
-              </Link>
-            </div>
-
-            {loading ? (
-              <Spin size="large" />
-            ) : (
-              <Row gutter={[32, 32]}>
-                {newSool.map((item) => (
-                  <Col xs={24} sm={12} lg={6} key={item.id}>
-                    <Link href={`/sool/${item.id}`}>
-                      <Card 
-                        hoverable
-                        style={{ background: "#111", border: "1px solid #222", borderRadius: 20, overflow: "hidden" }}
-                        styles={{ body: { padding: 24 } }}
-                      >
-                        <div style={{ aspectRatio: "1/1", background: "linear-gradient(45deg, #1a1a1a, #050505)", borderRadius: 12, marginBottom: 20, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 48 }}>
-                          {item.category === "막걸리" ? "🍶" : "🥃"}
-                        </div>
-                        <Badge status="processing" color="#d4af37" text={<span style={{ color: "#888", fontSize: 12 }}>JUST ADDED</span>} />
-                        <Title level={4} style={{ color: "#fff", margin: "12px 0 4px" }}>{item.name}</Title>
-                        <Text style={{ color: "#555" }}>{item.region} • {item.abv}%</Text>
-                      </Card>
-                    </Link>
-                  </Col>
-                ))}
-              </Row>
-            )}
-          </div>
-
-          <Row gutter={64}>
-            {/* Section 2: Live Feed */}
-            <Col xs={24} lg={14}>
-              <div style={{ background: "#111", padding: 40, borderRadius: 32, border: "1px solid #222" }}>
-                <Title level={3} style={{ color: "#fff", marginBottom: 32, display: "flex", alignItems: "center", gap: 16 }}>
-                  <SoundOutlined style={{ color: "#d4af37" }} />
-                  Community Pulse
-                </Title>
-                <Timeline 
-                  mode="start"
-                  reverse={false}
-                  items={[
-                    ...recentActivity.map((act) => ({
-                      color: "#d4af37",
-                      label: <Text style={{ color: "#444" }}>{act.created_at ? new Date(act.created_at).toLocaleTimeString() : "Just now"}</Text>,
-                      children: (
-                        <div style={{ marginBottom: 24 }}>
-                          <Text style={{ color: "#fff", fontSize: 16, fontWeight: 600, display: "block" }}>
-                            New Tasting Note on <span style={{ color: "#d4af37" }}>Spirit #{act.sool_id}</span>
-                          </Text>
-                          <Paragraph style={{ color: "#888", marginTop: 8, fontStyle: "italic" }}>
-                            "{act.notes || "Recorded a visual and aromatic profile."}"
-                          </Paragraph>
-                          <Space>
-                            <StarOutlined style={{ color: "#d4af37" }} />
-                            <Text style={{ color: "#d4af37" }}>{act.rating}/10</Text>
-                          </Space>
-                        </div>
-                      )
-                    })),
-                    {
-                      dot: <LoadingOutlined style={{ fontSize: '16px', color: '#d4af37' }} />,
-                      children: <Text style={{ color: "#444" }}>Awaiting more sensory data...</Text>,
-                    }
-                  ]}
-                />
-              </div>
-            </Col>
-
-            {/* Section 3: Trending Stats */}
-            <Col xs={24} lg={10}>
-              <Card 
-                style={{ background: "#111", border: "1px solid #222", borderRadius: 32, marginBottom: 32 }}
-                styles={{ body: { padding: 32 } }}
-              >
-                <Title level={4} style={{ color: "#fff", marginBottom: 24, display: "flex", alignItems: "center", gap: 12 }}>
-                  <FireOutlined style={{ color: "#d4af37" }} />
-                  Hot Picks
-                </Title>
-                <Space direction="vertical" size="large" style={{ width: "100%" }}>
-                  <div style={{ background: "#1a1a1a", padding: 20, borderRadius: 16, border: "1px solid #333" }}>
-                    <Text style={{ color: "#888", display: "block", marginBottom: 8 }}>MOST REVIEWED THIS WEEK</Text>
-                    <Title level={5} style={{ color: "#fff", margin: 0 }}>나루 약주</Title>
-                    <Text style={{ color: "#d4af37" }}>42 New Reviews</Text>
-                  </div>
-                  <div style={{ background: "#1a1a1a", padding: 20, borderRadius: 16, border: "1px solid #333" }}>
-                    <Text style={{ color: "#888", display: "block", marginBottom: 8 }}>HIGHEST RATING TREND</Text>
-                    <Title level={5} style={{ color: "#fff", margin: 0 }}>일품 안동소주</Title>
-                    <Text style={{ color: "#d4af37" }}>Average 9.8/10</Text>
-                  </div>
-                </Space>
-              </Card>
-
-              <div style={{ textAlign: "center", padding: 40, border: "1px dashed #222", borderRadius: 32 }}>
-                <ClockCircleOutlined style={{ fontSize: 32, color: "#222", marginBottom: 16 }} />
-                <Text style={{ color: "#444", display: "block" }}>Stay tuned for more updates on the heritage map.</Text>
-              </div>
-            </Col>
+        {loading ? (
+          <div className="py-24 text-center"><Spin size="large" /></div>
+        ) : (
+          <Row gutter={[32, 32]}>
+            {newSool.map((item) => (
+              <Col xs={24} sm={12} lg={6} key={item.id}>
+                <Link href={`/sool/${item.id}`}>
+                  <Card 
+                    hoverable
+                    className="bg-white/5 border-white/10 rounded-[32px] overflow-hidden backdrop-blur-sm group"
+                    styles={{ body: { padding: 32 } }}
+                  >
+                    <div className="aspect-square bg-gradient-to-br from-white/10 to-transparent rounded-2xl mb-6 flex items-center justify-center text-5xl transition-transform group-hover:scale-110">
+                      {item.category === "막걸리" ? "🍶" : "🥃"}
+                    </div>
+                    <Badge status="processing" color="#f59e0b" text={<span className="text-white/40 text-xs font-bold tracking-widest">JUST ADDED</span>} />
+                    <Title level={4} className="!text-white !mt-4 !mb-1">{item.name}</Title>
+                    <Text className="text-white/20 text-sm font-medium uppercase tracking-wider">{item.region} • {item.abv}%</Text>
+                  </Card>
+                </Link>
+              </Col>
+            ))}
           </Row>
-        </Content>
+        )}
+      </div>
 
-        <Footer style={{ 
-          background: "transparent", 
-          color: "#444", 
-          textAlign: "center", 
-          padding: "40px 0",
-          borderTop: "1px solid #222",
-          marginTop: 60
-        }}>
-          SOOL DISCOVERY — UNVEILING THE HIDDEN HERITAGE
-        </Footer>
-      </Layout>
-    </Layout>
+      <Row gutter={64}>
+        {/* Section 2: Live Feed */}
+        <Col xs={24} lg={14}>
+          <div className="bg-white/5 border border-white/10 p-10 rounded-[40px] backdrop-blur-sm">
+            <Title level={3} className="!text-white !mb-10 flex items-center gap-4">
+              <SoundOutlined className="text-amber-500" />
+              Community Pulse
+            </Title>
+            <Timeline 
+              mode="start"
+              reverse={false}
+              items={[
+                ...recentActivity.map((act) => ({
+                  color: "#f59e0b",
+                  title: <Text className="text-white/20 font-bold">{act.created_at ? new Date(act.created_at).toLocaleTimeString() : "Just now"}</Text>,
+                  content: (
+                    <div className="mb-10 pl-4">
+                      <Text className="text-white text-lg font-bold block mb-2">
+                        New Tasting Note on <span className="text-amber-500">Spirit #{act.sool_id}</span>
+                      </Text>
+                      <Paragraph className="text-white/40 italic text-base leading-relaxed mb-4">
+                        "{act.notes || "Recorded a visual and aromatic profile."}"
+                      </Paragraph>
+                      <Space className="bg-amber-500/10 px-4 py-1.5 rounded-full border border-amber-500/20">
+                        <StarOutlined className="text-amber-500" />
+                        <Text className="text-amber-500 font-bold">{act.rating}/10</Text>
+                      </Space>
+                    </div>
+                  )
+                })),
+                {
+                  icon: <LoadingOutlined className="text-lg text-amber-500" />,
+                  content: <Text className="text-white/20 font-bold ml-4">Awaiting more sensory data...</Text>,
+                }
+              ]}
+              className="custom-timeline"
+            />
+          </div>
+        </Col>
+
+        {/* Section 3: Trending Stats */}
+        <Col xs={24} lg={10}>
+          <Card 
+            className="bg-white/5 border-white/10 rounded-[40px] mb-8"
+            styles={{ body: { padding: 40 } }}
+          >
+            <Title level={4} className="!text-white !mb-8 flex items-center gap-4">
+              <FireOutlined className="text-amber-500" />
+              Hot Picks
+            </Title>
+            <Space orientation="vertical" size="large" className="w-full">
+              <div className="bg-white/5 p-6 rounded-2xl border border-white/10 transition-colors hover:bg-white/10 cursor-pointer">
+                <Text className="text-white/30 block mb-2 text-xs font-bold tracking-widest uppercase">MOST REVIEWED THIS WEEK</Text>
+                <Title level={5} className="!text-white !m-0">나루 약주</Title>
+                <Text className="text-amber-500 font-bold">42 New Reviews</Text>
+              </div>
+              <div className="bg-white/5 p-6 rounded-2xl border border-white/10 transition-colors hover:bg-white/10 cursor-pointer">
+                <Text className="text-white/30 block mb-2 text-xs font-bold tracking-widest uppercase">HIGHEST RATING TREND</Text>
+                <Title level={5} className="!text-white !m-0">일품 안동소주</Title>
+                <Text className="text-amber-500 font-bold">Average 9.8/10</Text>
+              </div>
+            </Space>
+          </Card>
+
+          <div className="text-center p-12 border border-dashed border-white/10 rounded-[40px]">
+            <ClockCircleOutlined className="text-4xl text-white/10 mb-6" />
+            <Text className="text-white/20 block font-medium">Stay tuned for more updates on the heritage map.</Text>
+          </div>
+        </Col>
+      </Row>
+
+      <style jsx global>{`
+        .custom-timeline .ant-timeline-item-tail { border-inline-start: 2px solid rgba(255,255,255,0.05) !important; }
+        .custom-timeline .ant-timeline-item-content { padding-inline-start: 24px !important; }
+      `}</style>
+    </div>
   );
 }

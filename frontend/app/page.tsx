@@ -1,36 +1,24 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import {
-  Layout,
-  Menu,
-  Input,
   Select,
   Card,
   Typography,
   Pagination,
   Space,
-  Button,
   Spin,
   Badge,
 } from "antd";
 import {
-  SearchOutlined,
-  AppstoreOutlined,
-  HeartOutlined,
   StarOutlined,
-  CompassOutlined,
-  ReloadOutlined,
-  BarChartOutlined,
   FilterOutlined,
-  UserOutlined,
-  LockOutlined,
 } from "@ant-design/icons";
 import { useRouter } from "next/navigation";
 import { useAuth } from "./components/AuthProvider";
+import { useAppShell } from "./components/AppShellProvider";
 
-const { Sider, Header, Content, Footer } = Layout;
 const { Title, Text } = Typography;
 
 const CATEGORIES = [
@@ -49,12 +37,10 @@ const SORT_OPTIONS = [
 ];
 
 export default function Home() {
-  const router = useRouter();
-  const { user, logout } = useAuth();
-  const [collapsed, setCollapsed] = useState(false);
+  const { user } = useAuth();
+  const { search, setSearch } = useAppShell();
   const [sool, setSool] = useState<any[]>([]);
   const [total, setTotal] = useState(0);
-  const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const [category, setCategory] = useState("");
   const [region, setRegion] = useState("전체");
@@ -63,9 +49,8 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   
   const getApiUrl = () => {
-    const envUrl = process.env.NEXT_PUBLIC_API_URL;
-    if (envUrl) return envUrl;
-    return "http://127.0.0.1:8000";
+    if (typeof window !== "undefined") return "/proxy";
+    return process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
   };
 
   const API_URL = getApiUrl();
@@ -74,7 +59,7 @@ export default function Home() {
   const resolveImageUrl = (url: string) => {
     if (!url) return null;
     if (url.startsWith('http')) return url;
-    if (url.startsWith('/static')) return `${API_URL}${encodeURI(url)}`;
+    if (url.startsWith('/static')) return `/proxy${encodeURI(url)}`;
     return url;
   };
 
@@ -90,7 +75,6 @@ export default function Home() {
         console.error("Failed to load regions:", err);
       }
     }
-
     loadRegions();
   }, [API_URL]);
 
@@ -99,7 +83,7 @@ export default function Home() {
       async function fetchData() {
         setLoading(true);
         let url = `${API_URL}/sool/filter?page=${page}&page_size=${pageSize}`;
-        if (search.length >= 2) url += `&q=${encodeURIComponent(search)}`;
+        if (search && search.length >= 2) url += `&q=${encodeURIComponent(search)}`;
         if (category) url += `&category=${encodeURIComponent(category)}`;
         if (region !== "전체") url += `&region=${encodeURIComponent(region)}`;
         if (sortOption) url += `&order=${sortOption}`;
@@ -122,364 +106,245 @@ export default function Home() {
     return () => clearTimeout(handler);
   }, [page, search, category, region, sortOption, API_URL]);
 
-  const resetFilters = () => {
-    setSearch("");
-    setCategory("");
-    setRegion("전체");
-    setSortOption("name");
-    setPage(1);
-  };
-
   return (
-    <Layout style={{ minHeight: "100vh", backgroundColor: "#0a0a0a" }}>
-      <Sider
-        collapsible
-        collapsed={collapsed}
-        onCollapse={setCollapsed}
-        theme="dark"
-        width={240}
-        style={{ 
-          background: "#0a0a0a", 
-          borderRight: "1px solid #222",
-          position: "fixed",
-          height: "100vh",
-          left: 0,
-          zIndex: 100,
-          display: "flex",
-          flexDirection: "column"
-        }}
-      >
-        <div style={{ flex: 1 }}>
-          <div style={{ 
-            height: 80, 
-            display: "flex", 
-            alignItems: "center", 
-            justifyContent: "center",
-            borderBottom: "1px solid #222",
-            marginBottom: 20
-          }}>
-            <Link href="/" style={{ textDecoration: "none", display: "flex", alignItems: "center", gap: 8 }}>
-              <span style={{ fontSize: 28 }}>🥃</span>
-              {!collapsed && <span style={{ color: "#fff", fontSize: 20, fontWeight: 700, letterSpacing: 1.5 }}>SOOL</span>}
-            </Link>
-          </div>
-
-          <Menu
-            theme="dark"
-            mode="inline"
-            defaultSelectedKeys={["explore"]}
-            style={{ background: "transparent", border: "none" }}
-            items={[
-              { key: "explore", icon: <AppstoreOutlined />, label: "Explore" },
-              { key: "tasting", icon: <StarOutlined />, label: <Link href="/Tasting">Tasting Notes</Link> },
-              { key: "analytics", icon: <BarChartOutlined />, label: <Link href="/dashboard">Analytics</Link> },
-              { key: "updates", icon: <CompassOutlined />, label: <Link href="/updates">Discovery</Link> },
-              { key: "community", icon: <HeartOutlined />, label: <Link href="/community">Community</Link> },
-              ...(user ? [
-                { key: "profile", icon: <UserOutlined />, label: <Link href="/profile">My Page</Link> }
-              ] : []),
-              ...(user?.is_admin ? [
-                { key: "divider", type: "divider" as const, style: { backgroundColor: "#222" } },
-                { key: "admin", icon: <AppstoreOutlined />, label: <Link href="/admin">Admin Dashboard</Link> }
-              ] : []),
-            ]}
-          />
+    <div className="bg-[#050505] min-h-full">
+      <div className="max-w-[1600px] mx-auto py-24 px-16">
+        {/* Hero Section */}
+        <div className="mb-24 text-center">
+          <Title className="!text-white !text-8xl !font-black !m-0 !tracking-tighter !leading-[1.1]">
+            Elevate Your <span className="text-amber-500">Sense</span>
+          </Title>
+          <Text className="!text-white/60 !text-2xl !max-w-3xl !block !mx-auto !mt-8 !font-medium !leading-relaxed">
+            Curated collection of Korea's finest traditional spirits. <br/>
+            Discover <span className="text-white font-bold">{total}</span> unique flavors and their heritage.
+          </Text>
         </div>
 
-        <div style={{ 
-          padding: "20px", 
-          borderTop: "1px solid #222", 
-          marginBottom: 40,
-          textAlign: collapsed ? "center" : "left" 
-        }}>
-          {user ? (
-            <Space orientation="vertical" size="middle" style={{ width: "100%" }}>
-              {!collapsed && (
-                <div>
-                  <Text style={{ color: "#fff", display: "block", fontWeight: 600 }}>{user.username}</Text>
-                  <Text style={{ color: "#444", fontSize: 12 }}>{user.email}</Text>
-                </div>
-              )}
-              <Button 
-                type="text" 
-                danger 
-                icon={<LockOutlined />} 
-                onClick={logout}
-                block={!collapsed}
-                style={{ display: "flex", alignItems: "center", justifyContent: collapsed ? "center" : "flex-start", padding: 0 }}
-              >
-                {!collapsed && "Logout"}
-              </Button>
-            </Space>
-          ) : (
-            <Link href="/login">
-              <Button 
-                type="primary" 
-                block={!collapsed}
-                icon={<UserOutlined />}
-                style={{ 
-                  background: "#d4af37", 
-                  color: "#000", 
-                  border: "none", 
-                  fontWeight: 700,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center"
-                }}
-              >
-                {!collapsed && "Sign In"}
-              </Button>
-            </Link>
-          )}
-        </div>
-      </Sider>
-
-      <Layout style={{ marginLeft: collapsed ? 80 : 240, background: "transparent", transition: "all 0.2s" }}>
-        <Header style={{ 
-          background: "rgba(10, 10, 10, 0.9)", 
-          backdropFilter: "blur(20px)",
-          padding: "0 40px",
-          height: 80,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          borderBottom: "1px solid #333",
-          position: "sticky",
-          top: 0,
-          zIndex: 90
-        }}>
-          <Input
-            prefix={<SearchOutlined style={{ color: "#d4af37" }} />}
-            placeholder="Search traditional sool..."
-            value={search}
-            style={{ 
-              width: 400, 
-              background: "#1a1a1a", 
-              borderRadius: 12, 
-              padding: "10px 18px",
-              color: "#fff",
-              border: "1px solid #444"
-            }}
-            onChange={(e) => {
-              setSearch(e.target.value);
-              setPage(1);
-            }}
-          />
-
-          <Space size="middle">
-            <Button 
-              type="text" 
-              icon={<ReloadOutlined />} 
-              onClick={resetFilters} 
-              style={{ color: "#888" }}
-            />
-            <div style={{ width: 1, height: 20, background: "#333" }} />
-            <Link href={user ? "/profile" : "/login"}>
-              <Space size="small" style={{ cursor: 'pointer' }}>
-                <Text style={{ color: "#fff", fontWeight: 500 }}>{user ? user.username : "Guest User"}</Text>
-                <Badge dot color={user ? "#52c41a" : "#d4af37"}>
-                  <div style={{ width: 32, height: 32, borderRadius: "50%", background: "#333", border: "1px solid #444", display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <UserOutlined style={{ color: user ? "#fff" : "#666" }} />
-                  </div>
-                </Badge>
-              </Space>
-            </Link>
-          </Space>
-        </Header>
-
-        <Content style={{ padding: "60px 80px" }}>
-          {/* Hero Section */}
-          <div style={{ marginBottom: 80, position: "relative", textAlign: "center" }}>
-            <Title style={{ color: "#fff", fontSize: 64, fontWeight: 900, margin: 0, letterSpacing: -1 }}>
-              Elevate Your <span style={{ color: "#d4af37" }}>Sense</span>
-            </Title>
-            <Text style={{ color: "#666", fontSize: 20, maxWidth: 700, display: "block", margin: "16px auto 0" }}>
-              Curated collection of Korea's finest traditional spirits. 
-              Explore {total} unique flavors and their heritage.
-            </Text>
-          </div>
-
-          {/* Filter Bar */}
-          <div style={{ 
-            display: "flex", 
-            justifyContent: "space-between", 
-            alignItems: "center", 
-            marginBottom: 48,
-            background: "#111",
-            padding: "16px 32px",
-            borderRadius: 16,
-            border: "1px solid #222",
-            boxShadow: "0 10px 30px rgba(0,0,0,0.5)"
-          }}>
-            <Space size="large">
-              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                <FilterOutlined style={{ color: "#d4af37" }} />
+        {/* Advanced Filter Control Center */}
+        <div className="mb-16 bg-white/[0.02] p-8 rounded-[2.5rem] border border-white/10 shadow-[0_30px_60px_rgba(0,0,0,0.8)] backdrop-blur-2xl">
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-8">
+            <Space size={48} className="flex-wrap">
+              {/* Category Filter */}
+              <div className="flex flex-col gap-3">
+                <Text className="!text-amber-500 !text-[11px] !font-black !tracking-[0.3em] !uppercase !opacity-70">Category</Text>
                 <Select
                   variant="borderless"
-                  style={{ width: 140, background: "#1a1a1a", borderRadius: 8, border: "1px solid #333" }}
+                  className="custom-filter-select w-48"
                   value={category}
                   onChange={setCategory}
                   options={CATEGORIES}
-                  styles={{ popup: { root: { background: "#1a1a1a", border: "1px solid #333" } } }}
+                  classNames={{ popup: { root: "custom-select-dropdown" } }}
                 />
               </div>
+
+              {/* Region Filter */}
+              <div className="flex flex-col gap-3">
+                <Text className="!text-amber-500 !text-[11px] !font-black !tracking-[0.3em] !uppercase !opacity-70">Region Origin</Text>
                 <Select
                   variant="borderless"
-                  style={{ width: 160, background: "#1a1a1a", borderRadius: 8, border: "1px solid #333" }}
+                  className="custom-filter-select w-56"
                   value={region}
                   onChange={setRegion}
                   options={regionOptions.map((r) => ({ label: r, value: r }))}
-                  styles={{ popup: { root: { background: "#1a1a1a", border: "1px solid #333" } } }}
+                  classNames={{ popup: { root: "custom-select-dropdown" } }}
                 />
+              </div>
+
+              {/* Sort Control */}
+              <div className="flex flex-col gap-3">
+                <Text className="!text-amber-500 !text-[11px] !font-black !tracking-[0.3em] !uppercase !opacity-70">Sort By</Text>
+                <Select
+                  variant="borderless"
+                  className="custom-filter-select w-48"
+                  value={sortOption}
+                  onChange={setSortOption}
+                  options={SORT_OPTIONS}
+                  classNames={{ popup: { root: "custom-select-dropdown" } }}
+                />
+              </div>
             </Space>
 
-            <Select
-              variant="borderless"
-              style={{ width: 160, background: "#1a1a1a", borderRadius: 8, border: "1px solid #333" }}
-              value={sortOption}
-              onChange={setSortOption}
-              options={SORT_OPTIONS}
-              styles={{ popup: { root: { background: "#1a1a1a", border: "1px solid #333" } } }}
-            />
-          </div>
-
-          {/* Sool Grid */}
-          {loading ? (
-            <div style={{ display: "flex", justifyContent: "center", padding: "100px 0" }}>
-              <Spin size="large" />
+            <div className="flex flex-col items-end gap-2 bg-white/5 p-4 px-6 rounded-2xl border border-white/5">
+              <Text className="!text-white/30 !text-[10px] !font-black !tracking-widest !uppercase">Matched Archive</Text>
+              <div className="flex items-baseline gap-2">
+                <span className="text-4xl font-black text-white leading-none">{total}</span>
+                <span className="text-amber-500 font-bold text-sm">SPIRITS</span>
+              </div>
             </div>
-          ) : (
-            <>
-              <div style={{ 
-                display: "grid", 
-                gap: 32, 
-                gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))" 
-              }}>
-                {sool.map((item) => (
-                  <Link href={`/sool/${item.id}`} key={item.id}>
-                    <Card
-                      hoverable
-                      style={{ 
-                        background: "#111", 
-                        border: "1px solid #222",
-                        borderRadius: 20,
-                        overflow: "hidden",
-                        height: "100%",
-                        transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)"
-                      }}
-                      styles={{ body: { padding: 28 } }}
-                    >
-                      <div style={{ 
-                        width: "100%", 
-                        aspectRatio: "1/1", 
-                        background: "linear-gradient(135deg, #1a1a1a 0%, #050505 100%)", 
-                        borderRadius: 16,
-                        marginBottom: 24,
-                        display: "flex",
-                        flexDirection: "column",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        position: "relative",
-                        overflow: "hidden",
-                        border: "1px solid #222"
-                      }}>
-                        {item.image_url ? (
-                          <img 
-                            src={resolveImageUrl(item.image_url) || ""} 
-                            alt={item.name} 
-                            style={{ width: "100%", height: "100%", objectFit: "cover" }} 
-                          />
-                        ) : (
-                          <div style={{ fontSize: 64, filter: "drop-shadow(0 10px 20px rgba(0,0,0,0.8))" }}>
-                            {item.category === "막걸리" ? "🍶" : "🥃"}
-                          </div>
-                        )}
-                        <div style={{ 
-                          position: "absolute", 
-                          bottom: 0, 
-                          left: 0, 
-                          right: 0, 
-                          height: "40%", 
-                          background: "linear-gradient(to top, rgba(212,175,55,0.05), transparent)" 
-                        }} />
-                      </div>
-                      
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8 }}>
-                        <Title level={4} style={{ color: "#fff", margin: 0, fontSize: 20 }}>{item.name}</Title>
-                        <Text style={{ color: "#d4af37", fontWeight: 600 }}>{item.abv}%</Text>
-                      </div>
-                      
-                      <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
-                        <Badge count={item.category} style={{ backgroundColor: "#222", color: "#888", border: "none" }} />
-                        <Badge count={item.region ?? "미등록"} style={{ backgroundColor: "#222", color: "#888", border: "none" }} />
-                      </div>
-                      
-                      <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                        <StarOutlined style={{ color: "#666" }} />
-                        <Text style={{ color: "#666" }}>Not rated yet</Text>
-                      </div>
-                    </Card>
-                  </Link>
-                ))}
-              </div>
+          </div>
+        </div>
 
-              <div style={{ display: "flex", justifyContent: "center", marginTop: 60 }}>
-                <Pagination
-                  current={page}
-                  total={total}
-                  pageSize={pageSize}
-                  onChange={setPage}
-                  showSizeChanger={false}
-                  className="custom-pagination"
-                />
-              </div>
-            </>
-          )}
-        </Content>
+        {/* Sool Grid */}
+        {loading ? (
+          <div className="flex justify-center py-32">
+            <Spin size="large" />
+          </div>
+        ) : (
+          <>
+            <div className="grid gap-12 grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+              {sool.map((item) => (
+                <Link href={`/sool/${item.id}`} key={item.id}>
+                  <Card
+                    hoverable
+                    className="!bg-white/[0.04] !border-white/10 !rounded-[2.5rem] overflow-hidden h-full hover:!border-amber-500/60 transition-all duration-500 group shadow-2xl"
+                    styles={{ body: { padding: 32 } }}
+                  >
+                    <div className="w-full aspect-square bg-gradient-to-br from-neutral-900 to-black rounded-[2rem] mb-8 flex flex-col items-center justify-center relative overflow-hidden border border-white/10 group-hover:border-amber-500/30 transition-all shadow-inner">
+                      {item.image_url ? (
+                        <img 
+                          src={resolveImageUrl(item.image_url) || ""} 
+                          alt={item.name} 
+                          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-1000" 
+                        />
+                      ) : (
+                        <div className="text-8xl drop-shadow-[0_15px_15px_rgba(0,0,0,0.9)] group-hover:scale-125 transition-transform duration-700">
+                          {item.category === "막걸리" ? "🍶" : "🥃"}
+                        </div>
+                      )}
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                    </div>
+                    
+                    <div className="flex justify-between items-start mb-3">
+                      <Title level={3} className="!text-white !m-0 !text-2xl !font-black !tracking-tight group-hover:text-amber-500 transition-colors">{item.name}</Title>
+                      <Text className="!text-amber-500 !font-black !text-xl">{item.abv}%</Text>
+                    </div>
+                    
+                    <div className="flex flex-wrap gap-2.5 mb-6">
+                      <Badge count={item.category} className="custom-large-badge" />
+                      <Badge count={item.region ?? "미등록"} className="custom-large-badge" />
+                    </div>
+                    
+                    <div className="flex items-center gap-3 mt-auto pt-4 border-t border-white/5">
+                      <StarOutlined className="text-amber-500/40 text-lg" />
+                      <Text className="text-white/40 text-[13px] font-bold uppercase tracking-widest">Explore Profile</Text>
+                    </div>
+                  </Card>
+                </Link>
+              ))}
+            </div>
 
-        <Footer style={{ 
-          background: "transparent", 
-          color: "#444", 
-          textAlign: "center", 
-          padding: "40px 0",
-          borderTop: "1px solid #222",
-          marginTop: 60
-        }}>
+            <div className="flex justify-center mt-24">
+              <Pagination
+                current={page}
+                total={total}
+                pageSize={pageSize}
+                onChange={setPage}
+                showSizeChanger={false}
+              />
+            </div>
+          </>
+        )}
+
+        <div className="!bg-transparent text-white/20 text-center py-24 mt-24 border-t border-white/5 tracking-[0.8em] font-black uppercase text-sm">
           SOOL — THE ESSENCE OF TRADITION
-        </Footer>
-      </Layout>
+        </div>
+      </div>
 
       <style jsx global>{`
-        .ant-layout-sider-trigger {
-          background: #111 !important;
+        /* --- Filter Visibility Fix --- */
+        .custom-filter-select.ant-select .ant-select-selector {
+          background: rgba(255,255,255,0.06) !important;
+          border: 1px solid rgba(255,255,255,0.15) !important;
+          border-radius: 14px !important;
+          height: 56px !important;
+          padding: 0 24px !important;
+          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+          display: flex !important;
+          align-items: center !important;
+          box-shadow: 0 4px 15px rgba(0,0,0,0.3) !important;
         }
-        .ant-menu-item-selected {
-          background-color: #1a1a1a !important;
-          color: #d4af37 !important;
+        
+        .custom-filter-select.ant-select:hover .ant-select-selector {
+          border-color: #f59e0b !important;
+          background: rgba(255,255,255,0.1) !important;
+          box-shadow: 0 4px 20px rgba(245, 158, 11, 0.15) !important;
         }
-        .ant-menu-item:hover {
-          color: #d4af37 !important;
+
+        /* Essential: Force White Text */
+        .custom-filter-select.ant-select .ant-select-selection-item,
+        .custom-filter-select.ant-select .ant-select-selection-placeholder,
+        .custom-filter-select.ant-select .ant-select-selection-search-input {
+          color: #ffffff !important;
+          font-size: 17px !important;
+          font-weight: 800 !important;
+          letter-spacing: -0.02em !important;
         }
-        .ant-pagination-item-active {
-          border-color: #d4af37 !important;
-          background: transparent !important;
+
+        .custom-filter-select.ant-select .ant-select-arrow {
+          color: #f59e0b !important;
+          font-size: 14px !important;
         }
-        .ant-pagination-item-active a {
-          color: #d4af37 !important;
+
+        /* Dropdown Menu Styling */
+        .custom-select-dropdown {
+          background: #121212 !important;
+          border: 1px solid rgba(255,255,255,0.12) !important;
+          border-radius: 18px !important;
+          padding: 10px !important;
+          box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7) !important;
+          backdrop-filter: blur(20px) !important;
+          z-index: 1000 !important;
         }
-        .ant-pagination-item:hover {
-          border-color: #d4af37 !important;
+
+        .custom-select-dropdown .ant-select-item {
+          color: rgba(255,255,255,0.7) !important;
+          border-radius: 10px !important;
+          margin-bottom: 6px !important;
+          padding: 12px 18px !important;
+          font-weight: 600 !important;
+          transition: all 0.2s !important;
         }
-        .ant-pagination-item:hover a {
-          color: #d4af37 !important;
+
+        .custom-select-dropdown .ant-select-item-option-selected {
+          background: rgba(245, 158, 11, 0.2) !important;
+          color: #f59e0b !important;
+          font-weight: 800 !important;
         }
-        .ant-select-selector {
+
+        .custom-select-dropdown .ant-select-item-option-active:not(.ant-select-item-option-selected) {
+          background: rgba(255,255,255,0.06) !important;
+          color: #ffffff !important;
+        }
+
+        /* --- Global Enhancements --- */
+        .custom-large-badge .ant-scroll-number {
+          background: rgba(255,255,255,0.1) !important;
           color: #fff !important;
+          border: 1px solid rgba(255,255,255,0.1) !important;
+          font-size: 13px !important;
+          font-weight: 800 !important;
+          padding: 4px 14px !important;
+          height: auto !important;
+          line-height: 1.4 !important;
+          border-radius: 8px !important;
+          box-shadow: 0 2px 8px rgba(0,0,0,0.2) !important;
         }
-        .ant-select-arrow {
-          color: #666 !important;
+        
+        .ant-pagination-item {
+          background: rgba(255,255,255,0.03) !important;
+          border-color: rgba(255,255,255,0.1) !important;
+          height: 52px !important;
+          width: 52px !important;
+          line-height: 50px !important;
+          border-radius: 14px !important;
+          transition: all 0.3s !important;
+        }
+        
+        .ant-pagination-item a {
+          color: rgba(255,255,255,0.5) !important;
+          font-size: 17px !important;
+          font-weight: 700 !important;
+        }
+        
+        .ant-pagination-item-active {
+          border-color: #f59e0b !important;
+          background: rgba(245, 158, 11, 0.15) !important;
+        }
+        
+        .ant-pagination-item-active a {
+          color: #f59e0b !important;
         }
       `}</style>
-    </Layout>
+    </div>
   );
 }

@@ -1,7 +1,7 @@
 ﻿import { NextRequest, NextResponse } from "next/server";
 
 const BACKEND = (process.env.BACKEND_URL || "http://127.0.0.1:8000").replace(/\/+$/, "");
-type Ctx = { params: Promise<{ path?: string[] }> | { path?: string[] } };
+type Ctx = { params: Promise<{ path?: string[] }> };
 
 export async function GET(req: NextRequest, ctx: Ctx) { return forward(req, ctx); }
 export async function POST(req: NextRequest, ctx: Ctx) { return forward(req, ctx); }
@@ -10,7 +10,7 @@ export async function PATCH(req: NextRequest, ctx: Ctx) { return forward(req, ct
 export async function DELETE(req: NextRequest, ctx: Ctx) { return forward(req, ctx); }
 
 async function forward(req: NextRequest, ctx: Ctx) {
-  const resolved = await Promise.resolve(ctx.params);
+  const resolved = await ctx.params;
   const parts = Array.isArray(resolved?.path) ? resolved.path : [];
   const targetPath = parts.join("/");
 
@@ -23,15 +23,24 @@ async function forward(req: NextRequest, ctx: Ctx) {
   const contentType = req.headers.get("content-type");
   if (contentType) headers.set("content-type", contentType);
 
+  const accept = req.headers.get("accept");
+  if (accept) headers.set("accept", accept);
+
+  const authHeader = req.headers.get("authorization");
+  if (authHeader) {
+    headers.set("authorization", authHeader);
+  }
+
   // ✅ 브라우저 쿠키를 백엔드로 전달
   const cookie = req.headers.get("cookie");
   if (cookie) {
     headers.set("cookie", cookie);
 
-    // ✅ cookie 문자열에서 access_token 파싱 → Authorization 헤더로도 전달
-    const m = cookie.match(/(?:^|;\s*)access_token=([^;]+)/);
-    if (m?.[1]) {
-      headers.set("authorization", `Bearer ${m[1]}`);
+    if (!headers.has("authorization")) {
+      const m = cookie.match(/(?:^|;\s*)access_token=([^;]+)/);
+      if (m?.[1]) {
+        headers.set("authorization", `Bearer ${m[1]}`);
+      }
     }
   }
 

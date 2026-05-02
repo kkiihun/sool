@@ -3,9 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "NODE_OPTIONS='--max-old-space-size=4096' next dev",
-    "build": "next build",
-    "start": "next start",
+    "dev": "cross-env NODE_OPTIONS=--max-old-space-size=4096 node scripts/next-with-filter.mjs dev",
+    "build": "node scripts/write-git-env.mjs && cross-env NODE_OPTIONS=--max-old-space-size=4096 node scripts/next-with-filter.mjs build --webpack",
+    "start": "node scripts/next-with-filter.mjs start",
     "lint": "next lint"
   },
   "dependencies": {

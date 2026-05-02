@@ -1,8 +1,9 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { message } from 'antd';
+import React, { createContext, useContext, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { message } from "antd";
+import { clearToken, getToken, setToken } from "@/lib/auth";
 
 interface User {
   id: number;
@@ -24,20 +25,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
-  const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
 
   const fetchUser = async (token: string) => {
     try {
-      const res = await fetch(`${API_URL}/users/me`, {
+      const res = await fetch("/proxy/users/me", {
+        cache: "no-store",
+        credentials: "include",
         headers: {
-          'Authorization': `Bearer ${token}`
-        }
+          Authorization: `Bearer ${token}`,
+        },
       });
+
       if (res.ok) {
         const userData = await res.json();
         setUser(userData);
       } else {
-        localStorage.removeItem('sool_token');
+        clearToken();
         setUser(null);
       }
     } catch (err) {
@@ -49,7 +52,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   useEffect(() => {
-    const token = localStorage.getItem('sool_token');
+    const token = getToken();
     if (token) {
       fetchUser(token);
     } else {
@@ -58,16 +61,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const login = async (token: string) => {
-    localStorage.setItem('sool_token', token);
+    setToken(token);
     await fetchUser(token);
-    router.push('/');
+    router.push("/");
     message.success("Welcome back!");
   };
 
   const logout = () => {
-    localStorage.removeItem('sool_token');
+    clearToken();
     setUser(null);
-    router.push('/');
+    router.push("/");
     message.info("Logged out safely.");
   };
 
@@ -81,7 +84,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
+    throw new Error("useAuth must be used within an AuthProvider");
   }
   return context;
-}
+};

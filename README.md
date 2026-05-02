@@ -1,130 +1,92 @@
-# 🍶 sool
-## 전통주 데이터 기반 분석 & 추천 시스템 (MVP → v1 전환중)
+# sool
 
-전통주 데이터를 구조화하고  
-**검색 · 조회 · 분석(그래프)까지 가능한 데이터 중심 서비스**로 구현한 프로젝트입니다.
+Traditional liquor data platform built with FastAPI, MariaDB, and Next.js.
 
-> 🍶 Data before recommendation.  
-> Structure first, intelligence later.
+## Repository Layout
 
----
+```text
+.
+|-- backend/            # FastAPI app, models, migrations, data loaders
+|-- frontend/           # Next.js app
+|-- data/               # Shared project data and non-runtime datasets
+|-- docs/               # Project docs and analysis notes
+|-- exports/            # Generated outputs, dumps, ad-hoc exports
+|-- scripts/            # Root-level utility scripts
+|-- docker-compose.yml  # Local Docker stack
+|-- .env                # Docker/local environment values
+```
 
-## 프로젝트 개요
-- 전통주 정형 데이터 모델링 (sool / sense / user 기반)
-- DB → API → Frontend 엔드투엔드 파이프라인 구축
-- 분석 기반 추천 시스템 확장 가능 구조
+## Folder Rules
 
----
+- Keep application code only in `backend/` and `frontend/`.
+- Put reusable datasets in `data/`.
+- Put generated CSV/TSV reports, dumps, and temporary exports in `exports/`.
+- Put analysis writeups and snapshots in `docs/analysis/`.
+- Put one-off maintenance scripts in `scripts/oneoff/`.
+- Do not drop ad-hoc files directly in the repository root.
 
-## 기술 스택
-- Backend: FastAPI, SQLAlchemy
-- Database: MariaDB (Docker 기반)
-- Frontend: Next.js, Tailwind CSS
-- Data / Analysis: Pandas
+## Run With Docker
 
----
+```powershell
+cd D:\sool
+docker compose up -d --build
+```
 
-## 문서
-- [주요 기능](docs/FEATURES.md)
-- [데이터 분석 결과](docs/ANALYSIS.md)
-- [실행 방법](docs/RUN.md)
-- [로드맵 & 목적](docs/ROADMAP.md)
+- Frontend: `http://localhost:3300`
+- Backend: `http://localhost:8000`
+- MariaDB: `localhost:3307`
 
----
+## Load DB Data
 
-# 주요 기능
+Initialize schema:
 
-## 전통주 검색
-- 이름 / 지역 / 주종 기반 검색
-- DB 쿼리 기반 빠른 조회
+```powershell
+cd D:\sool
+docker compose exec backend python scripts/sync_db_schema.py
+```
 
-## 상세 페이지
-- 전통주 기본 정보
-- 도수, 지역, 제조사 등 정형 데이터 제공
-- (옵션) 감각 데이터(sense) 기반 레이더/그래프 표시
+Load `sool` master data:
 
-## 리뷰 저장 구조
-- 사용자 리뷰 저장 가능한 테이블 설계
-- 평점 및 취향 데이터 확장 가능
+```powershell
+cd D:\sool
+docker compose exec backend python scripts/import_sool_basic.py
+```
 
-## 데이터 기반 통계
-- 도수 평균
-- 지역별 분포
-- 주종별 개수 통계
+Load `sense` data:
 
----
+```powershell
+cd D:\sool
+docker compose exec backend python scripts/load_data.py
+```
 
-# 데이터 분석 결과 (MVP)
-현재는 **기초 통계 분석 중심의 MVP 단계**입니다.  
-데이터 구조 검증 및 분석 파이프라인 구축을 목적으로 합니다.
+Notes:
 
-## 전통주 도수 분포
-![ABV Distribution](images/abv_distribution.png)
+- `import_sool_basic.py` reads `backend/data/sool_basic_clean.csv`
+- `load_data.py` reads `backend/data/sense_clean.csv`
 
-## 지역별 전통주 분포
-![Region Distribution](images/region_distribution.png)
+## Local Development
 
-## 주종별 전통주 비율
-![Type Ratio](images/type_ratio.png)
+Frontend:
 
----
+```powershell
+cd D:\sool\frontend
+npm install
+npm run dev
+```
 
-# 실행 방법 (Windows 기준: Docker DB/Backend + Front 로컬)
+Backend:
 
-## 0) 준비물
-- Docker Desktop (WSL2 권장)
-- Node.js **>= 20.9.0** (Next.js 16 요구사항)
-- Git
+```powershell
+cd D:\sool\backend
+py -m venv .venv
+.\.venv\Scripts\Activate.ps1
+$env:PYTHONUTF8="1"
+python -m pip install -r requirements.txt
+uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
+```
 
----
+## Cleanup Direction
 
-## 1) DB + Backend 실행 (Docker)
-프로젝트 루트에서:
-
-본 프로젝트는  
-**데이터 분석가 / 백엔드 포지션 지원을 위한 포트폴리오**로,
-
-- 데이터 모델링
-- API 설계
-- 분석 파이프라인 구축
-- 서비스 구조 설계
-
-역량을 **실제 구현 결과물**로 증명하는 것을 목표로 합니다.
-
-
-  실행 방법
-
-  프로젝트 루트 디렉토리에서 아래 명령어를 순서대로 실행하세요.
-
-
-   1. 서비스 실행:
-   1     docker-compose up -d --build
-
-   2. 초기 데이터 로드 (Seeding):
-   1     docker exec -it sool-backend bash -c "PYTHONPATH=. python scripts/import_sool_basic.py"
-   3. 접속:
-       * Frontend: http://localhost:3000 (http://localhost:3000)
-       * Backend API: http://localhost:8000 (http://localhost:8000)
-
-
-  실행 방법
-
-  프로젝트 루트 디렉토리에서 아래 명령어를 순서대로 실행하세요.
-
-
-   1. 서비스 실행:
-      docker-compose up --build -d
-
-   2. 초기 데이터 로드 (Seeding):
-      docker exec -it sool-backend bash -c "PYTHONPATH=. python scripts/import_sool_basic.py"
-
-   3. 접속:
-       * Frontend: http://localhost:3300 (http://localhost:3000)
-       * Backend API: http://localhost:8000 (http://localhost:8000)
-
-   4. 관리자 아이디
-      Id : admin@sool.com
-      PW : admin1234
-   
-   5. 서비스 다운:
-      docker-compose down
+- `D:\sool` is the primary working repository.
+- `D:\Development\sool` should be treated as an old working copy / migration source.
+- Move only reviewed files from the old copy into the structured folders above.

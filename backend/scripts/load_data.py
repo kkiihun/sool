@@ -6,23 +6,31 @@ import pandas as pd
 from sqlalchemy.exc import SQLAlchemyError
 
 from app.core.database import SessionLocal
+from app.models.sense import Sense
 from app.models.sool import Sool
-from app.models.user import User   # noqa: F401  (모델 등록용)
-from app.models.sense import Sense # noqa: F401  (모델 등록용)
+from app.models.user import User  # noqa: F401
 
-# load_sense.py 위치 기준으로 CSV가 같은 폴더(app/data)에 있다고 가정
 BASE_PATH = os.path.dirname(__file__)
+PROJECT_ROOT = os.path.dirname(BASE_PATH)
 
-SENSE_FILE = "sense_clean.csv"
+DEFAULT_SENSE_FILE = os.path.join(PROJECT_ROOT, "data", "sense_clean.csv")
+LEGACY_SENSE_FILE = os.path.join(BASE_PATH, "sense_clean.csv")
 
-# ✅ 사고 방지 가드: sool이 너무 적으면 sense를 돌리지 말고 즉시 중단
 MIN_SOOL_COUNT = int(os.getenv("MIN_SOOL_COUNT", "1000"))
 COMMIT_EVERY = int(os.getenv("COMMIT_EVERY", "200"))
 
-# ✅ 모델에 존재할 때만 주입(프로젝트마다 Sense 컬럼이 다를 수 있어서 안전하게)
 CANDIDATE_NUM_FIELDS = [
-    "aroma", "sweetness", "acidity", "body", "finish",
-    "rating", "color", "carbonation", "smoothness", "clarity", "aftertaste"
+    "aroma",
+    "sweetness",
+    "acidity",
+    "body",
+    "finish",
+    "rating",
+    "color",
+    "carbonation",
+    "smoothness",
+    "clarity",
+    "aftertaste",
 ]
 CANDIDATE_STR_FIELDS = ["notes"]
 
@@ -33,8 +41,8 @@ def clean_int(value, default=None):
     s = str(value).strip()
     if s.lower() in ("nan", "none", "null"):
         return default
-    m = re.findall(r"-?\d+", s)
-    return int(m[0]) if m else default
+    match = re.findall(r"-?\d+", s)
+    return int(match[0]) if match else default
 
 
 def clean_float(value, default=None):
@@ -43,10 +51,9 @@ def clean_float(value, default=None):
     s = str(value).strip()
     if s.lower() in ("nan", "none", "null"):
         return default
-    # "12,5" / "12.5%" 방어
     s = s.replace("%", "").replace(",", ".")
-    m = re.findall(r"-?\d+\.?\d*", s)
-    return float(m[0]) if m else default
+    match = re.findall(r"-?\d+\.?\d*", s)
+    return float(match[0]) if match else default
 
 
 def clean_str(value, default=None, max_len=None):
@@ -60,6 +67,14 @@ def clean_str(value, default=None, max_len=None):
     return s
 
 
+def resolve_csv_path():
+    if os.path.exists(DEFAULT_SENSE_FILE):
+        return DEFAULT_SENSE_FILE
+    if os.path.exists(LEGACY_SENSE_FILE):
+        return LEGACY_SENSE_FILE
+    return DEFAULT_SENSE_FILE
+
+
 def import_sense():
     db = SessionLocal()
 
@@ -68,49 +83,53 @@ def import_sense():
     skipped_missing_sool = 0
     skipped_bad_row = 0
     errors = 0
-
     missing_sool_ids = []
 
-    csv_path = os.path.join(BASE_PATH, SENSE_FILE)
-    print(f"\n📂 Loading: {csv_path}")
+    csv_path = resolve_csv_path()
+    print(f"\nLoading: {csv_path}")
 
     if not os.path.exists(csv_path):
-        print(f"❌ 파일 없음: {SENSE_FILE}")
+        print("sense_clean.csv not found in backend/data or backend/scripts")
         db.close()
         return
 
-    # ✅ sool 카운트 가드
-    sool_cnt = db.query(Sool).count()
-    if sool_cnt < MIN_SOOL_COUNT:
+    sool_count = db.query(Sool).count()
+    if sool_count < MIN_SOOL_COUNT:
         db.close()
         raise RuntimeError(
-            f"sool count too low ({sool_cnt}). "
-            f"Run scripts/load_data.py first (expect ~1192). "
-            f"If you really want to bypass, set MIN_SOOL_COUNT=0."
+            f"sool count too low ({sool_count}). "
+            "Run scripts/import_sool_basic.py first. "
+            "If you really want to bypass, set MIN_SOOL_COUNT=0."
         )
 
     df = pd.read_csv(csv_path)
     df = df.where(pd.notnull(df), None)
 
-    print(f"✅ rows={len(df)} cols={len(df.columns)} (sool_cnt={sool_cnt})")
+    print(f"rows={len(df)} cols={len(df.columns)} (sool_cnt={sool_count})")
 
-    # ✅ Sense 모델 컬럼 키 목록 (존재하는 컬럼만 넣기)
     sense_cols = set(Sense.__table__.columns.keys())
 
     for idx, row in df.iterrows():
         sool_id = clean_int(row.get("sool_id"))
-        if not sool_id:
-            skipped_bad_row += 1
-            continue
+        sool_name = clean_str(row.get("name"))
 
-        # ✅ sool 존재 확인 (절대 생성하지 않음)
-        sool = db.query(Sool).filter(Sool.id == sool_id).first()
+        sool = None
+        if sool_id:
+            sool = db.query(Sool).filter(Sool.id == sool_id).first()
+        elif sool_name:
+            sool = db.query(Sool).filter(Sool.name == sool_name).first()
+
         if not sool:
+            if not sool_id and not sool_name:
+                skipped_bad_row += 1
+                continue
             skipped_missing_sool += 1
-            missing_sool_ids.append(sool_id)
+            if sool_id:
+                missing_sool_ids.append(sool_id)
             continue
 
-        # ✅ 중복 방지: (데이터셋 특성상) sool_id당 1개만 들어가게
+        sool_id = sool.id
+
         exists = db.query(Sense).filter(Sense.sool_id == sool_id).first()
         if exists:
             skipped_exists += 1
@@ -118,22 +137,20 @@ def import_sense():
 
         payload = {}
 
-        # FK
         if "sool_id" in sense_cols:
             payload["sool_id"] = sool_id
 
-        # ✅ 숫자 필드: 모델에 존재 + CSV 컬럼 존재 시만
-        for f in CANDIDATE_NUM_FIELDS:
-            if f in sense_cols and f in df.columns:
-                payload[f] = clean_float(row.get(f), default=0.0)
+        for field in CANDIDATE_NUM_FIELDS:
+            if field in sense_cols and field in df.columns:
+                payload[field] = clean_float(row.get(field), default=0.0)
 
-        # ✅ 문자열 필드
-        for f in CANDIDATE_STR_FIELDS:
-            if f in sense_cols and f in df.columns:
-                payload[f] = clean_str(row.get(f), default="", max_len=1000)
+        if "rating" in sense_cols and "overall_score" in df.columns:
+            payload["rating"] = clean_float(row.get("overall_score"), default=0.0)
 
-        # ✅ (옵션) Sense 모델에 user_id가 필수인데 CSV에 없다면 환경변수로 주입 가능
-        # 예: DEFAULT_USER_ID=1
+        for field in CANDIDATE_STR_FIELDS:
+            if field in sense_cols and field in df.columns:
+                payload[field] = clean_str(row.get(field), default="", max_len=1000)
+
         if "user_id" in sense_cols and "user_id" not in payload:
             default_user_id = os.getenv("DEFAULT_USER_ID")
             if default_user_id:
@@ -147,27 +164,27 @@ def import_sense():
 
             if inserted_total % COMMIT_EVERY == 0:
                 db.commit()
-                print(f"💾 committed {inserted_total} rows...")
+                print(f"committed {inserted_total} rows...")
 
-        except SQLAlchemyError as e:
+        except SQLAlchemyError as exc:
             errors += 1
-            print(f"❌ row error at {SENSE_FILE}:{idx} sool_id={sool_id} => {e}")
+            print(f"row error at {os.path.basename(csv_path)}:{idx} sool_id={sool_id} => {exc}")
 
     db.commit()
     db.close()
 
-    print("\n==================== 📊 Sense Import Summary ====================")
-    print(f"✅ Inserted                 : {inserted_total}")
-    print(f"↩️  Skipped (sense exists)   : {skipped_exists}")
-    print(f"⚠️  Skipped (missing sool)   : {skipped_missing_sool}")
-    print(f"⚠️  Skipped (bad row)        : {skipped_bad_row}")
-    print(f"❌ Errors                   : {errors}")
+    print("\n==================== Sense Import Summary ====================")
+    print(f"Inserted                 : {inserted_total}")
+    print(f"Skipped (sense exists)   : {skipped_exists}")
+    print(f"Skipped (missing sool)   : {skipped_missing_sool}")
+    print(f"Skipped (bad row)        : {skipped_bad_row}")
+    print(f"Errors                   : {errors}")
 
     if missing_sool_ids:
         top = Counter(missing_sool_ids).most_common(10)
-        print(f"🔎 Top missing sool_id (top10): {top}")
+        print(f"Top missing sool_id (top10): {top}")
 
-    print("===============================================================\n")
+    print("=============================================================\n")
 
 
 if __name__ == "__main__":

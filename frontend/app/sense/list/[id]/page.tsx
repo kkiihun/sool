@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import axios from "axios";
 import { useParams } from "next/navigation";
 
 export default function SenseDetail() {
@@ -9,10 +8,18 @@ export default function SenseDetail() {
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
+  const getApiUrl = () => {
+    if (typeof window !== "undefined") return "/proxy";
+    return process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
+  };
+  const API_URL = getApiUrl();
+
   const fetchData = async () => {
     try {
-      const res = await axios.get(`http://localhost:8000/sense/${id}`);
-      setData(res.data);
+      const res = await fetch(`${API_URL}/sense/${id}`);
+      if (!res.ok) throw new Error("Fetch failed");
+      const json = await res.json();
+      setData(json);
     } catch (error) {
       alert("데이터 불러오기 실패");
     } finally {

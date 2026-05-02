@@ -3,8 +3,6 @@
 import Link from "next/link";
 import { useState, useEffect } from "react";
 import {
-  Layout,
-  Menu,
   Typography,
   Card,
   Row,
@@ -13,11 +11,7 @@ import {
   Statistic,
 } from "antd";
 import {
-  AppstoreOutlined,
-  CompassOutlined,
   StarOutlined,
-  HeartOutlined,
-  BarChartOutlined,
   DatabaseOutlined,
   GlobalOutlined,
   ExperimentOutlined,
@@ -36,17 +30,19 @@ import {
   Legend,
 } from "recharts";
 
-const { Sider, Header, Content, Footer } = Layout;
 const { Title, Text } = Typography;
 
-const COLORS = ["#d4af37", "#aa8e2e", "#816d23", "#584c18", "#302b0d"];
+const COLORS = ["#f59e0b", "#d97706", "#b45309", "#92400e", "#78350f"];
 
 export default function DashboardPage() {
-  const [collapsed, setCollapsed] = useState(false);
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState<any>(null);
 
-  const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+  const getApiUrl = () => {
+    if (typeof window !== "undefined") return "/proxy";
+    return process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
+  };
+  const API_URL = getApiUrl();
 
   useEffect(() => {
     async function fetchStats() {
@@ -67,182 +63,108 @@ export default function DashboardPage() {
 
   if (loading) {
     return (
-      <div style={{ display: "flex", justifyContent: "center", alignItems: "center", height: "100vh", background: "#0a0a0a" }}>
+      <div className="h-screen flex items-center justify-center bg-[#0a0a0a]">
         <Spin size="large" />
       </div>
     );
   }
 
   return (
-    <Layout style={{ minHeight: "100vh", backgroundColor: "#0a0a0a" }}>
-      <Sider
-        collapsible
-        collapsed={collapsed}
-        onCollapse={setCollapsed}
-        theme="dark"
-        width={240}
-        style={{ 
-          background: "#0a0a0a", 
-          borderRight: "1px solid #222",
-          position: "fixed",
-          height: "100vh",
-          left: 0,
-          zIndex: 100
-        }}
-      >
-        <div style={{ 
-          height: 80, 
-          display: "flex", 
-          alignItems: "center", 
-          justifyContent: "center",
-          borderBottom: "1px solid #222",
-          marginBottom: 20
-        }}>
-          <Link href="/" style={{ textDecoration: "none", display: "flex", alignItems: "center", gap: 8 }}>
-            <span style={{ fontSize: 28 }}>🥃</span>
-            {!collapsed && <span style={{ color: "#fff", fontSize: 20, fontWeight: 700, letterSpacing: 1.5 }}>SOOL</span>}
-          </Link>
-        </div>
+    <div className="max-w-[1600px] mx-auto py-12 px-8">
+      <div className="mb-12">
+        <Title className="!text-white !m-0 !text-5xl font-black">
+          Market <span className="text-amber-500">Overview</span>
+        </Title>
+        <Text className="text-white/40 text-lg italic">Comprehensive data analysis of Korean traditional spirits.</Text>
+      </div>
 
-        <Menu
-          theme="dark"
-          mode="inline"
-          selectedKeys={["analytics"]}
-          style={{ background: "transparent", border: "none" }}
-          items={[
-            { key: "explore", icon: <AppstoreOutlined />, label: <Link href="/">Explore</Link> },
-            { key: "tasting", icon: <StarOutlined />, label: <Link href="/Tasting">Tasting Notes</Link> },
-            { key: "analytics", icon: <BarChartOutlined />, label: "Analytics" },
-            { key: "updates", icon: <CompassOutlined />, label: <Link href="/updates">Updates</Link> },
-            { key: "community", icon: <HeartOutlined />, label: <Link href="/community">Community</Link> },
-          ]}
-        />
-      </Sider>
+      {/* KPI Row */}
+      <Row gutter={[24, 24]} className="mb-12">
+        {[
+          { title: "Total Spirit Varieties", value: stats.total_sool, icon: <DatabaseOutlined />, suffix: "Items" },
+          { title: "Average ABV", value: stats.avg_abv, icon: <ExperimentOutlined />, suffix: "%" },
+          { title: "Consumer Reviews", value: stats.total_reviews, icon: <StarOutlined />, suffix: "Notes" },
+          { title: "Sourcing Regions", value: stats.region_distribution.length, icon: <GlobalOutlined />, suffix: "Areas" },
+        ].map((kpi, idx) => (
+          <Col xs={24} sm={12} lg={6} key={idx}>
+            <Card 
+              className="bg-white/5 border-white/10 rounded-3xl backdrop-blur-sm"
+              styles={{ body: { padding: "32px" } }}
+            >
+              <Statistic
+                title={<span className="text-white/30 text-xs font-bold uppercase tracking-widest">{kpi.title}</span>}
+                value={kpi.value}
+                precision={idx === 1 ? 1 : 0}
+                styles={{ content: { color: "#fff", fontSize: "32px", fontWeight: 900 } }}
+                prefix={<span className="text-amber-500 mr-4">{kpi.icon}</span>}
+                suffix={<span className="text-white/20 text-sm ml-2">{kpi.suffix}</span>}
+              />
+            </Card>
+          </Col>
+        ))}
+      </Row>
 
-      <Layout style={{ marginLeft: collapsed ? 80 : 240, background: "transparent", transition: "all 0.2s" }}>
-        <Header style={{ 
-          background: "rgba(10, 10, 10, 0.8)", 
-          backdropFilter: "blur(10px)",
-          padding: "0 40px",
-          height: 80,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          borderBottom: "1px solid #222",
-          position: "sticky",
-          top: 0,
-          zIndex: 90
-        }}>
-          <Title level={4} style={{ color: "#fff", margin: 0 }}>Analytics Dashboard</Title>
-          <Text style={{ color: "#666" }}>Market Insights & Data</Text>
-        </Header>
-
-        <Content style={{ padding: "40px 60px" }}>
-          <div style={{ marginBottom: 40 }}>
-            <Title level={2} style={{ color: "#fff", margin: 0 }}>Market <span style={{ color: "#d4af37" }}>Overview</span></Title>
-            <Text style={{ color: "#888" }}>Comprehensive data analysis of Korean traditional spirits.</Text>
-          </div>
-
-          {/* KPI Row */}
-          <Row gutter={[24, 24]} style={{ marginBottom: 40 }}>
-            {[
-              { title: "Total Spirit Varieties", value: stats.total_sool, icon: <DatabaseOutlined />, suffix: "Items" },
-              { title: "Average ABV", value: stats.avg_abv, icon: <ExperimentOutlined />, suffix: "%" },
-              { title: "Consumer Reviews", value: stats.total_reviews, icon: <StarOutlined />, suffix: "Notes" },
-              { title: "Sourcing Regions", value: stats.region_distribution.length, icon: <GlobalOutlined />, suffix: "Areas" },
-            ].map((kpi, idx) => (
-              <Col xs={24} sm={12} lg={6} key={idx}>
-                <Card 
-                  style={{ background: "#111", border: "1px solid #222", borderRadius: 16 }}
-                  styles={{ body: { padding: "24px" } }}
-                >
-                  <Statistic
-                    title={<span style={{ color: "#666", fontSize: 14, textTransform: "uppercase", letterSpacing: 1 }}>{kpi.title}</span>}
-                    value={kpi.value}
-                    precision={idx === 1 ? 1 : 0}
-                    styles={{ content: { color: "#fff", fontSize: 28, fontWeight: 700 } }}
-                    prefix={<span style={{ color: "#d4af37", marginRight: 12 }}>{kpi.icon}</span>}
-                    suffix={<span style={{ fontSize: 14, color: "#444", marginLeft: 8 }}>{kpi.suffix}</span>}
+      <Row gutter={[24, 24]}>
+        <Col xs={24} lg={14}>
+          <Card
+            title={<span className="text-white font-bold uppercase tracking-wider text-sm">Region Distribution</span>}
+            className="bg-white/5 border-white/10 rounded-[32px] overflow-hidden"
+            styles={{ header: { borderBottom: "1px solid rgba(255,255,255,0.05)", padding: "24px 32px" }, body: { padding: "32px" } }}
+          >
+            <div className="h-[450px] w-full">
+              <ResponsiveContainer>
+                <BarChart data={stats.region_distribution} layout="vertical" margin={{ left: 20 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" horizontal={false} />
+                  <XAxis type="number" stroke="rgba(255,255,255,0.3)" fontSize={12} />
+                  <YAxis dataKey="name" type="category" stroke="rgba(255,255,255,0.5)" fontSize={12} width={100} />
+                  <Tooltip 
+                    contentStyle={{ background: "rgba(0,0,0,0.9)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "12px", backdropFilter: "blur(10px)" }}
+                    itemStyle={{ color: "#f59e0b" }}
                   />
-                </Card>
-              </Col>
-            ))}
-          </Row>
+                  <Bar dataKey="value" fill="#f59e0b" radius={[0, 8, 8, 0]} barSize={24} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </Card>
+        </Col>
 
-          <Row gutter={[24, 24]}>
-            <Col xs={24} lg={14}>
-              <Card
-                title={<span style={{ color: "#fff" }}>Region Distribution</span>}
-                style={{ background: "#111", border: "1px solid #222", borderRadius: 20 }}
-                styles={{ header: { borderBottom: "1px solid #222" } }}
-              >
-                <div style={{ height: 400, width: "100%" }}>
-                  <ResponsiveContainer>
-                    <BarChart data={stats.region_distribution} layout="vertical" margin={{ left: 20 }}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#222" horizontal={false} />
-                      <XAxis type="number" stroke="#444" fontSize={12} />
-                      <YAxis dataKey="name" type="category" stroke="#888" fontSize={12} width={80} />
-                      <Tooltip 
-                        contentStyle={{ background: "#1a1a1a", border: "1px solid #333", borderRadius: 8 }}
-                        itemStyle={{ color: "#d4af37" }}
-                      />
-                      <Bar dataKey="value" fill="#d4af37" radius={[0, 4, 4, 0]} barSize={20} />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-              </Card>
-            </Col>
-
-            <Col xs={24} lg={10}>
-              <Card
-                title={<span style={{ color: "#fff" }}>Category Breakdown</span>}
-                style={{ background: "#111", border: "1px solid #222", borderRadius: 20 }}
-                styles={{ header: { borderBottom: "1px solid #222" } }}
-              >
-                <div style={{ height: 400, width: "100%" }}>
-                  <ResponsiveContainer>
-                    <PieChart>
-                      <Pie
-                        data={stats.category_distribution}
-                        cx="50%"
-                        cy="50%"
-                        innerRadius={80}
-                        outerRadius={120}
-                        paddingAngle={5}
-                        dataKey="value"
-                      >
-                        {stats.category_distribution.map((entry: any, index: number) => (
-                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                        ))}
-                      </Pie>
-                      <Tooltip 
-                        contentStyle={{ background: "#1a1a1a", border: "1px solid #333", borderRadius: 8 }}
-                        itemStyle={{ color: "#fff" }}
-                      />
-                      <Legend 
-                        verticalAlign="bottom" 
-                        height={36} 
-                        formatter={(value) => <span style={{ color: "#888" }}>{value}</span>}
-                      />
-                    </PieChart>
-                  </ResponsiveContainer>
-                </div>
-              </Card>
-            </Col>
-          </Row>
-        </Content>
-
-        <Footer style={{ 
-          background: "transparent", 
-          color: "#444", 
-          textAlign: "center", 
-          padding: "40px 0",
-          borderTop: "1px solid #222",
-          marginTop: 60
-        }}>
-          SOOL ANALYTICS — DATA DRIVEN HERITAGE
-        </Footer>
-      </Layout>
-    </Layout>
+        <Col xs={24} lg={10}>
+          <Card
+            title={<span className="text-white font-bold uppercase tracking-wider text-sm">Category Breakdown</span>}
+            className="bg-white/5 border-white/10 rounded-[32px] overflow-hidden"
+            styles={{ header: { borderBottom: "1px solid rgba(255,255,255,0.05)", padding: "24px 32px" }, body: { padding: "32px" } }}
+          >
+            <div className="h-[450px] w-full">
+              <ResponsiveContainer>
+                <PieChart>
+                  <Pie
+                    data={stats.category_distribution}
+                    cx="50%"
+                    cy="45%"
+                    innerRadius={100}
+                    outerRadius={140}
+                    paddingAngle={8}
+                    dataKey="value"
+                  >
+                    {stats.category_distribution.map((entry: any, index: number) => (
+                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip 
+                    contentStyle={{ background: "rgba(0,0,0,0.9)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "12px", backdropFilter: "blur(10px)" }}
+                    itemStyle={{ color: "#fff" }}
+                  />
+                  <Legend 
+                    verticalAlign="bottom" 
+                    height={36} 
+                    formatter={(value) => <span className="text-white/40 text-xs font-semibold uppercase tracking-wider">{value}</span>}
+                  />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+          </Card>
+        </Col>
+      </Row>
+    </div>
   );
 }

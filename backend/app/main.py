@@ -15,7 +15,11 @@ from app.core.database import SessionLocal, Base, engine
 # =====================#
 #   APP 생성
 # =====================#
-app = FastAPI(title="SOOL API V2")
+app = FastAPI(
+    title="SOOL API V2",
+    description="Korean Traditional Spirits Database API",
+    version="0.1.0"
+)
 
 # =====================#
 #   Model Import

@@ -1,6 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
+import { getToken } from "@/lib/auth";
 
 type Me = {
   id?: number;
@@ -13,6 +14,8 @@ type ShellCtx = {
   loadingMe: boolean;
   isAdmin: boolean;
   refreshMe: () => Promise<void>;
+  search: string;
+  setSearch: (v: string) => void;
 };
 
 const Ctx = createContext<ShellCtx | null>(null);
@@ -24,9 +27,11 @@ export function useAppShell() {
 }
 
 async function fetchMe() {
-  const r = await fetch("/api/proxy/users/me", {
+  const token = getToken();
+  const r = await fetch("/proxy/users/me", {
     cache: "no-store",
-    credentials: "include", // ✅ 쿠키 포함
+    credentials: "include",
+    headers: token ? { Authorization: `Bearer ${token}` } : undefined,
   });
 
   if (!r.ok) return null;
@@ -37,6 +42,7 @@ async function fetchMe() {
 export default function AppShellProvider({ children }: { children: React.ReactNode }) {
   const [me, setMe] = useState<Me | null>(null);
   const [loadingMe, setLoadingMe] = useState(true);
+  const [search, setSearch] = useState("");
 
   const refreshMe = async () => {
     setLoadingMe(true);
@@ -50,13 +56,12 @@ export default function AppShellProvider({ children }: { children: React.ReactNo
 
   useEffect(() => {
     refreshMe();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const value = useMemo<ShellCtx>(() => {
     const isAdmin = !!me?.is_admin;
-    return { me, loadingMe, isAdmin, refreshMe };
-  }, [me, loadingMe]);
+    return { me, loadingMe, isAdmin, refreshMe, search, setSearch };
+  }, [me, loadingMe, search]);
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

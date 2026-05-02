@@ -1,10 +1,12 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
+
 from app.core.database import SessionLocal
 from app.models.tasting_note import TastingNote
 from app.schemas.tasting_note import TastingNoteCreate, TastingNoteResponse
 
 router = APIRouter(prefix="/v2/tasting", tags=["Tasting"])
+
 
 def get_db():
     db = SessionLocal()
@@ -13,40 +15,38 @@ def get_db():
     finally:
         db.close()
 
-# -------------------------------
-# 1) Create Tasting Note (등록)
-# -------------------------------
+
 @router.post("/note", response_model=TastingNoteResponse)
 def create_note(data: TastingNoteCreate, db: Session = Depends(get_db)):
-    note = TastingNote(**data.dict())
+    payload = data.model_dump() if hasattr(data, "model_dump") else data.dict()
+    note = TastingNote(**payload)
     db.add(note)
     db.commit()
     db.refresh(note)
     return note
 
-# -------------------------------
-# 2) Get All Notes (조회) ← 새로 추가!
-# -------------------------------
-@router.get("/note/all")
-def list_notes(db: Session = Depends(get_db)):
-    return db.query(TastingNote).all()
 
-# -------------------------------
-# 3) note id 추가
-# -------------------------------
+@router.get("/note/all", response_model=list[TastingNoteResponse])
+def list_notes(db: Session = Depends(get_db)):
+    return db.query(TastingNote).order_by(TastingNote.id.desc()).all()
+
+
 @router.get("/note/{note_id}", response_model=TastingNoteResponse)
 def get_note(note_id: int, db: Session = Depends(get_db)):
-    return db.query(TastingNote).filter(TastingNote.id == note_id).first()
+    note = db.query(TastingNote).filter(TastingNote.id == note_id).first()
+    if not note:
+        raise HTTPException(status_code=404, detail="Note not found")
+    return note
 
 
-# UPDATE
 @router.put("/note/{note_id}", response_model=TastingNoteResponse)
 def update_note(note_id: int, data: TastingNoteCreate, db: Session = Depends(get_db)):
     note = db.query(TastingNote).filter(TastingNote.id == note_id).first()
     if not note:
-        return {"error": "Note not found"}
+        raise HTTPException(status_code=404, detail="Note not found")
 
-    for key, value in data.dict().items():
+    payload = data.model_dump() if hasattr(data, "model_dump") else data.dict()
+    for key, value in payload.items():
         setattr(note, key, value)
 
     db.commit()
@@ -54,12 +54,11 @@ def update_note(note_id: int, data: TastingNoteCreate, db: Session = Depends(get
     return note
 
 
-# DELETE
 @router.delete("/note/{note_id}")
 def delete_note(note_id: int, db: Session = Depends(get_db)):
     note = db.query(TastingNote).filter(TastingNote.id == note_id).first()
     if not note:
-        return {"error": "Note not found"}
+        raise HTTPException(status_code=404, detail="Note not found")
 
     db.delete(note)
     db.commit()

@@ -4,11 +4,16 @@
 __pycache__/
 *.pyc
 venv/
+backend/.venv/
 
 # ======================
 # Environment variables
 # ======================
 .env
+.env.local
+frontend/.env.local
+backend/.env.*
+docker-compose.override.yml
 
 # ======================
 # Databases
@@ -21,6 +26,7 @@ venv/
 # ======================
 *.log
 **/logs/
+exports/logs/
 
 # ======================
 # OS
@@ -33,19 +39,31 @@ venv/
 .idea/
 .vscode/
 
+# ======================
+# Node / Next
+# ======================
+node_modules/
+frontend/node_modules/
+frontend/.next/
+frontend/out/
+frontend/build/
 
-# Next local env
-.env.local
-frontend/.env.local
+# ======================
+# Generated exports
+# ======================
+exports/**
+!exports/.gitkeep
+!exports/README.md
 
+# ======================
+# Project data staging
+# ======================
+data/tmp/**
+!data/tmp/.gitkeep
+
+# ======================
+# Misc
+# ======================
 openapi.json
-
-
-# local env / overrides
-backend/ .env.*
-docker-compose.override.yml
-
-# local env / overrides
-backend/.env.*
-docker-compose.override.yml
+package-lock.json
 

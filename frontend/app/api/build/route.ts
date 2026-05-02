@@ -19,18 +19,18 @@ function safeExec(cmd: string) {
 }
 
 export async function GET() {
-  try {
-    const sha = safeExec("git rev-parse --short HEAD");
-    const branch = safeExec("git branch --show-current") || "detached";
+  let sha = "unknown";
+  let branch = "unknown";
 
-    return NextResponse.json(
-      { branch, sha },
-      { headers: { "Cache-Control": "no-store" } }
-    );
-  } catch {
-    return NextResponse.json(
-      { branch: "unknown-branch", sha: "unknown-sha" },
-      { headers: { "Cache-Control": "no-store" } }
-    );
+  try {
+    sha = safeExec("git rev-parse --short HEAD");
+    branch = safeExec("git branch --show-current") || "detached";
+  } catch (err) {
+    // git이 없거나 에러가 나면 조용히 넘어감
   }
+
+  return NextResponse.json(
+    { branch, sha },
+    { headers: { "Cache-Control": "no-store" } }
+  );
 }

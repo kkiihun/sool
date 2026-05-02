@@ -83,9 +83,8 @@ export default function SoolDetail({
 
   // 🔥 API URL 결정 로직 강화 (localhost 대신 127.0.0.1 시도)
   const getApiUrl = () => {
-    const envUrl = process.env.NEXT_PUBLIC_API_URL;
-    if (envUrl) return envUrl;
-    return "http://127.0.0.1:8000"; // localhost 대신 127.0.0.1이 더 안정적임
+    if (typeof window !== "undefined") return "/proxy";
+    return process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
   };
 
   const API_URL = getApiUrl();
@@ -187,7 +186,7 @@ export default function SoolDetail({
 
   if (loading) return (
     <div style={{ display: "flex", justifyContent: "center", alignItems: "center", height: "100vh", background: "#0a0a0a" }}>
-      <Space direction="vertical" align="center">
+      <Space orientation="vertical" align="center">
         <Spin size="large" />
         <Text style={{ color: "#d4af37", marginTop: 20, letterSpacing: 2 }}>ARCHIVE CONSULTATION IN PROGRESS...</Text>
       </Space>
@@ -214,155 +213,196 @@ export default function SoolDetail({
     : 0;
 
   return (
-    <div style={{ background: "#0a0a0a", minHeight: "100vh", color: "#fff", position: "relative" }}>
-      {/* Visual Header Background */}
-      <div style={{ 
-        position: "absolute", 
-        top: 0, 
-        left: 0, 
-        right: 0, 
-        height: "50vh", 
-        background: "linear-gradient(to bottom, #1a1608 0%, #0a0a0a 100%)",
-        zIndex: 0
-      }} />
-
-      {/* Navigation */}
-      <div style={{ 
-        padding: "20px 40px", 
-        display: "flex", 
-        alignItems: "center",
-        justifyContent: "space-between",
-        position: "sticky",
-        top: 0,
-        zIndex: 100,
-        background: "rgba(10,10,10,0.7)",
-        backdropFilter: "blur(20px)",
-        borderBottom: "1px solid rgba(255,255,255,0.05)"
-      }}>
-        <Space size="large">
-          <Button type="text" icon={<ArrowLeftOutlined />} onClick={() => router.back()} style={{ color: "#d4af37" }} />
-          <Breadcrumb items={[{ title: "GALLERY" }, { title: sool.name.toUpperCase() }]} />
-        </Space>
-        <Text style={{ color: "#444", fontSize: 10, letterSpacing: 2 }}>EST. 2026 / SPIRIT ARCHIVE</Text>
-      </div>
-
-      <div style={{ maxWidth: 1400, margin: "0 auto", padding: "80px 40px", position: "relative", zIndex: 1 }}>
-        <Row gutter={[80, 80]}>
-          <Col span={24}>
-            <Space direction="vertical" size={0}>
-              <Badge count={sool.category} style={{ backgroundColor: "#d4af37", color: "#000", fontWeight: 800, border: "none", marginBottom: 16 }} />
-              <Title style={{ color: "#fff", fontSize: 80, fontWeight: 900, margin: 0, lineHeight: 0.9 }}>{sool.name}</Title>
-              <div style={{ marginTop: 24, display: "flex", alignItems: "center", gap: 32 }}>
-                <Space>
-                  <Rate disabled allowHalf value={avgRating / 2} style={{ color: "#d4af37" }} />
-                  <Text style={{ color: "#d4af37", fontSize: 24, fontWeight: 700 }}>{(avgRating/2).toFixed(1)}</Text>
-                </Space>
-                <div style={{ width: 1, height: 20, background: "#222" }} />
-                <Text style={{ color: "#555", fontSize: 16 }}>{senses.length} CONNOISSEUR NOTES</Text>
+    <div className="min-h-full text-white relative">
+      <div className="max-w-[1400px] mx-auto py-12 px-10 relative z-1">
+        <div className="mb-12">
+          <Button 
+            type="text" 
+            icon={<ArrowLeftOutlined />} 
+            onClick={() => router.back()} 
+            className="text-amber-500 hover:text-amber-400 mb-6 !p-0 font-bold tracking-widest"
+          >
+            BACK TO GALLERY
+          </Button>
+          
+          <Row gutter={[80, 80]}>
+            <Col span={24}>
+              <div className="flex flex-col gap-4">
+                <div className="flex items-center gap-3">
+                  <Badge 
+                    count={sool.category} 
+                    className="custom-category-badge"
+                  />
+                  <Badge 
+                    count={sool.region || "South Korea"} 
+                    className="custom-region-badge"
+                  />
+                </div>
+                <Title className="!text-white !text-8xl !font-black !m-0 !tracking-tight !leading-none uppercase">
+                  {sool.name}
+                </Title>
+                <div className="mt-8 flex items-center gap-10">
+                  <div className="flex items-center gap-4">
+                    <Rate disabled allowHalf value={avgRating / 2} className="!text-amber-500 !text-2xl" />
+                    <Text className="!text-amber-500 !text-3xl !font-black">{(avgRating/2).toFixed(1)}</Text>
+                  </div>
+                  <div className="w-px h-8 bg-white/10" />
+                  <Text className="!text-white/30 !text-lg !font-bold !tracking-widest uppercase">
+                    {senses.length} Connoisseur Notes
+                  </Text>
+                </div>
               </div>
-            </Space>
-          </Col>
+            </Col>
 
-          <Col xs={24} lg={14}>
-            <div style={{ background: "rgba(255,255,255,0.02)", padding: 48, borderRadius: 40, border: "1px solid rgba(255,255,255,0.05)" }}>
-              <Title level={4} style={{ color: "#fff", marginBottom: 40, letterSpacing: 2 }}>SENSORY MAP</Title>
-              <SoolRadar tastings={senses} />
-              
-              <Row gutter={[40, 40]} style={{ marginTop: 60, borderTop: "1px solid rgba(255,255,255,0.05)", paddingTop: 40 }}>
-                {[
-                  { label: "STRENGTH", value: `${sool.abv}% ABV`, icon: <ExperimentOutlined /> },
-                  { label: "ORIGIN", value: sool.region || "South Korea", icon: <EnvironmentOutlined /> },
-                  { label: "MAISON", value: sool.producer || "Heritage Craft", icon: <ThunderboltOutlined /> },
-                ].map((stat, i) => (
-                  <Col span={8} key={i}>
-                    <div style={{ color: "#d4af37", fontSize: 20, marginBottom: 12 }}>{stat.icon}</div>
-                    <Text style={{ color: "#444", fontSize: 10, letterSpacing: 2, display: "block" }}>{stat.label}</Text>
-                    <Text style={{ color: "#fff", fontSize: 18, fontWeight: 600 }}>{stat.value}</Text>
-                  </Col>
-                ))}
-              </Row>
-            </div>
-
-            <div style={{ marginTop: 60, padding: "0 20px" }}>
-              <Title level={3} style={{ color: "#fff", marginBottom: 24 }}>THE STORY</Title>
-              <Paragraph style={{ color: "#888", fontSize: 20, lineHeight: 1.8, fontWeight: 300 }}>
-                {sool.description || "The detailed lineage and tasting profile of this spirit are being meticulously documented by our historians. Experience its depth through our sensory analysis."}
-              </Paragraph>
-              <Divider style={{ borderColor: "#222", margin: "48px 0" }} />
-              <Space direction="vertical">
-                <Text style={{ color: "#444", letterSpacing: 2, fontSize: 10 }}>COMPOSITION</Text>
-                <Text style={{ color: "#888", fontSize: 16 }}>{sool.ingredients || "Traditional selection of organic grains and artisanal yeast."}</Text>
-              </Space>
-            </div>
-          </Col>
-
-          <Col xs={24} lg={10}>
-            <Card style={{ background: "#111", border: "1px solid #222", borderRadius: 32, padding: 20 }} styles={{ body: { padding: 24 } }}>
-              <Title level={4} style={{ color: "#fff", marginBottom: 32 }}>LOG A NEW ENTRY</Title>
-              <Space direction="vertical" size={32} style={{ width: "100%" }}>
-                <div>
-                  <Text style={{ color: "#444", fontSize: 10, letterSpacing: 2, display: "block", marginBottom: 12 }}>OVERALL IMPRESSION</Text>
-                  <Rate value={rating} onChange={setRating} style={{ fontSize: 32, color: "#d4af37" }} />
-                </div>
+            <Col xs={24} lg={14}>
+              <div className="bg-white/[0.03] p-12 rounded-[3rem] border border-white/10 shadow-2xl backdrop-blur-sm">
+                <Title level={4} className="!text-white !mb-12 !tracking-[0.3em] !text-sm !font-black !uppercase !opacity-40">
+                  Sensory Analysis
+                </Title>
+                <SoolRadar tastings={senses} />
                 
-                <div style={{ borderTop: "1px solid #222", paddingTop: 32 }}>
+                <Row gutter={[40, 40]} className="mt-16 border-t border-white/10 pt-12">
                   {[
-                    { label: "Aroma", val: aroma, set: setAroma },
-                    { label: "Palate", val: sweetness, set: setSweetness },
-                    { label: "Finish", val: aftertaste, set: setAftertaste },
-                  ].map((m) => (
-                    <div key={m.label} style={{ marginBottom: 24 }}>
-                      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
-                        <Text style={{ color: "#888" }}>{m.label}</Text>
-                        <Text style={{ color: "#d4af37", fontWeight: 700 }}>{m.val}</Text>
-                      </div>
-                      <Slider min={1} max={5} step={0.5} value={m.val} onChange={m.set} trackStyle={{ background: "#d4af37" }} handleStyle={{ borderColor: "#d4af37", background: "#000" }} />
-                    </div>
+                    { label: "STRENGTH", value: `${sool.abv}% ABV`, icon: <ExperimentOutlined /> },
+                    { label: "ORIGIN", value: sool.region || "South Korea", icon: <EnvironmentOutlined /> },
+                    { label: "PRODUCER", value: sool.producer || "Heritage Craft", icon: <ThunderboltOutlined /> },
+                  ].map((stat, i) => (
+                    <Col span={8} key={i}>
+                      <div className="text-amber-500 text-2xl mb-4">{stat.icon}</div>
+                      <Text className="!text-white/20 !text-[10px] !font-black !tracking-[0.2em] !display-block !mb-2 !uppercase">
+                        {stat.label}
+                      </Text>
+                      <Text className="!text-white !text-xl !font-bold">
+                        {stat.value}
+                      </Text>
+                    </Col>
                   ))}
+                </Row>
+              </div>
+
+              <div className="mt-20 px-4">
+                <Title level={3} className="!text-white !mb-8 !text-3xl !font-black !tracking-tight uppercase">
+                  The Heritage
+                </Title>
+                <Paragraph className="!text-white/60 !text-xl !leading-relaxed !font-medium !mb-12">
+                  {sool.description || "The detailed lineage and tasting profile of this spirit are being meticulously documented by our historians. Experience its depth through our sensory analysis."}
+                </Paragraph>
+                <Divider className="!border-white/10 !my-16" />
+                <div className="flex flex-col gap-3">
+                  <Text className="!text-white/20 !tracking-[0.3em] !text-[10px] !font-black !uppercase">Composition</Text>
+                  <Text className="!text-white/60 !text-lg !font-medium">
+                    {sool.ingredients || "Traditional selection of organic grains and artisanal yeast."}
+                  </Text>
                 </div>
+              </div>
+            </Col>
 
-                <TextArea 
-                  rows={4} 
-                  placeholder="Describe your encounter with this spirit..." 
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
-                  style={{ background: "#1a1a1a", border: "1px solid #333", color: "#fff", borderRadius: 16 }}
-                />
-
-                <Button 
-                  type="primary" 
-                  size="large" 
-                  block 
-                  loading={submitting} 
-                  onClick={handleSubmit}
-                  style={{ background: "#d4af37", color: "#000", border: "none", height: 60, fontWeight: 800, borderRadius: 16, letterSpacing: 2 }}
-                >
-                  PRESERVE ENTRY
-                </Button>
-              </Space>
-            </Card>
-
-            <div style={{ marginTop: 60 }}>
-              <Title level={4} style={{ color: "#fff", marginBottom: 32 }}>RECENT OBSERVATIONS</Title>
-              {senses.length === 0 ? (
-                <Empty description={<Text style={{ color: "#444" }}>No records found.</Text>} />
-              ) : (
-                <Space direction="vertical" size={20} style={{ width: "100%" }}>
-                  {senses.slice().reverse().map((s) => (
-                    <div key={s.id} style={{ background: "rgba(255,255,255,0.02)", padding: 24, borderRadius: 24, border: "1px solid rgba(255,255,255,0.05)" }}>
-                      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 12 }}>
-                        <Rate disabled value={s.rating / 2} style={{ fontSize: 10, color: "#d4af37" }} />
-                        <Text style={{ color: "#444", fontSize: 11 }}>{s.created_at ? new Date(s.created_at).toLocaleDateString() : "Just now"}</Text>
+            <Col xs={24} lg={10}>
+              <Card 
+                className="!bg-neutral-900/50 !border-white/10 !rounded-[2.5rem] !p-6 shadow-2xl backdrop-blur-md sticky top-32"
+                styles={{ body: { padding: 32 } }}
+              >
+                <Title level={4} className="!text-amber-500 !mb-10 !text-lg !font-black !tracking-widest uppercase">
+                  Record Discovery
+                </Title>
+                <Space orientation="vertical" size={40} className="w-full">
+                  <div>
+                    <Text className="!text-white/30 !text-[10px] !font-black !tracking-widest !block !mb-4 !uppercase">
+                      Overall Impression
+                    </Text>
+                    <Rate value={rating} onChange={setRating} className="!text-4xl !text-amber-500" />
+                  </div>
+                  
+                  <div className="border-t border-white/5 pt-10 flex flex-col gap-8">
+                    {[
+                      { label: "AROMA", val: aroma, set: setAroma },
+                      { label: "PALATE", val: sweetness, set: setSweetness },
+                      { label: "FINISH", val: aftertaste, set: setAftertaste },
+                    ].map((m) => (
+                      <div key={m.label} className="flex flex-col gap-2">
+                        <div className="flex justify-between items-center mb-2">
+                          <Text className="!text-white/40 !font-bold !text-xs !tracking-widest">{m.label}</Text>
+                          <Text className="!text-amber-500 !font-black !text-lg">{m.val}</Text>
+                        </div>
+                        <Slider 
+                          min={1} max={5} step={0.5} value={m.val} onChange={m.set} 
+                          trackStyle={{ background: "#f59e0b" }} 
+                          handleStyle={{ borderColor: "#f59e0b", background: "#000", width: 20, height: 20 }}
+                          railStyle={{ background: "rgba(255,255,255,0.05)" }}
+                        />
                       </div>
-                      <Paragraph style={{ color: "#aaa", fontSize: 15, margin: 0 }}>"{s.notes || "A singular tasting experience."}"</Paragraph>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
+
+                  <TextArea 
+                    rows={4} 
+                    placeholder="Describe your sensory journey..." 
+                    value={notes}
+                    onChange={(e) => setNotes(e.target.value)}
+                    className="!bg-white/5 !border-white/10 !text-white !rounded-2xl !p-4 !text-[15px] focus:!border-amber-500/50 placeholder:!text-white/20"
+                  />
+
+                  <Button 
+                    type="primary" 
+                    size="large" 
+                    block 
+                    loading={submitting} 
+                    onClick={handleSubmit}
+                    className="!bg-amber-500 !text-black !border-none !h-16 !font-black !rounded-2xl !tracking-[0.2em] !text-sm active:!scale-[0.98] transition-transform"
+                  >
+                    PRESERVE NOTE
+                  </Button>
                 </Space>
-              )}
-            </div>
-          </Col>
-        </Row>
+              </Card>
+
+              <div className="mt-20">
+                <Title level={4} className="!text-white/40 !mb-10 !text-sm !font-black !tracking-widest uppercase">
+                  Connoisseur Observations
+                </Title>
+                {senses.length === 0 ? (
+                  <Empty description={<Text className="!text-white/10">No records found.</Text>} />
+                ) : (
+                  <div className="flex flex-col gap-8">
+                    {senses.slice().reverse().map((s) => (
+                      <div key={s.id} className="bg-white/[0.02] p-8 rounded-[2rem] border border-white/5 hover:border-white/10 transition-colors">
+                        <div className="flex justify-between items-center mb-4">
+                          <Rate disabled value={s.rating / 2} className="!text-xs !text-amber-500/50" />
+                          <Text className="!text-white/20 !text-xs !font-bold">
+                            {s.created_at ? new Date(s.created_at).toLocaleDateString() : "Just now"}
+                          </Text>
+                        </div>
+                        <Paragraph className="!text-white/70 !text-[17px] !italic !m-0 !leading-relaxed">
+                          "{s.notes || "A singular tasting experience."}"
+                        </Paragraph>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </Col>
+          </Row>
+        </div>
       </div>
+      
+      <style jsx global>{`
+        .custom-category-badge .ant-scroll-number {
+          background: #f59e0b !important;
+          color: #000 !important;
+          font-weight: 900 !important;
+          border: none !important;
+          font-size: 12px !important;
+          padding: 4px 12px !important;
+          border-radius: 6px !important;
+        }
+        .custom-region-badge .ant-scroll-number {
+          background: rgba(255,255,255,0.05) !important;
+          color: rgba(255,255,255,0.4) !important;
+          border: 1px solid rgba(255,255,255,0.1) !important;
+          font-size: 12px !important;
+          padding: 4px 12px !important;
+          border-radius: 6px !important;
+        }
+      `}</style>
     </div>
   );
 }

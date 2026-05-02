@@ -4,9 +4,8 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "../components/AuthProvider";
 import { useEffect, useState } from "react";
+import { clearToken, getToken } from "@/lib/auth";
 import {
-  Layout,
-  Menu,
   Typography,
   Card,
   Row,
@@ -17,56 +16,41 @@ import {
   Rate,
   Spin,
   Empty,
-  Badge,
 } from "antd";
-
 import {
-  AppstoreOutlined,
-  CompassOutlined,
-  StarOutlined,
-  HeartOutlined,
-  BarChartOutlined,
   PlusOutlined,
   BulbOutlined,
 } from "@ant-design/icons";
 
-const { Sider, Header, Content, Footer } = Layout;
-const { Title, Text, Paragraph } = Typography;
+const { Title, Text } = Typography;
 
 export default function TastingPage() {
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
-  const [collapsed, setCollapsed] = useState(false);
   const [notes, setNotes] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const getApiUrl = () => {
-    if (process.env.NEXT_PUBLIC_API_URL) return process.env.NEXT_PUBLIC_API_URL;
-    return "http://127.0.0.1:8000";
-  };
-
-  const API_URL = getApiUrl();
-
   const fetchNotes = async () => {
-    const token = localStorage.getItem('sool_token');
+    const token = getToken();
     if (!token) {
       setLoading(false);
       return;
     }
 
     try {
-      const res = await fetch(`${API_URL}/sense/`, {
-        method: 'GET',
-        headers: { 
-          'Authorization': `Bearer ${token}`,
-          'Accept': 'application/json'
-        }
+      const res = await fetch("/proxy/sense/", {
+        method: "GET",
+        cache: "no-store",
+        headers: {
+          Accept: "application/json",
+          Authorization: `Bearer ${token}`,
+        },
       });
-      
+
       if (res.ok) {
         setNotes(await res.json());
       } else if (res.status === 401) {
-        localStorage.removeItem('sool_token');
+        clearToken();
       }
     } catch (err) {
       console.error("Connection Refused:", err);
@@ -87,178 +71,101 @@ export default function TastingPage() {
       dataIndex: "sool_name",
       key: "sool_name",
       render: (name: string, record: any) => (
-        <Link href={`/sool/${record.sool_id}`} style={{ color: "#fff", fontWeight: 600 }}>{name}</Link>
-      )
+        <Link href={`/sool/${record.sool_id}`} style={{ color: "#fff", fontWeight: 600 }}>
+          {name}
+        </Link>
+      ),
     },
     {
       title: "RATING",
       dataIndex: "rating",
       key: "rating",
-      render: (r: number) => <Rate disabled value={r / 2} style={{ fontSize: 12, color: "#d4af37" }} />
+      render: (r: number) => <Rate disabled value={r / 2} style={{ fontSize: 12, color: "#d4af37" }} />,
     },
     {
       title: "NOTES",
       dataIndex: "notes",
       key: "notes",
       ellipsis: true,
-      render: (n: string) => <Text style={{ color: "#666" }}>{n || "No comments recorded."}</Text>
+      render: (n: string) => <Text style={{ color: "#666" }}>{n || "No comments recorded."}</Text>,
     },
     {
       title: "DATE",
       dataIndex: "created_at",
       key: "created_at",
-      render: (d: string) => <Text style={{ color: "#444", fontSize: 12 }}>{new Date(d).toLocaleDateString()}</Text>
-    }
+      render: (d: string) => <Text style={{ color: "#444", fontSize: 12 }}>{new Date(d).toLocaleDateString()}</Text>,
+    },
   ];
 
-  if (authLoading) return <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#0a0a0a' }}><Spin size="large" /></div>;
+  if (authLoading) {
+    return (
+      <div className="h-screen flex items-center justify-center bg-[#0a0a0a]">
+        <Spin size="large" />
+      </div>
+    );
+  }
 
   return (
-    <Layout style={{ minHeight: "100vh", backgroundColor: "#0a0a0a" }}>
-      <Sider
-        collapsible
-        collapsed={collapsed}
-        onCollapse={setCollapsed}
-        theme="dark"
-        width={240}
-        style={{ 
-          background: "#0a0a0a", 
-          borderRight: "1px solid #222",
-          position: "fixed",
-          height: "100vh",
-          left: 0,
-          zIndex: 100
-        }}
-      >
-        <div style={{ height: 80, display: "flex", alignItems: "center", justifyContent: "center", borderBottom: "1px solid #222", marginBottom: 20 }}>
-          <Link href="/" style={{ textDecoration: "none", display: "flex", alignItems: "center", gap: 8 }}>
-            <span style={{ fontSize: 28 }}>🥃</span>
-            {!collapsed && <span style={{ color: "#fff", fontSize: 20, fontWeight: 700, letterSpacing: 1.5 }}>SOOL</span>}
+    <div className="max-w-[1600px] mx-auto py-12 px-8">
+      {!user ? (
+        <div className="text-center py-24">
+          <Empty description={<Text className="text-white/40">Sign in to start your tasting journal.</Text>} />
+          <Link href="/login">
+            <Button type="primary" className="mt-6 h-12 px-8 bg-amber-500 text-black border-none font-bold">
+              Sign In
+            </Button>
           </Link>
         </div>
-
-        <Menu
-          theme="dark"
-          mode="inline"
-          selectedKeys={["tasting"]}
-          style={{ background: "transparent", border: "none" }}
-          items={[
-            { key: "explore", icon: <AppstoreOutlined />, label: <Link href="/">Explore</Link> },
-            { key: "tasting", icon: <StarOutlined />, label: "Tasting Notes" },
-            { key: "analytics", icon: <BarChartOutlined />, label: <Link href="/dashboard">Analytics</Link> },
-            { key: "updates", icon: <CompassOutlined />, label: <Link href="/updates">Updates</Link> },
-            { key: "community", icon: <HeartOutlined />, label: <Link href="/community">Community</Link> },
-            ...(user?.is_admin ? [
-              { key: "divider", type: "divider" as const, style: { backgroundColor: "#222" } },
-              { key: "admin", icon: <AppstoreOutlined />, label: <Link href="/admin">Admin Dashboard</Link> }
-            ] : []),
-          ]}
-        />
-      </Sider>
-
-      <Layout style={{ marginLeft: collapsed ? 80 : 240, background: "transparent", transition: "all 0.2s" }}>
-        <Header style={{ 
-          background: "rgba(10, 10, 10, 0.8)", 
-          backdropFilter: "blur(10px)",
-          padding: "0 40px",
-          height: 80,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          borderBottom: "1px solid #222",
-          position: "sticky",
-          top: 0,
-          zIndex: 90
-        }}>
-          <Title level={4} style={{ color: "#fff", margin: 0 }}>Sensory Vault</Title>
-          <Link href={user ? "/profile" : "/login"}>
-              <Space size="small" style={{ cursor: 'pointer' }}>
-                <Text style={{ color: "#fff", fontWeight: 500 }}>{user ? user.username : "Guest"}</Text>
-                <Badge dot color={user ? "#52c41a" : "#d4af37"}>
-                  <div style={{ width: 32, height: 32, borderRadius: "50%", background: "#333", border: "1px solid #444", display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <StarOutlined style={{ color: user ? "#fff" : "#666" }} />
-                  </div>
-                </Badge>
-              </Space>
-            </Link>
-        </Header>
-
-        <Content style={{ padding: "60px 80px" }}>
-          {!user ? (
-            <div style={{ textAlign: 'center', padding: '100px 0' }}>
-              <Empty description={<Text style={{ color: '#666' }}>Sign in to start your tasting journal.</Text>} />
-              <Link href="/login"><Button type="primary" style={{ marginTop: 20, background: '#d4af37', color: '#000', border: 'none' }}>Sign In</Button></Link>
+      ) : (
+        <>
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 mb-12">
+            <div>
+              <Title className="!text-white !m-0 !text-5xl font-black">
+                My Sensory <span className="text-amber-500">Archive</span>
+              </Title>
+              <Text className="text-white/40 text-lg">You have recorded {notes.length} unique tasting experiences.</Text>
             </div>
-          ) : (
-            <>
-              <div style={{ marginBottom: 60, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
-                <div>
-                  <Title style={{ color: "#fff", fontSize: 48, fontWeight: 800, margin: 0 }}>
-                    My Sensory <span style={{ color: "#d4af37" }}>Archive</span>
-                  </Title>
-                  <Text style={{ color: "#666", fontSize: 18 }}>You have recorded {notes.length} unique tasting experiences.</Text>
-                </div>
-                <Link href="/sense/new">
-                  <Button type="primary" size="large" icon={<PlusOutlined />} style={{ background: "#d4af37", color: "#000", border: "none", fontWeight: 700, borderRadius: 12, height: 50 }}>
-                    NEW ENTRY
-                  </Button>
-                </Link>
-              </div>
-
-              {loading ? <Spin size="large" /> : (
-                <Card style={{ background: "#111", border: "1px solid #222", borderRadius: 24, overflow: 'hidden' }}>
-                  <Table 
-                    dataSource={notes} 
-                    columns={columns} 
-                    rowKey="id"
-                    pagination={{ pageSize: 10 }}
-                    className="custom-table"
-                  />
-                </Card>
-              )}
-            </>
-          )}
-
-          {/* Quick Tips */}
-          <div style={{ 
-            marginTop: 80, 
-            background: "linear-gradient(135deg, #111 0%, #050505 100%)", 
-            borderRadius: 24, 
-            padding: 40,
-            border: "1px solid #222"
-          }}>
-            <Row gutter={[40, 40]} align="middle">
-              <Col xs={24} md={4} style={{ textAlign: "center" }}>
-                <BulbOutlined style={{ fontSize: 48, color: "#d4af37" }} />
-              </Col>
-              <Col xs={24} md={20}>
-                <Title level={4} style={{ color: "#fff" }}>Expert Tip</Title>
-                <Text style={{ color: "#888", fontSize: 16 }}>
-                  Focus on the "Body" of the spirit. Is it light like water, or full and coating like syrup? 
-                  The mouthfeel is a key differentiator in traditional spirits.
-                </Text>
-              </Col>
-            </Row>
+            <Link href="/sense/new">
+              <Button type="primary" size="large" icon={<PlusOutlined />} className="bg-amber-500 text-black border-none font-bold h-14 px-8 rounded-2xl">
+                NEW ENTRY
+              </Button>
+            </Link>
           </div>
-        </Content>
 
-        <Footer style={{ 
-          background: "transparent", 
-          color: "#444", 
-          textAlign: "center", 
-          padding: "40px 0",
-          borderTop: "1px solid #222",
-          marginTop: 60
-        }}>
-          SOOL — PRESERVING THE ART OF TASTING
-        </Footer>
-      </Layout>
+          {loading ? (
+            <div className="py-24 text-center"><Spin size="large" /></div>
+          ) : (
+            <Card className="bg-white/5 border-white/10 rounded-[32px] overflow-hidden backdrop-blur-sm">
+              <Table dataSource={notes} columns={columns} rowKey="id" pagination={{ pageSize: 10 }} className="custom-table" />
+            </Card>
+          )}
+        </>
+      )}
+
+      <div className="mt-20 bg-gradient-to-br from-white/5 to-transparent rounded-[32px] p-10 border border-white/10">
+        <Row gutter={[40, 40]} align="middle">
+          <Col xs={24} md={4} className="text-center">
+            <BulbOutlined className="text-5xl text-amber-500" />
+          </Col>
+          <Col xs={24} md={20}>
+            <Title level={4} className="!text-white !mb-2">Expert Tip</Title>
+            <Text className="text-white/60 text-lg">
+              Focus on the body of the spirit. Mouthfeel is a key differentiator in traditional drinks.
+            </Text>
+          </Col>
+        </Row>
+      </div>
+
       <style jsx global>{`
         .custom-table .ant-table { background: transparent !important; color: #aaa !important; }
-        .custom-table .ant-table-thead > tr > th { background: #1a1a1a !important; color: #666 !important; border-bottom: 1px solid #222 !important; text-transform: uppercase; font-size: 11px; letter-spacing: 1px; }
-        .custom-table .ant-table-tbody > tr > td { border-bottom: 1px solid #222 !important; background: transparent !important; }
-        .custom-table .ant-table-tbody > tr:hover > td { background: #161616 !important; }
+        .custom-table .ant-table-thead > tr > th { background: rgba(255,255,255,0.03) !important; color: rgba(255,255,255,0.4) !important; border-bottom: 1px solid rgba(255,255,255,0.05) !important; text-transform: uppercase; font-size: 11px; letter-spacing: 2px; font-weight: 700; }
+        .custom-table .ant-table-tbody > tr > td { border-bottom: 1px solid rgba(255,255,255,0.05) !important; background: transparent !important; padding: 24px 16px !important; }
+        .custom-table .ant-table-tbody > tr:hover > td { background: rgba(255,255,255,0.02) !important; }
+        .custom-table .ant-pagination-item { background: transparent !important; border-color: rgba(255,255,255,0.1) !important; }
+        .custom-table .ant-pagination-item a { color: rgba(255,255,255,0.6) !important; }
+        .custom-table .ant-pagination-item-active { border-color: #f59e0b !important; }
+        .custom-table .ant-pagination-item-active a { color: #f59e0b !important; }
       `}</style>
-    </Layout>
+    </div>
   );
 }

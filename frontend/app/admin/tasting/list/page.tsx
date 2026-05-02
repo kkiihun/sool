@@ -17,8 +17,11 @@ interface TastingNote {
 
 // ✅ env로 통일 (현재: http://localhost:8000)
 // ✅ 프록시로 바꾸면 NEXT_PUBLIC_API_BASE_URL=/proxy 로만 바꾸면 됨
-const API_BASE =
-  (process.env.NEXT_PUBLIC_API_BASE_URL ?? "/proxy").replace(/\/$/, "");
+const getApiUrl = () => {
+  if (typeof window !== "undefined") return "/proxy";
+  return process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
+};
+const API_BASE = getApiUrl();
 
 const apiUrl = (path: string) => {
   const p = path.startsWith("/") ? path : `/${path}`;

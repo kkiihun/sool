@@ -13,7 +13,12 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const router = useRouter();
   const { login } = useAuth();
-  const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
+  
+  const getApiUrl = () => {
+    if (typeof window !== "undefined") return "/proxy";
+    return process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
+  };
+  const API_URL = getApiUrl();
 
   const onFinish = async (values: any) => {
     setLoading(true);

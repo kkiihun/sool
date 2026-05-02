@@ -11,7 +11,12 @@ const { Title, Text } = Typography;
 export default function SignupPage() {
   const [loading, setLoading] = useState(false);
   const router = useRouter();
-  const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
+  
+  const getApiUrl = () => {
+    if (typeof window !== "undefined") return "/proxy";
+    return process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
+  };
+  const API_URL = getApiUrl();
 
   const onFinish = async (values: any) => {
     setLoading(true);

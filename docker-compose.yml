@@ -8,11 +8,11 @@ services:
       MYSQL_USER: sool
       MYSQL_PASSWORD: soolpass
     ports:
-      - "3306:3306"
+      - "3307:3306"
     volumes:
       - sool_mariadb_data:/var/lib/mysql
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p$MYSQL_ROOT_PASSWORD"]
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p$$MYSQL_ROOT_PASSWORD"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -41,12 +41,12 @@ services:
   frontend:
     build:
       context: ./frontend
-      target: runner
     container_name: sool-frontend
     ports:
       - "3300:3000"
     environment:
       - NEXT_PUBLIC_API_URL=http://localhost:8000
+      - BACKEND_URL=http://backend:8000
       - WATCHPACK_POLLING=true # 도커 환경에서 핫 리로딩 신뢰성 향상
     volumes:
       - ./frontend:/app

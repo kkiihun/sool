@@ -2,12 +2,11 @@
 
 type Props = {
   label: string;
-  name: string;
   value: number;
   onChange: (v: number) => void;
 };
 
-export default function SliderInput({ label, name, value, onChange }: Props) {
+export default function SliderInput({ label, value, onChange }: Props) {
   return (
     <div className="mb-4">
       <label className="block font-semibold mb-1">{label}: {value}</label>

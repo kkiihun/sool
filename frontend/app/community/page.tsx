@@ -3,8 +3,6 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
-  Layout,
-  Menu,
   Typography,
   Card,
   Row,
@@ -22,12 +20,7 @@ import {
   Tag,
 } from "antd";
 import {
-  AppstoreOutlined,
-  CompassOutlined,
   StarOutlined,
-  HeartOutlined,
-  BarChartOutlined,
-  ArrowLeftOutlined,
   MessageOutlined,
   ShareAltOutlined,
   PlusOutlined,
@@ -38,7 +31,6 @@ import {
 } from "@ant-design/icons";
 import { useRouter } from "next/navigation";
 
-const { Sider, Header, Content, Footer } = Layout;
 const { Title, Text, Paragraph } = Typography;
 const { TextArea } = Input;
 
@@ -53,13 +45,16 @@ interface FeedItem {
 
 export default function CommunityPage() {
   const router = useRouter();
-  const [collapsed, setCollapsed] = useState(false);
   const [feed, setFeed] = useState<FeedItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [newPost, setNewPost] = useState({ notes: "", rating: 5, sool_id: "" });
 
-  const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+  const getApiUrl = () => {
+    if (typeof window !== "undefined") return "/proxy";
+    return process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
+  };
+  const API_URL = getApiUrl();
 
   const fetchFeed = async () => {
     try {
@@ -107,46 +102,43 @@ export default function CommunityPage() {
   };
 
   const FeedTab = () => (
-    <div className="page-transition">
-      <Row gutter={[32, 32]}>
+    <div className="animate-in fade-in duration-700">
+      <Row gutter={[40, 40]}>
         <Col xs={24} lg={16}>
-<Space direction="vertical" size={24} style={{ width: "100%" }}>
+          <Space orientation="vertical" size={32} className="w-full">
             {feed.map((item) => (
               <Card 
                 key={item.id}
-                style={{ 
-                  background: "#111", 
-                  border: "1px solid #222", 
-                  borderRadius: 24,
-                  overflow: "hidden" 
-                }}
-                styles={{ body: { padding: 32 } }}
+                className="bg-white/5 border-white/10 rounded-[32px] overflow-hidden backdrop-blur-sm transition-transform hover:scale-[1.01]"
+                styles={{ body: { padding: 40 } }}
               >
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 20 }}>
+                <div className="flex justify-between items-start mb-6">
                   <Space size="middle">
-                    <Avatar icon={<UserOutlined />} style={{ backgroundColor: "#222", border: "1px solid #333" }} />
+                    <Avatar icon={<UserOutlined />} className="bg-white/10 border-white/20 h-12 w-12" />
                     <div>
-                      <Text style={{ color: "#fff", fontWeight: 700, display: "block" }}>Anonymous Connoisseur</Text>
-                      <Text style={{ color: "#444", fontSize: 12 }}>{new Date(item.created_at).toLocaleString()}</Text>
+                      <Text className="text-white text-lg font-black block leading-tight">Anonymous Connoisseur</Text>
+                      <Text className="text-white/20 text-xs font-bold uppercase tracking-widest" suppressHydrationWarning>
+                        {item.created_at ? new Date(item.created_at).toLocaleDateString() : "Just now"}
+                      </Text>
                     </div>
                   </Space>
                   <Link href={`/sool/${item.sool_id}`}>
-                    <Tag color="#d4af37" style={{ color: "#000", fontWeight: 600, border: "none" }}>Spirit #{item.sool_id}</Tag>
+                    <Tag className="bg-amber-500/10 text-amber-500 border-amber-500/20 px-4 py-1 rounded-full font-black text-xs uppercase tracking-widest">Spirit #{item.sool_id}</Tag>
                   </Link>
                 </div>
                 
-                <Paragraph style={{ color: "#aaa", fontSize: 16, lineHeight: 1.8, marginBottom: 24 }}>
+                <Paragraph className="text-white/60 text-lg leading-relaxed mb-8">
                   {item.notes || "Recorded a visual and aromatic profile of this exquisite spirit."}
                 </Paragraph>
                 
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderTop: "1px solid #222", paddingTop: 24 }}>
+                <div className="flex justify-between items-center border-t border-white/5 pt-8">
                   <Space size="large">
-                    <Rate disabled value={item.rating / 2} style={{ fontSize: 14, color: "#d4af37" }} />
-                    <Text style={{ color: "#d4af37", fontWeight: 700 }}>{item.rating}/10</Text>
+                    <Rate disabled value={item.rating / 2} className="text-sm text-amber-500" />
+                    <Text className="text-amber-500 font-black tracking-widest">{item.rating}/10</Text>
                   </Space>
                   <Space size="middle">
-                    <Button type="text" icon={<MessageOutlined />} style={{ color: "#444" }}>Comment</Button>
-                    <Button type="text" icon={<ShareAltOutlined />} style={{ color: "#444" }}>Share</Button>
+                    <Button type="text" icon={<MessageOutlined />} className="text-white/20 hover:text-white transition-colors">Comment</Button>
+                    <Button type="text" icon={<ShareAltOutlined />} className="text-white/20 hover:text-white transition-colors">Share</Button>
                   </Space>
                 </div>
               </Card>
@@ -156,39 +148,35 @@ export default function CommunityPage() {
 
         <Col xs={24} lg={8}>
           <Card 
-            title={<span style={{ color: "#fff" }}>Trending Now</span>}
-            style={{ background: "#111", border: "1px solid #222", borderRadius: 24, marginBottom: 24 }}
-            styles={{ header: { borderBottom: "1px solid #222" } }}
+            title={<span className="text-white font-black uppercase tracking-widest text-xs">Trending Now</span>}
+            className="bg-white/5 border-white/10 rounded-[32px] mb-8"
+            styles={{ header: { borderBottom: "1px solid rgba(255,255,255,0.05)", padding: "24px 32px" }, body: { padding: "32px" } }}
           >
-            <Space direction="vertical" size="middle" style={{ width: "100%" }}>
+            <Space orientation="vertical" size="middle" className="w-full">
               {[
                 { name: "Andong Soju", tag: "Heavy Hitter", count: 124 },
                 { name: "Naru Yakju", tag: "Popular", count: 89 },
                 { name: "Makgeolli", tag: "Rising", count: 56 },
               ].map((trend, idx) => (
-                <div key={idx} style={{ padding: "12px 0", borderBottom: idx < 2 ? "1px solid #222" : "none" }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
-                    <Text style={{ color: "#fff", fontWeight: 600 }}>{trend.name}</Text>
-                    <Badge count={trend.tag} style={{ backgroundColor: "#222", color: "#666", border: "1px solid #333" }} />
+                <div key={idx} className={`pb-6 ${idx < 2 ? "border-b border-white/5" : ""}`}>
+                  <div className="flex justify-between items-center mb-2">
+                    <Text className="text-white font-bold">{trend.name}</Text>
+                    <Badge count={trend.tag} className="[&>.ant-scroll-number]:bg-white/5 [&>.ant-scroll-number]:text-white/30 [&>.ant-scroll-number]:border-none [&>.ant-scroll-number]:text-[10px] [&>.ant-scroll-number]:font-black [&>.ant-scroll-number]:px-3" />
                   </div>
-                  <Text style={{ color: "#444", fontSize: 12 }}>{trend.count} discussions today</Text>
+                  <Text className="text-white/20 text-xs font-medium">{trend.count} discussions today</Text>
                 </div>
               ))}
             </Space>
           </Card>
           
           <Card 
-            style={{ 
-              background: "linear-gradient(135deg, #d4af37 0%, #aa8e2e 100%)", 
-              border: "none", 
-              borderRadius: 24 
-            }}
+            className="bg-gradient-to-br from-amber-500 to-amber-600 border-none rounded-[32px] p-4 shadow-2xl shadow-amber-500/20"
           >
-            <Title level={4} style={{ color: "#000", margin: 0 }}>Join the Guild</Title>
-            <Text style={{ color: "rgba(0,0,0,0.6)", display: "block", marginTop: 8, marginBottom: 20 }}>
+            <Title level={4} className="!text-black !m-0 !font-black !text-2xl uppercase tracking-tight">Join the Guild</Title>
+            <Text className="text-black/60 block mt-2 mb-8 font-medium">
               Unlock exclusive tasting events and community rewards.
             </Text>
-            <Button block style={{ background: "#000", color: "#d4af37", border: "none", fontWeight: 700 }}>Apply Now</Button>
+            <Button block className="bg-black text-amber-500 border-none font-black h-12 rounded-xl uppercase tracking-widest text-xs">Apply Now</Button>
           </Card>
         </Col>
       </Row>
@@ -196,156 +184,99 @@ export default function CommunityPage() {
   );
 
   const PlaceholderTab = ({ icon, title, description }: any) => (
-    <div style={{ textAlign: "center", padding: "100px 0" }}>
-      <div style={{ fontSize: 64, color: "#222", marginBottom: 24 }}>{icon}</div>
-      <Title level={3} style={{ color: "#fff" }}>{title}</Title>
-      <Paragraph style={{ color: "#666", maxWidth: 400, margin: "0 auto" }}>
+    <div className="text-center py-32">
+      <div className="text-8xl mb-8 opacity-10">{icon}</div>
+      <Title level={3} className="!text-white !font-black !text-3xl mb-4">{title}</Title>
+      <Paragraph className="text-white/40 max-w-md mx-auto text-lg">
         {description}
       </Paragraph>
-      <Button style={{ marginTop: 32, background: "transparent", border: "1px solid #333", color: "#888" }}>Notify Me</Button>
+      <Button className="mt-10 bg-transparent border-white/10 text-white/40 h-12 px-8 rounded-xl font-bold hover:!border-amber-500 hover:!text-amber-500 transition-all">Notify Me</Button>
     </div>
   );
 
   return (
-    <Layout style={{ minHeight: "100vh", backgroundColor: "#0a0a0a" }}>
-      <Sider
-        collapsible
-        collapsed={collapsed}
-        onCollapse={setCollapsed}
-        theme="dark"
-        width={240}
-        style={{ 
-          background: "#0a0a0a", 
-          borderRight: "1px solid #222",
-          position: "fixed",
-          height: "100vh",
-          left: 0,
-          zIndex: 100
-        }}
-      >
-        <div style={{ height: 80, display: "flex", alignItems: "center", justifyContent: "center", borderBottom: "1px solid #222", marginBottom: 20 }}>
-          <Link href="/" style={{ textDecoration: "none", display: "flex", alignItems: "center", gap: 8 }}>
-            <span style={{ fontSize: 28 }}>🥃</span>
-            {!collapsed && <span style={{ color: "#fff", fontSize: 20, fontWeight: 700, letterSpacing: 1.5 }}>SOOL</span>}
-          </Link>
+    <div className="max-w-[1600px] mx-auto py-12 px-8">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-12">
+        <div>
+          <Title className="!text-white !m-0 !text-5xl font-black">
+            Community <span className="text-amber-500">Hub</span>
+          </Title>
+          <Text className="text-white/40 text-lg">Shared passion, timeless tradition.</Text>
         </div>
-        <Menu
-          theme="dark"
-          mode="inline"
-          selectedKeys={["community"]}
-          style={{ background: "transparent", border: "none" }}
-          items={[
-            { key: "explore", icon: <AppstoreOutlined />, label: <Link href="/">Explore</Link> },
-            { key: "tasting", icon: <StarOutlined />, label: <Link href="/Tasting">Tasting Notes</Link> },
-            { key: "analytics", icon: <BarChartOutlined />, label: <Link href="/dashboard">Analytics</Link> },
-            { key: "updates", icon: <CompassOutlined />, label: <Link href="/updates">Discovery</Link> },
-            { key: "community", icon: <HeartOutlined />, label: "Community" },
-          ]}
-        />
-      </Sider>
+        <Button 
+          type="primary" 
+          icon={<PlusOutlined />} 
+          className="bg-amber-500 text-black border-none font-black h-14 px-8 rounded-2xl text-base shadow-xl shadow-amber-500/10"
+          onClick={() => setIsModalOpen(true)}
+        >
+          Create Post
+        </Button>
+      </div>
 
-      <Layout style={{ marginLeft: collapsed ? 80 : 240, background: "transparent", transition: "all 0.2s" }}>
-        <Header style={{ 
-          background: "rgba(10, 10, 10, 0.8)", 
-          backdropFilter: "blur(10px)",
-          padding: "0 40px",
-          height: 80,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          borderBottom: "1px solid #222",
-          position: "sticky",
-          top: 0,
-          zIndex: 90
-        }}>
-          <Space>
-            <Button type="text" icon={<ArrowLeftOutlined />} onClick={() => router.back()} style={{ color: "#888" }} />
-            <Title level={4} style={{ color: "#fff", margin: 0 }}>Community Hub</Title>
-          </Space>
-          <Button 
-            type="primary" 
-            icon={<PlusOutlined />} 
-            style={{ background: "#d4af37", color: "#000", border: "none", fontWeight: 700 }}
-            onClick={() => setIsModalOpen(true)}
-          >
-            Create Post
-          </Button>
-        </Header>
-
-        <Content style={{ padding: "40px 60px" }}>
-          <Tabs
-            defaultActiveKey="feed"
-            className="custom-tabs"
-            items={[
-              {
-                key: "feed",
-                label: (<span><FireOutlined />Feed</span>),
-                children: loading ? <Spin size="large" /> : <FeedTab />,
-              },
-              {
-                key: "market",
-                label: (<span><ShoppingOutlined />Marketplace</span>),
-                children: <PlaceholderTab icon={<ShoppingOutlined />} title="Marketplace Coming Soon" description="A dedicated space for trading limited editions and rare finds among collectors." />,
-              },
-              {
-                key: "clubs",
-                label: (<span><TeamOutlined />Clubs</span>),
-                children: <PlaceholderTab icon={<TeamOutlined />} title="Tasting Clubs" description="Join local or virtual clubs to share experiences and attend exclusive tasting sessions." />,
-              },
-            ]}
-          />
-        </Content>
-
-        <Footer style={{ 
-          background: "transparent", 
-          color: "#444", 
-          textAlign: "center", 
-          padding: "40px 0",
-          borderTop: "1px solid #222",
-          marginTop: 60
-        }}>
-          SOOL COMMUNITY — SHARED PASSION, TIMELESS TRADITION
-        </Footer>
-      </Layout>
+      <Tabs
+        defaultActiveKey="feed"
+        className="custom-tabs"
+        items={[
+          {
+            key: "feed",
+            label: (<span className="flex items-center gap-2 px-4"><FireOutlined />Feed</span>),
+            children: loading ? <div className="py-24 text-center"><Spin size="large" /></div> : <FeedTab />,
+          },
+          {
+            key: "market",
+            label: (<span className="flex items-center gap-2 px-4"><ShoppingOutlined />Marketplace</span>),
+            children: <PlaceholderTab icon={<ShoppingOutlined />} title="Marketplace Coming Soon" description="A dedicated space for trading limited editions and rare finds among collectors." />,
+          },
+          {
+            key: "clubs",
+            label: (<span className="flex items-center gap-2 px-4"><TeamOutlined />Clubs</span>),
+            children: <PlaceholderTab icon={<TeamOutlined />} title="Tasting Clubs" description="Join local or virtual clubs to share experiences and attend exclusive tasting sessions." />,
+          },
+        ]}
+      />
 
       <Modal
-        title={<span style={{ color: "#fff" }}>Share with the Community</span>}
+        title={<span className="text-white font-black uppercase tracking-widest">Share with the Community</span>}
         open={isModalOpen}
         onCancel={() => setIsModalOpen(false)}
         footer={null}
-        style={{ borderRadius: 20 }}
-        styles={{ content: { background: "#111", border: "1px solid #333" }, header: { background: "#111", borderBottom: "1px solid #222" } }}
+        className="dark-modal"
+        width={600}
+        styles={{
+          mask: { backdropFilter: "blur(10px)" },
+          content: { background: "#080808", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "32px", padding: "40px" },
+          header: { background: "transparent", borderBottom: "1px solid rgba(255,255,255,0.05)", paddingBottom: "24px", marginBottom: "32px" },
+        }}
       >
-<Space direction="vertical" size="large" style={{ width: "100%", padding: "20px 0" }}>
+        <Space orientation="vertical" size="large" className="w-full">
           <div>
-            <Text style={{ color: "#888", display: "block", marginBottom: 8 }}>Spirit ID</Text>
+            <Text className="text-white/30 text-xs font-bold uppercase tracking-widest block mb-3">Spirit ID</Text>
             <Input 
               placeholder="Which spirit are you enjoying? (ID)" 
               value={newPost.sool_id} 
               onChange={(e) => setNewPost({...newPost, sool_id: e.target.value})}
-              style={{ background: "#1a1a1a", border: "1px solid #333", color: "#fff" }}
+              className="bg-white/5 border-white/10 text-white h-14 rounded-xl focus:bg-white/10 transition-all"
             />
           </div>
           <div>
-            <Text style={{ color: "#888", display: "block", marginBottom: 8 }}>Your Rating</Text>
-            <Rate value={newPost.rating / 2} onChange={(val) => setNewPost({...newPost, rating: val * 2})} style={{ color: "#d4af37" }} />
+            <Text className="text-white/30 text-xs font-bold uppercase tracking-widest block mb-3">Your Rating</Text>
+            <Rate value={newPost.rating / 2} onChange={(val) => setNewPost({...newPost, rating: val * 2})} className="text-2xl text-amber-500" />
           </div>
           <div>
-            <Text style={{ color: "#888", display: "block", marginBottom: 8 }}>Impressions</Text>
+            <Text className="text-white/30 text-xs font-bold uppercase tracking-widest block mb-3">Impressions</Text>
             <TextArea 
               rows={4} 
               placeholder="What's on your mind?" 
               value={newPost.notes} 
               onChange={(e) => setNewPost({...newPost, notes: e.target.value})}
-              style={{ background: "#1a1a1a", border: "1px solid #333", color: "#fff" }}
+              className="bg-white/5 border-white/10 text-white rounded-xl focus:bg-white/10 transition-all p-4"
             />
           </div>
           <Button 
             type="primary" 
             block 
-            size="large" 
+            className="bg-amber-500 text-black border-none font-black h-16 rounded-2xl text-lg mt-4 uppercase tracking-widest"
             onClick={handlePost}
-            style={{ background: "#d4af37", color: "#000", border: "none", fontWeight: 700, height: 50 }}
           >
             Post to Feed
           </Button>
@@ -353,22 +284,13 @@ export default function CommunityPage() {
       </Modal>
 
       <style jsx global>{`
-        .custom-tabs .ant-tabs-nav::before {
-          border-bottom: 1px solid #222 !important;
-        }
-        .custom-tabs .ant-tabs-tab {
-          color: #444 !important;
-        }
-        .custom-tabs .ant-tabs-tab-active .ant-tabs-tab-btn {
-          color: #d4af37 !important;
-        }
-        .custom-tabs .ant-tabs-ink-bar {
-          background: #d4af37 !important;
-        }
-        .ant-modal-close {
-          color: #666 !important;
-        }
+        .custom-tabs .ant-tabs-nav::before { border-bottom: 1px solid rgba(255,255,255,0.05) !important; }
+        .custom-tabs .ant-tabs-tab { color: rgba(255,255,255,0.3) !important; font-weight: 700 !important; font-size: 16px !important; padding: 16px 0 !important; margin-right: 40px !important; }
+        .custom-tabs .ant-tabs-tab-active .ant-tabs-tab-btn { color: #f59e0b !important; }
+        .custom-tabs .ant-tabs-ink-bar { background: #f59e0b !important; height: 3px !important; }
+        .dark-modal .ant-modal-close { color: rgba(255,255,255,0.2) !important; top: 32px !important; right: 32px !important; }
+        .dark-modal .ant-modal-close:hover { color: #fff !important; }
       `}</style>
-    </Layout>
+    </div>
   );
 }

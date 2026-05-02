@@ -3,8 +3,6 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
-  Layout,
-  Menu,
   Typography,
   Table,
   Tag,
@@ -17,20 +15,14 @@ import {
   Statistic,
   message,
   Switch,
-  Breadcrumb,
   Badge,
   Rate,
 } from "antd";
 import {
-  AppstoreOutlined,
-  CompassOutlined,
   StarOutlined,
-  HeartOutlined,
-  BarChartOutlined,
   UserOutlined,
   SafetyCertificateOutlined,
   DatabaseOutlined,
-  ArrowLeftOutlined,
   ReloadOutlined,
   EditOutlined,
   DeleteOutlined,
@@ -43,7 +35,6 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "../components/AuthProvider";
 import { Tabs, Select, Popconfirm, Form, Modal, Input, InputNumber } from "antd";
 
-const { Sider, Header, Content, Footer } = Layout;
 const { Title, Text } = Typography;
 const { Option } = Select;
 const { TextArea } = Input;
@@ -51,7 +42,6 @@ const { TextArea } = Input;
 export default function AdminPage() {
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
-  const [collapsed, setCollapsed] = useState(false);
   const [users, setUsers] = useState<any[]>([]);
   const [sool, setSool] = useState<any[]>([]);
   const [reviews, setReviews] = useState<any[]>([]);
@@ -63,7 +53,11 @@ export default function AdminPage() {
   const [editingSool, setEditingSool] = useState<any>(null);
   const [soolForm] = Form.useForm();
 
-  const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
+  const getApiUrl = () => {
+    if (typeof window !== "undefined") return "/proxy";
+    return process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
+  };
+  const API_URL = getApiUrl();
 
   const resolveImageUrl = (url: string) => {
     if (!url) return null;
@@ -223,14 +217,14 @@ export default function AdminPage() {
     }
   };
 
-  if (authLoading || loading) return <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#0a0a0a' }}><Spin size="large" /></div>;
+  if (authLoading || loading) return <div className="h-screen flex items-center justify-center bg-[#0a0a0a]"><Spin size="large" /></div>;
 
   const userColumns = [
-    { title: "ID", dataIndex: "id", key: "id", render: (id: number) => <span style={{ color: "#666" }}>#{id}</span> },
+    { title: "ID", dataIndex: "id", key: "id", render: (id: number) => <span className="text-white/20 font-mono">#{id}</span> },
     { title: "User", dataIndex: "username", key: "username", render: (name: string, record: any) => (
       <div>
-        <Text style={{ color: "#fff", fontWeight: 600, display: 'block' }}>{name}</Text>
-        <Text style={{ color: "#444", fontSize: 12 }}>{record.email}</Text>
+        <Text className="text-white font-bold block">{name}</Text>
+        <Text className="text-white/30 text-xs">{record.email}</Text>
       </div>
     )},
     { 
@@ -240,16 +234,16 @@ export default function AdminPage() {
       render: (status: string, record: any) => (
         <Select 
           value={status || 'active'} 
-          style={{ width: 120 }} 
+          className="w-32 admin-select" 
           size="small"
           variant="borderless"
-          dropdownStyle={{ background: '#1a1a1a', border: '1px solid #333' }}
+          dropdownStyle={{ background: '#111', border: '1px solid rgba(255,255,255,0.1)' }}
           onChange={(val) => updateStatus(record.id, val)}
           disabled={record.id === user?.id}
         >
-          <Option value="active"><CheckCircleOutlined style={{ color: '#52c41a', marginRight: 8 }} /> Active</Option>
-          <Option value="suspended"><StopOutlined style={{ color: '#faad14', marginRight: 8 }} /> Suspended</Option>
-          <Option value="locked"><LockOutlined style={{ color: '#ff4d4f', marginRight: 8 }} /> Locked</Option>
+          <Option value="active"><CheckCircleOutlined className="text-green-500 mr-2" /> Active</Option>
+          <Option value="suspended"><StopOutlined className="text-amber-500 mr-2" /> Suspended</Option>
+          <Option value="locked"><LockOutlined className="text-red-500 mr-2" /> Locked</Option>
         </Select>
       ) 
     },
@@ -263,8 +257,9 @@ export default function AdminPage() {
             onChange={() => toggleAdmin(record.id)} 
             disabled={record.id === user?.id}
             size="small"
+            className="admin-switch"
           />
-          <Text style={{ color: "#444", fontSize: 12 }}>Admin</Text>
+          <Text className="text-white/30 text-xs font-bold uppercase tracking-widest">Admin</Text>
         </Space>
       ) 
     },
@@ -286,6 +281,7 @@ export default function AdminPage() {
             danger 
             icon={<DeleteOutlined />} 
             disabled={record.id === user?.id}
+            className="hover:bg-red-500/10"
           />
         </Popconfirm>
       ) 
@@ -293,26 +289,26 @@ export default function AdminPage() {
   ];
 
   const soolColumns = [
-    { title: "ID", dataIndex: "id", key: "id", width: 80 },
+    { title: "ID", dataIndex: "id", key: "id", width: 80, render: (id: number) => <span className="text-white/20 font-mono">#{id}</span> },
     { title: "Name", dataIndex: "name", key: "name", render: (text: string, record: any) => (
-      <Space>
-        <div style={{ width: 32, height: 32, background: '#1a1a1a', borderRadius: 4, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
-          {record.image_url ? <img src={resolveImageUrl(record.image_url) || ""} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : "🥃"}
+      <Space size="middle">
+        <div className="w-10 h-10 bg-white/5 rounded-lg flex items-center justify-center overflow-hidden border border-white/10">
+          {record.image_url ? <img src={resolveImageUrl(record.image_url) || ""} className="w-full h-full object-cover" /> : "🥃"}
         </div>
-        <Text style={{ color: "#fff", fontWeight: 600 }}>{text}</Text>
+        <Text className="text-white font-bold">{text}</Text>
       </Space>
     )},
-    { title: "Category", dataIndex: "category", key: "category", render: (cat: string) => <Tag color="gold">{cat}</Tag> },
-    { title: "ABV", dataIndex: "abv", key: "abv", render: (abv: number) => <Text style={{ color: "#d4af37" }}>{abv}%</Text> },
-    { title: "Producer", dataIndex: "producer", key: "producer", render: (p: string) => <Text style={{ color: "#888" }}>{p || "-"}</Text> },
+    { title: "Category", dataIndex: "category", key: "category", render: (cat: string) => <Tag className="bg-amber-500/10 text-amber-500 border-amber-500/20 font-black text-[10px] tracking-widest uppercase px-3">{cat}</Tag> },
+    { title: "ABV", dataIndex: "abv", key: "abv", render: (abv: number) => <Text className="text-amber-500 font-black">{abv}%</Text> },
+    { title: "Producer", dataIndex: "producer", key: "producer", render: (p: string) => <Text className="text-white/20 text-xs font-medium">{p || "-"}</Text> },
     { 
       title: "Actions", 
       key: "actions", 
       render: (record: any) => (
         <Space>
-          <Button type="text" icon={<EditOutlined />} onClick={() => handleEditSool(record)} style={{ color: "#888" }} />
+          <Button type="text" icon={<EditOutlined />} onClick={() => handleEditSool(record)} className="text-white/20 hover:text-white transition-colors" />
           <Popconfirm title="Delete Spirit?" onConfirm={() => handleDeleteSool(record.id)} okText="Yes" cancelText="No">
-            <Button type="text" icon={<DeleteOutlined />} danger />
+            <Button type="text" icon={<DeleteOutlined />} danger className="hover:bg-red-500/10" />
           </Popconfirm>
         </Space>
       )
@@ -320,15 +316,15 @@ export default function AdminPage() {
   ];
 
   const reviewColumns = [
-    { title: "ID", dataIndex: "id", key: "id", width: 80 },
-    { title: "Spirit ID", dataIndex: "sool_id", key: "sool_id" },
-    { title: "Rating", dataIndex: "rating", key: "rating", render: (r: number) => <Rate disabled value={r / 2} style={{ fontSize: 12 }} /> },
-    { title: "Notes", dataIndex: "notes", key: "notes", ellipsis: true, render: (n: string) => <Text style={{ color: "#888" }}>{n}</Text> },
+    { title: "ID", dataIndex: "id", key: "id", width: 80, render: (id: number) => <span className="text-white/20 font-mono">#{id}</span> },
+    { title: "Spirit ID", dataIndex: "sool_id", key: "sool_id", render: (id: number) => <Tag className="bg-white/5 text-white/40 border-white/10 font-bold px-3">SPIRIT #{id}</Tag> },
+    { title: "Rating", dataIndex: "rating", key: "rating", render: (r: number) => <Rate disabled value={r / 2} className="text-[10px] text-amber-500" /> },
+    { title: "Notes", dataIndex: "notes", key: "notes", ellipsis: true, render: (n: string) => <Text className="text-white/40 italic">{n}</Text> },
     { 
       title: "Actions", 
       key: "actions", 
       render: () => (
-        <Button type="text" icon={<DeleteOutlined />} danger />
+        <Button type="text" icon={<DeleteOutlined />} danger className="hover:bg-red-500/10" />
       )
     }
   ];
@@ -336,68 +332,63 @@ export default function AdminPage() {
   const tabItems = [
     {
       key: "users",
-      label: (
-        <span>
-          <UserOutlined /> Users
-        </span>
-      ),
+      label: (<span className="flex items-center gap-2 px-4"><UserOutlined /> Users</span>),
       children: (
         <Table 
           dataSource={users} 
           columns={userColumns} 
           rowKey="id" 
           pagination={{ pageSize: 10 }}
-          style={{ background: "transparent" }}
-          className="custom-table"
+          className="custom-table admin-table"
         />
       ),
     },
     {
       key: "sool",
-      label: (
-        <span>
-          <DatabaseOutlined /> Spirits
-        </span>
-      ),
+      label: (<span className="flex items-center gap-2 px-4"><DatabaseOutlined /> Spirits</span>),
       children: (
         <>
-          <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'flex-end' }}>
-            <Button type="primary" icon={<PlusOutlined />} onClick={handleAddSool} style={{ background: '#d4af37', color: '#000', border: 'none' }}>Add Spirit</Button>
+          <div className="mb-8 flex justify-end">
+            <Button type="primary" icon={<PlusOutlined />} onClick={handleAddSool} className="bg-amber-500 text-black border-none font-black h-12 px-8 rounded-xl shadow-xl shadow-amber-500/10">Add Spirit</Button>
           </div>
           <Table 
             dataSource={sool} 
             columns={soolColumns} 
             rowKey="id" 
             pagination={{ pageSize: 10 }}
-            style={{ background: "transparent" }}
-            className="custom-table"
+            className="custom-table admin-table"
           />
 
           <Modal
-            title={<span style={{ color: '#fff' }}>{editingSool ? 'EDIT SPIRIT' : 'ADD NEW SPIRIT'}</span>}
+            title={<span className="text-white font-black tracking-widest uppercase">Spirit Management</span>}
             open={isSoolModalOpen}
             onOk={() => soolForm.submit()}
             onCancel={() => setIsSoolModalOpen(false)}
             okText="Save Spirit"
-            okButtonProps={{ style: { background: '#d4af37', border: 'none', color: '#000', fontWeight: 700 } }}
-            cancelButtonProps={{ type: 'text', style: { color: '#888' } }}
-            styles={{ mask: { backdropFilter: 'blur(4px)' } }}
-            modalRender={(modal) => <div className="dark-modal">{modal}</div>}
+            className="dark-modal"
+            width={700}
+            styles={{
+              mask: { backdropFilter: 'blur(10px)' },
+              content: { background: '#080808', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '32px', padding: '40px' },
+              header: { background: 'transparent', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '24px', marginBottom: '32px' },
+            }}
+            okButtonProps={{ className: 'bg-amber-500 text-black border-none font-black h-12 px-8 rounded-xl' }}
+            cancelButtonProps={{ className: 'text-white/20 font-bold hover:text-white' }}
           >
             <Form 
               form={soolForm} 
               layout="vertical" 
               onFinish={saveSool}
               initialValues={{ abv: 15 }}
-              style={{ marginTop: 24 }}
+              className="admin-form"
             >
-              <Form.Item name="name" label={<Text style={{ color: '#888' }}>Name</Text>} rules={[{ required: true }]}>
-                <Input style={{ background: '#1a1a1a', border: '1px solid #333', color: '#fff' }} />
+              <Form.Item name="name" label={<span className="text-white/30 text-xs font-bold uppercase tracking-widest">Spirit Name</span>} rules={[{ required: true }]}>
+                <Input className="bg-white/5 border-white/10 text-white h-12 rounded-xl" />
               </Form.Item>
-              <Row gutter={16}>
+              <Row gutter={24}>
                 <Col span={12}>
-                  <Form.Item name="category" label={<Text style={{ color: '#888' }}>Category</Text>}>
-                    <Select dropdownStyle={{ background: '#1a1a1a' }}>
+                  <Form.Item name="category" label={<span className="text-white/30 text-xs font-bold uppercase tracking-widest">Category</span>}>
+                    <Select className="admin-select h-12" dropdownStyle={{ background: '#111', border: '1px solid rgba(255,255,255,0.1)' }}>
                       <Option value="막걸리">막걸리</Option>
                       <Option value="약주">약주</Option>
                       <Option value="청주">청주</Option>
@@ -407,26 +398,26 @@ export default function AdminPage() {
                   </Form.Item>
                 </Col>
                 <Col span={12}>
-                  <Form.Item name="abv" label={<Text style={{ color: '#888' }}>ABV (%)</Text>}>
-                    <InputNumber min={0} max={100} style={{ width: '100%', background: '#1a1a1a', border: '1px solid #333', color: '#fff' }} />
+                  <Form.Item name="abv" label={<span className="text-white/30 text-xs font-bold uppercase tracking-widest">ABV (%)</span>}>
+                    <InputNumber min={0} max={100} className="w-full bg-white/5 border-white/10 text-white h-12 rounded-xl flex items-center" />
                   </Form.Item>
                 </Col>
               </Row>
-              <Form.Item name="region" label={<Text style={{ color: '#888' }}>Region</Text>}>
-                <Input style={{ background: '#1a1a1a', border: '1px solid #333', color: '#fff' }} />
+              <Form.Item name="region" label={<span className="text-white/30 text-xs font-bold uppercase tracking-widest">Origin Region</span>}>
+                <Input className="bg-white/5 border-white/10 text-white h-12 rounded-xl" />
               </Form.Item>
-              <Form.Item name="producer" label={<Text style={{ color: '#888' }}>Producer</Text>}>
-                <Input style={{ background: '#1a1a1a', border: '1px solid #333', color: '#fff' }} />
+              <Form.Item name="producer" label={<span className="text-white/30 text-xs font-bold uppercase tracking-widest">Producer / Brewery</span>}>
+                <Input className="bg-white/5 border-white/10 text-white h-12 rounded-xl" />
               </Form.Item>
               <Form.Item 
                 name="image_url" 
-                label={<Text style={{ color: '#888' }}>Image URL</Text>}
-                extra={<Text style={{ color: '#444', fontSize: 11 }}>Tip: Use /static/images/{"{id}"}.png for local files.</Text>}
+                label={<span className="text-white/30 text-xs font-bold uppercase tracking-widest">Cover Image Asset Path</span>}
+                extra={<span className="text-white/10 text-[10px] font-bold uppercase tracking-tighter mt-2 block">Standard: /static/images/{"{id}"}.png</span>}
               >
-                <Input placeholder="https://... or /static/images/1.png" style={{ background: '#1a1a1a', border: '1px solid #333', color: '#fff' }} />
+                <Input placeholder="https://... or /static/images/1.png" className="bg-white/5 border-white/10 text-white h-12 rounded-xl" />
               </Form.Item>
-              <Form.Item name="description" label={<Text style={{ color: '#888' }}>Description</Text>}>
-                <TextArea rows={3} style={{ background: '#1a1a1a', border: '1px solid #333', color: '#fff' }} />
+              <Form.Item name="description" label={<span className="text-white/30 text-xs font-bold uppercase tracking-widest">Product Narrative</span>}>
+                <TextArea rows={4} className="bg-white/5 border-white/10 text-white rounded-xl p-4" />
               </Form.Item>
             </Form>
           </Modal>
@@ -435,139 +426,82 @@ export default function AdminPage() {
     },
     {
       key: "reviews",
-      label: (
-        <span>
-          <StarOutlined /> Reviews
-        </span>
-      ),
+      label: (<span className="flex items-center gap-2 px-4"><StarOutlined /> Reviews</span>),
       children: (
         <Table 
           dataSource={reviews} 
           columns={reviewColumns} 
           rowKey="id" 
           pagination={{ pageSize: 10 }}
-          style={{ background: "transparent" }}
-          className="custom-table"
+          className="custom-table admin-table"
         />
       ),
     },
   ];
 
   return (
-    <Layout style={{ minHeight: "100vh", backgroundColor: "#0a0a0a" }}>
-      <Sider
-        collapsible
-        collapsed={collapsed}
-        onCollapse={setCollapsed}
-        theme="dark"
-        width={240}
-        style={{ background: "#0a0a0a", borderRight: "1px solid #222", position: "fixed", height: "100vh", left: 0, zIndex: 100 }}
-      >
-        <div style={{ height: 80, display: "flex", alignItems: "center", justifyContent: "center", borderBottom: "1px solid #222", marginBottom: 20 }}>
-          <Link href="/" style={{ textDecoration: "none", display: "flex", alignItems: "center", gap: 8 }}>
-            <span style={{ fontSize: 28 }}>🥃</span>
-            {!collapsed && <span style={{ color: "#fff", fontSize: 20, fontWeight: 700, letterSpacing: 1.5 }}>SOOL</span>}
-          </Link>
+    <div className="max-w-[1600px] mx-auto py-12 px-8">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-12">
+        <div>
+          <Title className="!text-white !m-0 !text-5xl font-black">
+            Platform <span className="text-amber-500">Governance</span>
+          </Title>
+          <Text className="text-white/40 text-lg">Centralized system administration and content curation.</Text>
         </div>
-        <Menu
-          theme="dark"
-          mode="inline"
-          selectedKeys={["admin"]}
-          style={{ background: "transparent", border: "none" }}
-          items={[
-            { key: "explore", icon: <AppstoreOutlined />, label: <Link href="/">Explore</Link> },
-            { key: "admin", icon: <SafetyCertificateOutlined />, label: "Admin Console" },
-            { key: "analytics", icon: <BarChartOutlined />, label: <Link href="/dashboard">System Stats</Link> },
-          ]}
+        <Button 
+          icon={<ReloadOutlined />} 
+          onClick={fetchData} 
+          className="bg-white/5 border-white/10 text-white/40 hover:text-white font-bold h-12 px-6 rounded-xl transition-all"
+        >
+          Refresh Data
+        </Button>
+      </div>
+
+      <Row gutter={[24, 24]} className="mb-12">
+        {[
+          { title: "TOTAL USERS", value: users.length, icon: <UserOutlined /> },
+          { title: "TOTAL SPIRITS", value: sool.length, icon: <DatabaseOutlined /> },
+          { title: "REVIEWS", value: reviews.length, icon: <StarOutlined /> },
+          { title: "SYSTEM STATUS", value: "OPERATIONAL", icon: <SafetyCertificateOutlined />, color: "text-green-500" },
+        ].map((stat, idx) => (
+          <Col xs={24} sm={6} key={idx}>
+            <Card className="bg-white/5 border-white/10 rounded-3xl backdrop-blur-sm shadow-xl" styles={{ body: { padding: 32 } }}>
+              <div className="flex items-center gap-4 mb-2">
+                <span className="text-amber-500 text-lg">{stat.icon}</span>
+                <span className="text-white/20 text-[10px] font-black tracking-widest">{stat.title}</span>
+              </div>
+              <div className={`text-2xl font-black ${stat.color || "text-white"}`}>{stat.value}</div>
+            </Card>
+          </Col>
+        ))}
+      </Row>
+
+      <Card 
+        className="bg-white/5 border-white/10 rounded-[40px] overflow-hidden shadow-2xl backdrop-blur-sm"
+        styles={{ body: { padding: 40 } }}
+      >
+        <Tabs 
+          defaultActiveKey="users" 
+          items={tabItems} 
+          className="custom-tabs admin-tabs"
         />
-      </Sider>
-
-      <Layout style={{ marginLeft: collapsed ? 80 : 240, background: "transparent" }}>
-        <Header style={{ background: "rgba(10, 10, 10, 0.8)", backdropFilter: "blur(10px)", padding: "0 40px", height: 80, display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "1px solid #222", position: "sticky", top: 0, zIndex: 90 }}>
-          <Space>
-            <Button type="text" icon={<ArrowLeftOutlined />} onClick={() => router.push('/')} style={{ color: "#888" }} />
-            <Title level={4} style={{ color: "#fff", margin: 0 }}>Command Center</Title>
-          </Space>
-          <Space size="middle">
-            <Button icon={<ReloadOutlined />} onClick={fetchData} type="text" style={{ color: "#666" }}>Refresh Data</Button>
-            <div style={{ width: 1, height: 20, background: "#333" }} />
-            <Link href="/profile">
-              <Space size="small" style={{ cursor: 'pointer' }}>
-                <Text style={{ color: "#fff", fontWeight: 500 }}>{user?.username}</Text>
-                <Badge dot color="#52c41a">
-                  <div style={{ width: 32, height: 32, borderRadius: "50%", background: "#333", border: "1px solid #444", display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <UserOutlined style={{ color: "#fff" }} />
-                  </div>
-                </Badge>
-              </Space>
-            </Link>
-          </Space>
-        </Header>
-
-        <Content style={{ padding: "40px 60px" }}>
-          <div style={{ marginBottom: 40 }}>
-            <Title level={2} style={{ color: "#fff", margin: 0 }}>Platform <span style={{ color: "#d4af37" }}>Governance</span></Title>
-            <Text style={{ color: "#666" }}>Manage users, spirits, and platform reviews.</Text>
-          </div>
-
-          <Row gutter={[24, 24]} style={{ marginBottom: 40 }}>
-            <Col xs={24} sm={6}>
-              <Card style={{ background: "#111", border: "1px solid #222", borderRadius: 16 }}>
-                <Statistic title={<span style={{ color: "#666" }}>TOTAL USERS</span>} value={users.length} styles={{ content: { color: "#fff" } }} prefix={<UserOutlined style={{ color: "#d4af37" }} />} />
-              </Card>
-            </Col>
-            <Col xs={24} sm={6}>
-              <Card style={{ background: "#111", border: "1px solid #222", borderRadius: 16 }}>
-                <Statistic title={<span style={{ color: "#666" }}>TOTAL SPIRITS</span>} value={sool.length} styles={{ content: { color: "#fff" } }} prefix={<DatabaseOutlined style={{ color: "#d4af37" }} />} />
-              </Card>
-            </Col>
-            <Col xs={24} sm={6}>
-              <Card style={{ background: "#111", border: "1px solid #222", borderRadius: 16 }}>
-                <Statistic title={<span style={{ color: "#666" }}>REVIEWS</span>} value={reviews.length} styles={{ content: { color: "#fff" } }} prefix={<StarOutlined style={{ color: "#d4af37" }} />} />
-              </Card>
-            </Col>
-            <Col xs={24} sm={6}>
-              <Card style={{ background: "#111", border: "1px solid #222", borderRadius: 16 }}>
-                <Statistic title={<span style={{ color: "#666" }}>UPTIME</span>} value={100} suffix="%" styles={{ content: { color: "#52c41a" } }} prefix={<SafetyCertificateOutlined />} />
-              </Card>
-            </Col>
-          </Row>
-
-          <Card 
-            style={{ background: "#111", border: "1px solid #222", borderRadius: 24, overflow: "hidden" }}
-            styles={{ body: { padding: 24 } }}
-          >
-            <Tabs 
-              defaultActiveKey="users" 
-              items={tabItems} 
-              className="admin-tabs"
-            />
-          </Card>
-        </Content>
-
-        <Footer style={{ background: "transparent", color: "#444", textAlign: "center", padding: "40px 0", borderTop: "1px solid #222", marginTop: 60 }}>
-          SOOL ARCHITECT — INTERNAL GOVERNANCE SYSTEM
-        </Footer>
-      </Layout>
+      </Card>
 
       <style jsx global>{`
-        .custom-table .ant-table { background: transparent !important; color: #aaa !important; }
-        .custom-table .ant-table-thead > tr > th { background: #1a1a1a !important; color: #666 !important; border-bottom: 1px solid #222 !important; text-transform: uppercase; font-size: 11px; letter-spacing: 1px; }
-        .custom-table .ant-table-tbody > tr > td { border-bottom: 1px solid #222 !important; background: transparent !important; }
-        .custom-table .ant-table-tbody > tr:hover > td { background: #161616 !important; }
-        .admin-tabs .ant-tabs-tab { color: #666 !important; }
-        .admin-tabs .ant-tabs-tab-active .ant-tabs-tab-btn { color: #d4af37 !important; }
-        .admin-tabs .ant-tabs-ink-bar { background: #d4af37 !important; }
+        .custom-table .ant-table { background: transparent !important; color: rgba(255,255,255,0.6) !important; }
+        .custom-table .ant-table-thead > tr > th { background: rgba(255,255,255,0.03) !important; color: rgba(255,255,255,0.3) !important; border-bottom: 1px solid rgba(255,255,255,0.05) !important; text-transform: uppercase; font-size: 10px; letter-spacing: 2px; font-weight: 900; padding: 20px !important; }
+        .custom-table .ant-table-tbody > tr > td { border-bottom: 1px solid rgba(255,255,255,0.05) !important; background: transparent !important; padding: 24px 20px !important; }
+        .custom-table .ant-table-tbody > tr:hover > td { background: rgba(255,255,255,0.02) !important; }
         
-        .dark-modal .ant-modal-content { background: #111 !important; border: 1px solid #222 !important; border-radius: 24px !important; }
-        .dark-modal .ant-modal-header { background: transparent !important; border-bottom: 1px solid #222 !important; padding-bottom: 16px !important; }
-        .dark-modal .ant-modal-title { color: #fff !important; }
-        .dark-modal .ant-modal-close { color: #666 !important; }
-        .dark-modal .ant-form-item-label label { color: #888 !important; }
-        .dark-modal .ant-select-selector { background: #1a1a1a !important; border: 1px solid #333 !important; color: #fff !important; }
-        .dark-modal .ant-select-arrow { color: #666 !important; }
+        .admin-tabs .ant-tabs-nav::before { border-bottom: 1px solid rgba(255,255,255,0.05) !important; }
+        .admin-tabs .ant-tabs-tab { color: rgba(255,255,255,0.2) !important; font-weight: 800 !important; font-size: 14px !important; padding: 16px 0 !important; margin-right: 48px !important; text-transform: uppercase; letter-spacing: 2px; }
+        .admin-tabs .ant-tabs-tab-active .ant-tabs-tab-btn { color: #f59e0b !important; }
+        .admin-tabs .ant-tabs-ink-bar { background: #f59e0b !important; height: 3px !important; }
+
+        .admin-select .ant-select-selector { background: rgba(255,255,255,0.05) !important; border-color: rgba(255,255,255,0.1) !important; color: white !important; border-radius: 8px !important; }
+        .admin-switch.ant-switch-checked { background: #f59e0b !important; }
       `}</style>
-    </Layout>
+    </div>
   );
 }
 

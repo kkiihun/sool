@@ -29,9 +29,9 @@ export default function AppHeader() {
 
     (async () => {
       try {
-        // ✅ backend에 실제로 존재하는 endpoint는 /users/me
-        const res = await fetch("/users/me", {
+        const res = await fetch("/proxy/users/me", {
           cache: "no-store",
+          credentials: "include",
           headers: { Authorization: `Bearer ${token}` },
         });
 
@@ -63,26 +63,48 @@ export default function AppHeader() {
 
   if (!me) {
     return (
-      <div className="flex items-center gap-2 text-xs">
-        <Link className="text-blue-300 hover:text-blue-200" href="/login">
+      <div className="flex items-center gap-6">
+        <Link 
+          className="text-xs font-bold text-white/70 hover:text-white transition-colors tracking-widest uppercase" 
+          href="/login"
+        >
           Login
         </Link>
-        <span className="text-white/20">|</span>
-        <Link className="text-blue-300 hover:text-blue-200" href="/signup">
-          Sign Up
+        <Link 
+          className="px-4 py-1.5 rounded bg-white text-black text-[11px] font-bold tracking-widest uppercase hover:bg-gray-200 transition-colors" 
+          href="/signup"
+        >
+          Join
         </Link>
       </div>
     );
   }
 
   return (
-    <div className="flex items-center gap-2">
-      <span className="text-xs text-white/60">
-        <b className="text-white/80">{me.username}</b>
-      </span>
-      <Button size="small" onClick={onLogout}>
-        Logout
-      </Button>
+    <div className="flex items-center gap-6 pl-8 border-l border-white/10">
+      <div className="flex flex-col items-end gap-1.5">
+        <span className="text-[15px] font-bold text-white tracking-tight leading-none">
+          {me.username}
+        </span>
+        <span className="text-[11px] text-white/50 font-semibold tracking-tight">
+          {me.email}
+        </span>
+      </div>
+      
+      <div className="group relative">
+        <div className="w-12 h-12 rounded-full bg-gradient-to-br from-neutral-800 to-black border border-white/20 flex items-center justify-center cursor-pointer group-hover:border-amber-500 transition-all shadow-xl overflow-hidden active:scale-95">
+          <span className="text-lg font-black text-white group-hover:text-amber-500 transition-colors">
+            {me.username.substring(0, 1).toUpperCase()}
+          </span>
+        </div>
+        
+        <button 
+          onClick={onLogout}
+          className="absolute top-14 right-0 hidden group-hover:block bg-neutral-900 border border-white/10 px-8 py-4 rounded-xl shadow-2xl text-[13px] font-black text-red-500 hover:text-white hover:bg-red-600 transition-all tracking-[0.15em] whitespace-nowrap z-[60]"
+        >
+          LOGOUT
+        </button>
+      </div>
     </div>
   );
 }

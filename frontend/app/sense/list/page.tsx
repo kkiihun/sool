@@ -2,9 +2,8 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { getToken } from "@/lib/auth";
 import {
-  Layout,
-  Menu,
   Typography,
   Table,
   Tag,
@@ -25,7 +24,6 @@ import {
 } from "@ant-design/icons";
 import { useRouter } from "next/navigation";
 
-const { Sider, Header, Content, Footer } = Layout;
 const { Title, Text } = Typography;
 
 interface Sense {
@@ -41,27 +39,19 @@ interface Sense {
   created_at?: string;
 }
 
-// ✅ env로 통일 (현재: http://localhost:8000)
-// ✅ 프록시로 바꾸면 NEXT_PUBLIC_API_BASE_URL=/proxy 로만 바꾸면 됨
-const API_BASE =
-  (process.env.NEXT_PUBLIC_API_BASE_URL ?? "/proxy").replace(/\/$/, "");
-
-const apiUrl = (path: string) => {
-  const p = path.startsWith("/") ? path : `/${path}`;
-  return `${API_BASE}${p}`;
-};
-
 export default function SenseListPage() {
   const router = useRouter();
-  const [collapsed, setCollapsed] = useState(false);
   const [data, setData] = useState<Sense[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
-
   const fetchData = async () => {
     try {
-      const res = await fetch(`${API_URL}/sense/`);
+      const token = getToken();
+      const res = await fetch("/proxy/sense/", {
+        cache: "no-store",
+        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+      });
+
       if (res.ok) {
         const json = await res.json();
         setData(json);
@@ -75,20 +65,20 @@ export default function SenseListPage() {
 
   useEffect(() => {
     fetchData();
-  }, [API_URL]);
+  }, []);
 
   const columns = [
     {
       title: "ID",
-      dataKey: "id",
+      dataIndex: "id",
       render: (id: number) => <span style={{ color: "#666" }}>#{id}</span>,
     },
     {
       title: "Sool",
-      dataKey: "sool_id",
-      render: (sool_id: number) => (
-        <Link href={`/sool/${sool_id}`} style={{ color: "#d4af37", fontWeight: 600 }}>
-          Spirit #{sool_id}
+      dataIndex: "sool_id",
+      render: (soolId: number) => (
+        <Link href={`/sool/${soolId}`} style={{ color: "#d4af37", fontWeight: 600 }}>
+          Spirit #{soolId}
         </Link>
       ),
     },
@@ -105,7 +95,7 @@ export default function SenseListPage() {
     {
       title: "Overall",
       dataIndex: "rating",
-      render: (rating: number) => <Rate disabled value={rating / 2} style={{ fontSize: 12, color: "#d4af37" }} />,
+      render: (rating: number) => <Rate disabled value={(rating ?? 0) / 2} style={{ fontSize: 12, color: "#d4af37" }} />,
     },
     {
       title: "Date",
@@ -116,104 +106,39 @@ export default function SenseListPage() {
       title: "Action",
       render: (record: Sense) => (
         <Link href={`/sense/list/${record.id}`}>
-          <Button type="text" icon={<EyeOutlined />} style={{ color: "#d4af37" }}>View</Button>
+          <Button type="text" icon={<EyeOutlined />} style={{ color: "#d4af37" }}>
+            View
+          </Button>
         </Link>
       ),
     },
   ];
 
   return (
-    <Layout style={{ minHeight: "100vh", backgroundColor: "#0a0a0a" }}>
-      <Sider
-        collapsible
-        collapsed={collapsed}
-        onCollapse={setCollapsed}
-        theme="dark"
-        width={240}
-        style={{ 
-          background: "#0a0a0a", 
-          borderRight: "1px solid #222",
-          position: "fixed",
-          height: "100vh",
-          left: 0,
-          zIndex: 100
-        }}
-      >
-        <div style={{ height: 80, display: "flex", alignItems: "center", justifyContent: "center", borderBottom: "1px solid #222", marginBottom: 20 }}>
-          <Link href="/" style={{ textDecoration: "none", display: "flex", alignItems: "center", gap: 8 }}>
-            <span style={{ fontSize: 28 }}>🥃</span>
-            {!collapsed && <span style={{ color: "#fff", fontSize: 20, fontWeight: 700, letterSpacing: 1.5 }}>SOOL</span>}
-          </Link>
+    <div style={{ padding: "40px 60px", background: "#050505", minHeight: "100vh" }}>
+      <div style={{ marginBottom: 40 }}>
+        <Title level={2} style={{ color: "#fff", margin: 0 }}>
+          Your <span style={{ color: "#d4af37" }}>Sensory Vault</span>
+        </Title>
+        <Text style={{ color: "#666" }}>Review your past explorations and flavor profiles.</Text>
+      </div>
+
+      {loading ? (
+        <div style={{ display: "flex", justifyContent: "center", padding: "100px 0" }}>
+          <Spin size="large" />
         </div>
-        <Menu
-          theme="dark"
-          mode="inline"
-          selectedKeys={["tasting"]}
-          style={{ background: "transparent", border: "none" }}
-          items={[
-            { key: "explore", icon: <AppstoreOutlined />, label: <Link href="/">Explore</Link> },
-            { key: "tasting", icon: <StarOutlined />, label: <Link href="/Tasting">Tasting Notes</Link> },
-            { key: "analytics", icon: <BarChartOutlined />, label: <Link href="/dashboard">Analytics</Link> },
-            { key: "updates", icon: <CompassOutlined />, label: <Link href="/updates">Updates</Link> },
-            { key: "community", icon: <HeartOutlined />, label: <Link href="/community">Community</Link> },
-          ]}
-        />
-      </Sider>
-
-      <Layout style={{ marginLeft: collapsed ? 80 : 240, background: "transparent", transition: "all 0.2s" }}>
-        <Header style={{ 
-          background: "rgba(10, 10, 10, 0.8)", 
-          backdropFilter: "blur(10px)",
-          padding: "0 40px",
-          height: 80,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          borderBottom: "1px solid #222",
-          position: "sticky",
-          top: 0,
-          zIndex: 90
-        }}>
-          <Space>
-            <Button type="text" icon={<ArrowLeftOutlined />} onClick={() => router.back()} style={{ color: "#888" }} />
-            <Title level={4} style={{ color: "#fff", margin: 0 }}>Collection History</Title>
-          </Space>
-          <Breadcrumb 
-            items={[
-              { title: <Link href="/Tasting" style={{ color: "#666" }}>Tasting</Link> },
-              { title: <span style={{ color: "#fff" }}>History</span> },
-            ]}
+      ) : (
+        <div style={{ background: "#111", borderRadius: 24, border: "1px solid #222", overflow: "hidden" }}>
+          <Table
+            dataSource={data}
+            columns={columns}
+            rowKey="id"
+            pagination={{ pageSize: 10, position: ["bottomCenter"] }}
+            style={{ background: "transparent" }}
+            className="custom-table"
           />
-        </Header>
-
-        <Content style={{ padding: "40px 60px" }}>
-          <div style={{ marginBottom: 40 }}>
-            <Title level={2} style={{ color: "#fff", margin: 0 }}>Your <span style={{ color: "#d4af37" }}>Sensory Vault</span></Title>
-            <Text style={{ color: "#666" }}>Review your past explorations and flavor profiles.</Text>
-          </div>
-
-          {loading ? (
-            <div style={{ display: "flex", justifyContent: "center", padding: "100px 0" }}>
-              <Spin size="large" />
-            </div>
-          ) : (
-            <div style={{ background: "#111", borderRadius: 24, border: "1px solid #222", overflow: "hidden" }}>
-              <Table 
-                dataSource={data} 
-                columns={columns} 
-                rowKey="id"
-                pagination={{ pageSize: 10, position: ["bottomCenter"] }}
-                style={{ background: "transparent" }}
-                className="custom-table"
-              />
-            </div>
-          )}
-        </Content>
-
-        <Footer style={{ background: "transparent", color: "#444", textAlign: "center", padding: "40px 0", borderTop: "1px solid #222", marginTop: 60 }}>
-          SOOL — PRESERVING EVERY DROP
-        </Footer>
-      </Layout>
+        </div>
+      )}
 
       <style jsx global>{`
         .custom-table .ant-table {
@@ -248,6 +173,6 @@ export default function SenseListPage() {
           color: #d4af37 !important;
         }
       `}</style>
-    </Layout>
+    </div>
   );
 }

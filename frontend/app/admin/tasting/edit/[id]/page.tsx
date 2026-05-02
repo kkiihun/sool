@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { use, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import SliderInput from "@/components/SliderInput";
 
@@ -11,22 +11,19 @@ type TastingForm = {
   body?: number;
   finish?: number;
   comment?: string;
-  // 백엔드에서 다른 필드가 와도 유지
   [key: string]: any;
 };
 
-// ✅ env로 통일 (지금은 http://localhost:8000)
-// ✅ 추후 프록시 쓰면 NEXT_PUBLIC_API_BASE_URL=/proxy 로만 바꾸면 됨
-const API_BASE =
-  (process.env.NEXT_PUBLIC_API_BASE_URL ?? "/proxy").replace(/\/$/, "");
+const API_BASE = (process.env.NEXT_PUBLIC_API_BASE_URL ?? "/proxy").replace(/\/$/, "");
 
 const apiUrl = (path: string) => {
   const p = path.startsWith("/") ? path : `/${path}`;
   return `${API_BASE}${p}`;
 };
 
-export default function EditTastingPage({ params }: { params: { id: string } }) {
+export default function EditTastingPage({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter();
+  const { id } = use(params);
 
   const [form, setForm] = useState<TastingForm | null>(null);
   const [loading, setLoading] = useState(true);
@@ -41,11 +38,13 @@ export default function EditTastingPage({ params }: { params: { id: string } }) 
         setLoading(true);
         setError(null);
 
-        const res = await fetch(apiUrl(`/v2/tasting/note/${params.id}`), {
+        const res = await fetch(apiUrl(`/v2/tasting/note/${id}`), {
           cache: "no-store",
         });
 
-        if (!res.ok) throw new Error(`GET 실패 (HTTP ${res.status})`);
+        if (!res.ok) {
+          throw new Error(`Failed to load tasting note (HTTP ${res.status})`);
+        }
 
         const data = await res.json();
 
@@ -55,8 +54,9 @@ export default function EditTastingPage({ params }: { params: { id: string } }) 
           comment: typeof data?.comment === "string" ? data.comment : "",
         });
       } catch (e: any) {
-        if (cancelled) return;
-        setError(e?.message ?? "불러오기 실패");
+        if (!cancelled) {
+          setError(e?.message ?? "Failed to load tasting note.");
+        }
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -66,7 +66,7 @@ export default function EditTastingPage({ params }: { params: { id: string } }) 
     return () => {
       cancelled = true;
     };
-  }, [params.id]);
+  }, [id]);
 
   const save = async () => {
     if (!form || saving) return;
@@ -75,7 +75,7 @@ export default function EditTastingPage({ params }: { params: { id: string } }) 
       setSaving(true);
       setError(null);
 
-      const res = await fetch(apiUrl(`/v2/tasting/note/${params.id}`), {
+      const res = await fetch(apiUrl(`/v2/tasting/note/${id}`), {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(form),
@@ -83,15 +83,16 @@ export default function EditTastingPage({ params }: { params: { id: string } }) 
 
       if (!res.ok) {
         const msg = await res.text().catch(() => "");
-        throw new Error(`PUT 실패 (HTTP ${res.status}) ${msg}`.trim());
+        throw new Error(`Failed to update tasting note (HTTP ${res.status}) ${msg}`.trim());
       }
 
-      alert("수정 완료");
+      alert("Tasting note updated.");
       router.push("/admin/tasting/list");
       router.refresh();
     } catch (e: any) {
-      setError(e?.message ?? "저장 실패");
-      alert(e?.message ?? "저장 실패");
+      const message = e?.message ?? "Failed to update tasting note.";
+      setError(message);
+      alert(message);
     } finally {
       setSaving(false);
     }
@@ -102,48 +103,28 @@ export default function EditTastingPage({ params }: { params: { id: string } }) 
   if (!form) return <div className="p-6">No data</div>;
 
   return (
-    <div className="p-6 space-y-6 max-w-xl mx-auto">
-      <h1 className="text-2xl font-bold mb-4">✏ 테이스팅 수정 #{params.id}</h1>
+    <div className="mx-auto max-w-xl space-y-6 p-6">
+      <h1 className="mb-4 text-2xl font-bold">Edit tasting note #{id}</h1>
 
-      <SliderInput
-        label="Aroma"
-        value={Number(form.aroma ?? 0)}
-        onChange={(v) => setForm({ ...form, aroma: v })}
-      />
-      <SliderInput
-        label="Sweetness"
-        value={Number(form.sweetness ?? 0)}
-        onChange={(v) => setForm({ ...form, sweetness: v })}
-      />
-      <SliderInput
-        label="Acidity"
-        value={Number(form.acidity ?? 0)}
-        onChange={(v) => setForm({ ...form, acidity: v })}
-      />
-      <SliderInput
-        label="Body"
-        value={Number(form.body ?? 0)}
-        onChange={(v) => setForm({ ...form, body: v })}
-      />
-      <SliderInput
-        label="Finish"
-        value={Number(form.finish ?? 0)}
-        onChange={(v) => setForm({ ...form, finish: v })}
-      />
+      <SliderInput label="Aroma" value={Number(form.aroma ?? 0)} onChange={(v) => setForm({ ...form, aroma: v })} />
+      <SliderInput label="Sweetness" value={Number(form.sweetness ?? 0)} onChange={(v) => setForm({ ...form, sweetness: v })} />
+      <SliderInput label="Acidity" value={Number(form.acidity ?? 0)} onChange={(v) => setForm({ ...form, acidity: v })} />
+      <SliderInput label="Body" value={Number(form.body ?? 0)} onChange={(v) => setForm({ ...form, body: v })} />
+      <SliderInput label="Finish" value={Number(form.finish ?? 0)} onChange={(v) => setForm({ ...form, finish: v })} />
 
       <textarea
         value={form.comment ?? ""}
         onChange={(e) => setForm({ ...form, comment: e.target.value })}
-        className="border p-2 w-full text-black rounded"
+        className="w-full rounded border p-2 text-black"
         placeholder="Comment"
       />
 
       <button
         onClick={save}
         disabled={saving}
-        className="bg-green-600 disabled:bg-green-900 text-white px-4 py-2 rounded font-semibold"
+        className="rounded bg-green-600 px-4 py-2 font-semibold text-white disabled:bg-green-900"
       >
-        {saving ? "저장 중..." : "저장"}
+        {saving ? "Saving..." : "Save"}
       </button>
     </div>
   );
