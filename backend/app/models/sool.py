@@ -17,9 +17,9 @@ class Sool(Base):
     ingredients = Column(String(255))
     image_url = Column(String(500)) # 이미지 URL 저장을 위한 필드 추가
 
-    # 🔹 감각 노트
-    sense_notes = relationship(
-        "Sense",
+    # 🔹 감각 노트 (Standardized)
+    tasting_notes = relationship(
+        "TastingNote",
         back_populates="sool",
         cascade="all, delete-orphan"
     )

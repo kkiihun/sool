@@ -14,8 +14,8 @@ type Tasting = {
   sweetness?: number | null;
   acidity?: number | null;
   body?: number | null;
-  aftertaste?: number | null;
-  finish?: number | null; // Compatibility fallback
+  finish?: number | null;
+  aftertaste?: number | null; // Legacy compatibility
 };
 
 export default function SoolRadar({
@@ -27,10 +27,10 @@ export default function SoolRadar({
     (t) =>
       t.aroma != null ||
       t.sweetness != null ||
-      t.aftertaste != null ||
-      t.finish != null ||
       t.acidity != null ||
-      t.body != null
+      t.body != null ||
+      t.finish != null ||
+      t.aftertaste != null
   );
 
   if (valid.length === 0) {
@@ -42,15 +42,13 @@ export default function SoolRadar({
   }
 
   const avg = (key: keyof Tasting) => {
-    const sum = valid.reduce((acc, t) => {
-      let val = 0;
-      if (key === 'aftertaste' || key === 'finish') {
-        val = Number(t.aftertaste ?? t.finish ?? 0);
-      } else {
-        val = Number(t[key] ?? 0);
+    const items = valid.map(t => {
+      if (key === 'finish') {
+        return Number(t.finish ?? t.aftertaste ?? 0);
       }
-      return acc + val;
-    }, 0);
+      return Number(t[key] ?? 0);
+    });
+    const sum = items.reduce((acc, val) => acc + val, 0);
     return sum / valid.length;
   };
 

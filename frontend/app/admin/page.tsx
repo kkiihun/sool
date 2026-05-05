@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
 import {
   Typography,
   Table,
@@ -15,8 +14,15 @@ import {
   Statistic,
   message,
   Switch,
-  Badge,
   Rate,
+  Tabs,
+  Select,
+  Popconfirm,
+  Form,
+  Modal,
+  Input,
+  InputNumber,
+  Badge,
 } from "antd";
 import {
   StarOutlined,
@@ -33,11 +39,10 @@ import {
 } from "@ant-design/icons";
 import { useRouter } from "next/navigation";
 import { useAuth } from "../components/AuthProvider";
-import { Tabs, Select, Popconfirm, Form, Modal, Input, InputNumber } from "antd";
 
 const { Title, Text } = Typography;
-const { Option } = Select;
 const { TextArea } = Input;
+const { Option } = Select;
 
 export default function AdminPage() {
   const router = useRouter();
@@ -504,4 +509,3 @@ export default function AdminPage() {
     </div>
   );
 }
-

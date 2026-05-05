@@ -5,7 +5,7 @@ import pandas as pd
 
 from app.models.user import User  # noqa: F401 (모델 등록용)
 from app.core.database import SessionLocal
-from app.models.sense import Sense
+from app.models.tasting_note import TastingNote
 from app.models.sool import Sool
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -48,10 +48,9 @@ def parse_date(x):
         return None
 
 
-def set_sense_date_like(obj, dt):
-    """Sense 모델에 date가 있으면 date에, 없으면 created_at에 저장(있을 때만)."""
+def set_note_date_like(obj, dt):
+    """TastingNote 모델에 date가 있으면 date에, 없으면 created_at에 저장(있을 때만)."""
     if hasattr(obj, "date"):
-        # 컬럼 타입이 문자열일 수도 있어서 ISO 문자열로 저장
         setattr(obj, "date", dt.isoformat(sep=" ") if dt else None)
         return
     if hasattr(obj, "created_at") and dt:
@@ -62,14 +61,13 @@ def main():
     print(f"\n📂 Loading CSV → {CSV_PATH}")
 
     df = pd.read_csv(CSV_PATH)
-    # ✅ 핵심: pandas NaN -> None
     df = df.where(pd.notnull(df), None)
 
     db = SessionLocal()
 
-    inserted_sense = 0
+    inserted_note = 0
     created_sool = 0
-    updated_sense = 0
+    updated_note = 0
 
     for _, row in df.iterrows():
         name = clean_str(row.get("name"))
@@ -94,68 +92,65 @@ def main():
                 abv=abv if abv is not None else 0,
                 region=region if region else "미등록",
                 description=notes[:200] if notes else None,
-                producer=producer,  # ✅ NaN이면 None
+                producer=producer,
             )
             db.add(sool)
-
-            # ✅ commit 대신 flush로 id 확보 (중간 rollback 리스크/성능 개선)
             db.flush()
             db.refresh(sool)
 
             created_sool += 1
             print(f"🆕 New SOOL Created → {sool.id}: {name}")
 
-        # 3) sense upsert
-        sense = db.query(Sense).filter(Sense.sool_id == sool.id).first()
+        # 3) TastingNote upsert
+        note = db.query(TastingNote).filter(TastingNote.sool_id == sool.id).first()
 
-        if sense:
-            sense.clarity = to_float(row.get("clarity"))
-            sense.color = to_float(row.get("color"))
-            sense.smoothness = to_float(row.get("smoothness"))
-            sense.aftertaste = to_float(row.get("aftertaste"))
-            sense.aroma = to_float(row.get("aroma"))
-            sense.sweetness = to_float(row.get("sweetness"))
-            sense.body = to_float(row.get("body"))
-            sense.acidity = to_float(row.get("acidity"))
-            sense.carbonation = to_float(row.get("carbonation"))
-            sense.complexity = to_float(row.get("complexity"))
-            sense.rating = to_float(row.get("overall_score"))
-            sense.notes = notes
+        if note:
+            note.clarity = to_float(row.get("clarity"))
+            note.color = to_float(row.get("color"))
+            note.smoothness = to_float(row.get("smoothness"))
+            # aftertaste (CSV) -> finish (TastingNote)
+            note.finish = to_float(row.get("aftertaste")) or to_float(row.get("finish"))
+            note.aroma = to_float(row.get("aroma"))
+            note.sweetness = to_float(row.get("sweetness"))
+            note.body = to_float(row.get("body"))
+            note.acidity = to_float(row.get("acidity"))
+            note.carbonation = to_float(row.get("carbonation"))
+            note.complexity = to_float(row.get("complexity"))
+            note.rating = to_float(row.get("overall_score")) or 3.0
+            note.notes = notes
 
-            # ✅ date 컬럼 유무 자동 대응
-            set_sense_date_like(sense, dt)
-
-            updated_sense += 1
+            set_note_date_like(note, dt)
+            updated_note += 1
         else:
-            sense_kwargs = dict(
+            note_kwargs = dict(
                 sool_id=sool.id,
                 clarity=to_float(row.get("clarity")),
                 color=to_float(row.get("color")),
                 smoothness=to_float(row.get("smoothness")),
-                aftertaste=to_float(row.get("aftertaste")),
+                finish=to_float(row.get("aftertaste")) or to_float(row.get("finish")),
                 aroma=to_float(row.get("aroma")),
                 sweetness=to_float(row.get("sweetness")),
                 body=to_float(row.get("body")),
                 acidity=to_float(row.get("acidity")),
                 carbonation=to_float(row.get("carbonation")),
                 complexity=to_float(row.get("complexity")),
-                rating=to_float(row.get("overall_score")),
+                rating=to_float(row.get("overall_score")) or 3.0,
                 notes=notes,
             )
 
-            new_sense = Sense(**sense_kwargs)
-            set_sense_date_like(new_sense, dt)
+            new_note = TastingNote(**note_kwargs)
+            set_note_date_like(new_note, dt)
 
-            db.add(new_sense)
-            inserted_sense += 1
+            db.add(new_note)
+            inserted_note += 1
 
     db.commit()
     db.close()
 
     print("\n==================== 📊 Import Summary ====================")
     print(f"🍶 신규 SOOL 생성       : {created_sool}")
-    print(f"🧪 새로운 Sense 삽입    : {inserted_sense}")
-    print(f"♻ 기존 Sense 업데이트   : {updated_sense}")
+    print(f"🧪 새로운 Note 삽입     : {inserted_note}")
+    print(f"♻ 기존 Note 업데이트    : {updated_note}")
     print("==========================================================\n")
 
 

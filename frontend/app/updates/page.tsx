@@ -14,14 +14,14 @@ import {
   Timeline,
 } from "antd";
 import {
-  StarOutlined,
   FireOutlined,
   SoundOutlined,
   ClockCircleOutlined,
+  StarOutlined,
   LoadingOutlined,
 } from "@ant-design/icons";
 import { useRouter } from "next/navigation";
-import { useAuth } from "../components/AuthProvider";
+import { useAuth } from "@/app/components/AuthProvider";
 
 const { Title, Text, Paragraph } = Typography;
 
@@ -31,14 +31,6 @@ interface Sool {
   category: string;
   abv: number;
   region: string;
-}
-
-interface Review {
-  id: number;
-  sool_name: string;
-  rating: number;
-  notes: string;
-  timestamp: string;
 }
 
 export default function DiscoveryPage() {
@@ -129,7 +121,7 @@ export default function DiscoveryPage() {
               Community Pulse
             </Title>
             <Timeline 
-              mode="start"
+              mode="left"
               reverse={false}
               items={[
                 ...recentActivity.map((act) => ({
@@ -170,7 +162,7 @@ export default function DiscoveryPage() {
               <FireOutlined className="text-amber-500" />
               Hot Picks
             </Title>
-            <Space orientation="vertical" size="large" className="w-full">
+            <Space direction="vertical" size="large" className="w-full">
               <div className="bg-white/5 p-6 rounded-2xl border border-white/10 transition-colors hover:bg-white/10 cursor-pointer">
                 <Text className="text-white/30 block mb-2 text-xs font-bold tracking-widest uppercase">MOST REVIEWED THIS WEEK</Text>
                 <Title level={5} className="!text-white !m-0">나루 약주</Title>
@@ -190,6 +182,10 @@ export default function DiscoveryPage() {
           </div>
         </Col>
       </Row>
+
+      <footer className="text-center py-24 text-white/10 text-[10px] font-black tracking-[0.2em] uppercase border-t border-white/5 mt-24">
+        SOOL DISCOVERY — UNVEILING THE HIDDEN HERITAGE
+      </footer>
 
       <style jsx global>{`
         .custom-timeline .ant-timeline-item-tail { border-inline-start: 2px solid rgba(255,255,255,0.05) !important; }

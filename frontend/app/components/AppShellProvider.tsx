@@ -16,6 +16,8 @@ type ShellCtx = {
   refreshMe: () => Promise<void>;
   search: string;
   setSearch: (v: string) => void;
+  collapsed: boolean;
+  setCollapsed: (v: boolean) => void;
 };
 
 const Ctx = createContext<ShellCtx | null>(null);
@@ -27,11 +29,18 @@ export function useAppShell() {
 }
 
 async function fetchMe() {
-  const token = getToken();
-  const r = await fetch("/proxy/users/me", {
+  // Try to get token using the library function first, fall back to localStorage
+  const token = getToken() || (typeof window !== "undefined" ? localStorage.getItem("sool_token") : null);
+  
+  if (!token) return null;
+
+  // Use the remote's API path /api/proxy/users/me
+  const r = await fetch("/api/proxy/users/me", {
     cache: "no-store",
-    credentials: "include",
-    headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+    headers: { 
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json"
+    },
   });
 
   if (!r.ok) return null;
@@ -43,6 +52,7 @@ export default function AppShellProvider({ children }: { children: React.ReactNo
   const [me, setMe] = useState<Me | null>(null);
   const [loadingMe, setLoadingMe] = useState(true);
   const [search, setSearch] = useState("");
+  const [collapsed, setCollapsed] = useState(false);
 
   const refreshMe = async () => {
     setLoadingMe(true);
@@ -60,8 +70,8 @@ export default function AppShellProvider({ children }: { children: React.ReactNo
 
   const value = useMemo<ShellCtx>(() => {
     const isAdmin = !!me?.is_admin;
-    return { me, loadingMe, isAdmin, refreshMe, search, setSearch };
-  }, [me, loadingMe, search]);
+    return { me, loadingMe, isAdmin, refreshMe, search, setSearch, collapsed, setCollapsed };
+  }, [me, loadingMe, search, collapsed]);
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

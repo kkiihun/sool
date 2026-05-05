@@ -30,6 +30,7 @@ import {
   FireOutlined,
 } from "@ant-design/icons";
 import { useRouter } from "next/navigation";
+import { useAuth } from "@/app/components/AuthProvider";
 
 const { Title, Text, Paragraph } = Typography;
 const { TextArea } = Input;
@@ -45,6 +46,7 @@ interface FeedItem {
 
 export default function CommunityPage() {
   const router = useRouter();
+  const { user } = useAuth();
   const [feed, setFeed] = useState<FeedItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -79,15 +81,19 @@ export default function CommunityPage() {
       message.warning("Please fill in all fields.");
       return;
     }
+    const token = localStorage.getItem('sool_token');
     try {
       const res = await fetch(`${API_URL}/sense/`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
         body: JSON.stringify({
           sool_id: Number(newPost.sool_id),
           notes: newPost.notes,
           rating: newPost.rating,
-          aroma: 3, sweetness: 3, acidity: 3, body: 3, aftertaste: 3 // Default values for simple post
+          aroma: 3, sweetness: 3, acidity: 3, body: 3, aftertaste: 3
         }),
       });
       if (res.ok) {
@@ -105,7 +111,7 @@ export default function CommunityPage() {
     <div className="animate-in fade-in duration-700">
       <Row gutter={[40, 40]}>
         <Col xs={24} lg={16}>
-          <Space orientation="vertical" size={32} className="w-full">
+          <Space direction="vertical" size={32} className="w-full">
             {feed.map((item) => (
               <Card 
                 key={item.id}
@@ -152,7 +158,7 @@ export default function CommunityPage() {
             className="bg-white/5 border-white/10 rounded-[32px] mb-8"
             styles={{ header: { borderBottom: "1px solid rgba(255,255,255,0.05)", padding: "24px 32px" }, body: { padding: "32px" } }}
           >
-            <Space orientation="vertical" size="middle" className="w-full">
+            <Space direction="vertical" size="middle" className="w-full">
               {[
                 { name: "Andong Soju", tag: "Heavy Hitter", count: 124 },
                 { name: "Naru Yakju", tag: "Popular", count: 89 },
@@ -248,7 +254,7 @@ export default function CommunityPage() {
           header: { background: "transparent", borderBottom: "1px solid rgba(255,255,255,0.05)", paddingBottom: "24px", marginBottom: "32px" },
         }}
       >
-        <Space orientation="vertical" size="large" className="w-full">
+        <Space direction="vertical" size="large" className="w-full">
           <div>
             <Text className="text-white/30 text-xs font-bold uppercase tracking-widest block mb-3">Spirit ID</Text>
             <Input 
@@ -282,6 +288,16 @@ export default function CommunityPage() {
           </Button>
         </Space>
       </Modal>
+
+      <footer style={{ 
+        textAlign: "center", 
+        padding: "80px 0 40px",
+        color: "#444",
+        fontSize: 12,
+        letterSpacing: 2
+      }}>
+        SOOL COMMUNITY — SHARED PASSION, TIMELESS TRADITION
+      </footer>
 
       <style jsx global>{`
         .custom-tabs .ant-tabs-nav::before { border-bottom: 1px solid rgba(255,255,255,0.05) !important; }

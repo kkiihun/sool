@@ -3,11 +3,11 @@ import sys
 
 from sqlalchemy import text
 
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+# Add project root to sys.path
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from app.core.database import Base, engine
 from app.models.review import Review  # noqa: F401
-from app.models.sense import Sense  # noqa: F401
 from app.models.sool import Sool  # noqa: F401
 from app.models.tasting_note import TastingNote  # noqa: F401
 from app.models.user import User  # noqa: F401
@@ -17,16 +17,17 @@ from app.models.sool_v2 import SoolV2, Category, Region, Producer, TastingNoteV2
 def apply_alter(conn, sql: str, success_message: str, exists_message: str):
     try:
         conn.execute(text(sql))
-        print(success_message)
+        print(f"➕ {success_message}")
     except Exception:
-        print(exists_message)
+        if exists_message:
+            print(f"ℹ️ {exists_message}")
 
 
 def sync_db():
-    print("Database Schema Sync Start...")
+    print("🚀 Database Schema Sync Start (Standardized)...")
     try:
         Base.metadata.create_all(bind=engine)
-        print("All tables created or already exist.")
+        print("✅ All tables created or already exist.")
 
         with engine.connect() as conn:
             apply_alter(
@@ -34,18 +35,6 @@ def sync_db():
                 "ALTER TABLE users ADD COLUMN is_admin BOOLEAN DEFAULT FALSE",
                 "Added 'is_admin' column to 'users' table.",
                 "'is_admin' column already exists in 'users'.",
-            )
-            apply_alter(
-                conn,
-                "ALTER TABLE sense ADD COLUMN user_id INTEGER REFERENCES users(id)",
-                "Added 'user_id' column to 'sense' table.",
-                "'user_id' column already exists in 'sense'.",
-            )
-            apply_alter(
-                conn,
-                "ALTER TABLE sense ADD COLUMN created_at DATETIME DEFAULT CURRENT_TIMESTAMP",
-                "Added 'created_at' column to 'sense' table.",
-                "'created_at' column already exists in 'sense'.",
             )
             apply_alter(
                 conn,
@@ -67,9 +56,9 @@ def sync_db():
             )
             conn.commit()
 
-        print("Database Sync Completed Successfully!")
+        print("✨ Database Sync Completed Successfully!")
     except Exception as exc:
-        print(f"Error during sync: {exc}")
+        print(f"❌ Error during sync: {exc}")
 
 
 if __name__ == "__main__":
