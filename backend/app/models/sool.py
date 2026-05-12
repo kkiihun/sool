@@ -2,6 +2,8 @@ from sqlalchemy import Column, Integer, String, Float
 from sqlalchemy.orm import relationship
 from app.core.database import Base
 
+from app.models.food_pairing import sool_food_tags
+
 class Sool(Base):
     __tablename__ = "sool"
 
@@ -29,4 +31,11 @@ class Sool(Base):
         "Review",
         back_populates="sool",
         cascade="all, delete-orphan"
+    )
+
+    # 🔹 음식 매칭 (Food Pairing Tags)
+    food_tags = relationship(
+        "FoodTag",
+        secondary=sool_food_tags,
+        back_populates="sools"
     )

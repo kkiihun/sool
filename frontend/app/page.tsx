@@ -73,8 +73,10 @@ export default function Home() {
   const [page, setPage] = useState(1);
   const [category, setCategory] = useState("");
   const [region, setRegion] = useState("전체 지역");
+  const [foodTagId, setFoodTagId] = useState<number | null>(null);
   const [sortOption, setSortOption] = useState("name");
   const [regionOptions, setRegionOptions] = useState<string[]>(["전체 지역"]);
+  const [foodTags, setFoodTags] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
   
@@ -94,35 +96,52 @@ export default function Home() {
   };
 
   useEffect(() => {
-    async function loadRegions() {
+    async function loadInitialData() {
       try {
-        const res = await fetch(`${API_URL}/sool/regions`);
-        if (res.ok) {
-          const data = await res.json();
+        const [regRes, tagsRes] = await Promise.all([
+          fetch(`${API_URL}/sool/regions`),
+          fetch(`${API_URL}/sool/food-tags`)
+        ]);
+        
+        if (regRes.ok) {
+          const data = await regRes.json();
           setRegionOptions(["전체 지역", ...(data ?? [])]);
         }
+        if (tagsRes.ok) {
+          const data = await tagsRes.json();
+          setFoodTags(data ?? []);
+        }
       } catch (err) {
-        console.error("Failed to load regions:", err);
+        console.error("Failed to load filter options:", err);
       }
     }
-    loadRegions();
+    loadInitialData();
   }, [API_URL]);
 
   useEffect(() => {
     const handler = setTimeout(() => {
       async function fetchData() {
         setLoading(true);
-        let url = `${API_URL}/sool/filter?page=${page}&page_size=${pageSize}`;
+        // Using v2 search API for better filtering support
+        let url = `${API_URL}/v2/sool/search?page=${page}&limit=${pageSize}`;
         if (search && search.length >= 2) url += `&q=${encodeURIComponent(search)}`;
         if (category) url += `&category=${encodeURIComponent(category)}`;
         if (region !== "전체 지역") url += `&region=${encodeURIComponent(region)}`;
-        if (sortOption) url += `&order=${sortOption}`;
+        if (foodTagId) url += `&food_tag_id=${foodTagId}`;
+        
+        if (sortOption === "abv_low") {
+          url += `&sort=abv&order=asc`;
+        } else if (sortOption === "abv_high") {
+          url += `&sort=abv&order=desc`;
+        } else {
+          url += `&sort=name&order=asc`;
+        }
 
         try {
           const res = await fetch(url);
           if (res.ok) {
             const data = await res.json();
-            setSool(data.items ?? []);
+            setSool(data.results ?? []);
             setTotal(data.total ?? 0);
           }
         } catch (err) {
@@ -134,17 +153,19 @@ export default function Home() {
       fetchData();
     }, search ? 400 : 0);
     return () => clearTimeout(handler);
-  }, [page, search, category, region, sortOption, API_URL]);
+  }, [page, search, category, region, foodTagId, sortOption, API_URL]);
 
   // 필터 변경 핸들러 - 페이지 1로 초기화 보장
   const handleCategoryChange = (val: string) => { setCategory(val); setPage(1); };
   const handleRegionChange = (val: string) => { setRegion(val); setPage(1); };
+  const handleFoodTagChange = (val: number | null) => { setFoodTagId(val); setPage(1); };
   const handleSortChange = (val: string) => { setSortOption(val); setPage(1); };
 
   const resetFilters = () => {
     setSearch("");
     setCategory("");
     setRegion("전체 지역");
+    setFoodTagId(null);
     setSortOption("name");
     setPage(1);
   };
@@ -202,7 +223,7 @@ export default function Home() {
 
           {/* Hidden Filters Panel */}
           {showFilters && (
-            <div className="mt-4 p-8 bg-white/[0.04] border border-white/10 rounded-[2.5rem] backdrop-blur-xl grid grid-cols-1 md:grid-cols-3 gap-8 animate-in slide-in-from-top-2 duration-500 shadow-2xl">
+            <div className="mt-4 p-8 bg-white/[0.04] border border-white/10 rounded-[2.5rem] backdrop-blur-xl grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 animate-in slide-in-from-top-2 duration-500 shadow-2xl">
               <div className="flex flex-col gap-3">
                 <Text className="!text-amber-500 !text-[11px] !font-black !tracking-[0.3em] !uppercase !opacity-70 ml-1">Category</Text>
                 <Select
@@ -221,6 +242,19 @@ export default function Home() {
                   value={region}
                   onChange={handleRegionChange}
                   options={regionOptions.map((r) => ({ label: r, value: r }))}
+                  styles={{ popup: { root: { background: '#0a0a0a', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '18px' } } }}
+                />
+              </div>
+
+              <div className="flex flex-col gap-3">
+                <Text className="!text-amber-500 !text-[11px] !font-black !tracking-[0.3em] !uppercase !opacity-70 ml-1">Recommended Food</Text>
+                <Select
+                  className="w-full h-14 premium-select"
+                  placeholder="Select Pairing"
+                  value={foodTagId || undefined}
+                  onChange={handleFoodTagChange}
+                  allowClear
+                  options={foodTags.map((t) => ({ label: `${t.icon} ${t.name}`, value: t.id }))}
                   styles={{ popup: { root: { background: '#0a0a0a', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '18px' } } }}
                 />
               </div>

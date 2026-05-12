@@ -1,5 +1,3 @@
-from app.schemas.sool_schema import SoolSummaryResponse, RadarAvg
-
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from sqlalchemy import func
@@ -8,11 +6,15 @@ from typing import Optional
 from app.core.database import get_db
 from app.models.sool import Sool
 from app.models.tasting_note import TastingNote
+from app.models.food_pairing import FoodTag
 from app.schemas.sool_schema import (
     SoolCreate,
     SoolResponse,
     PaginatedSool,
     SoolWithStats,
+    SoolSummaryResponse,
+    RadarAvg,
+    FoodTagSchema,
 )
 
 router = APIRouter(prefix="/sool", tags=["Sool"])
@@ -313,6 +315,9 @@ def get_sool_stats(db: Session = Depends(get_db)):
             "error": str(e)
         }
 
+@router.get("/food-tags", response_model=list[FoodTagSchema])
+def get_food_tags(db: Session = Depends(get_db)):
+    return db.query(FoodTag).order_by(FoodTag.name).all()
 
 # ------------------------
 # 📌 상세 조회 (충돌 방지)

@@ -5,14 +5,21 @@ from app.models.sool import Sool
 from sqlalchemy import func
 from app.models.tasting_note import TastingNote
 from app.api.utils.recommender import flavor_vector
-import numpy as np
-
+from app.schemas.sool_schema import SoolResponse, FoodTagSchema
+from app.models.food_pairing import FoodTag
+from typing import List
 
 router = APIRouter(
     prefix="/v2/sool",
     tags=["SOOL V2"]
 )
 
+@router.get("/food-tags", summary="Get all available food tags", response_model=List[FoodTagSchema])
+def get_food_tags():
+    db: Session = SessionLocal()
+    tags = db.query(FoodTag).order_by(FoodTag.name).all()
+    db.close()
+    return tags
 
 # ================================
 # 🔥 Search API (검색 + pagination + sorting)
@@ -26,8 +33,10 @@ def search_sool(
     # 📌 추가된 Multi Filters
     region: str = Query(None, description="ex: 경기, 강원, 서울"),
     producer: str = Query(None, description="양조장명"),
-    abv_min: float = Query(None, ge=0, description="최소 도수"),
-    abv_max: float = Query(None, ge=0, description="최대 도수"),
+    category: str = Query(None),
+    food_tag_id: int = Query(None),
+    abv_min: float = Query(None, ge=0),
+    abv_max: float = Query(None, ge=0),
 
     # 정렬
     sort: str = Query("name"),
@@ -45,6 +54,9 @@ def search_sool(
     if q:
         query = query.filter(Sool.name.ilike(f"%{q}%"))
 
+    if category:
+        query = query.filter(Sool.category.ilike(f"%{category}%"))
+
     if region:
         query = query.filter(Sool.region.ilike(f"%{region}%"))
 
@@ -56,6 +68,9 @@ def search_sool(
 
     if abv_max is not None:
         query = query.filter(Sool.abv <= abv_max)
+    
+    if food_tag_id:
+        query = query.filter(Sool.food_tags.any(id=food_tag_id))
 
     # 정렬 필드 정의
     valid_fields = {
@@ -256,16 +271,16 @@ def similar_by_flavor(sool_id: int, limit: int = 5):
     }
 
 
-
 # ================================
 # 🔥 ID 조회 (항상 마지막)
 # ================================
-@router.get("/{sool_id:int}", summary="Get SOOL by ID", operation_id="get_sool_v2")
+@router.get("/{sool_id:int}", summary="Get SOOL by ID", response_model=SoolResponse, operation_id="get_sool_v2")
 def get_sool(sool_id: int):
     db: Session = SessionLocal()
     sool = db.query(Sool).filter(Sool.id == sool_id).first()
 
     if not sool:
+        db.close()
         raise HTTPException(status_code=404, detail="SOOL not found")
 
     return sool

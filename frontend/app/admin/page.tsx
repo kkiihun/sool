@@ -11,8 +11,7 @@ import {
   Card,
   Row,
   Col,
-  Statistic,
-  message,
+  App,
   Switch,
   Rate,
   Tabs,
@@ -46,6 +45,7 @@ const { Option } = Select;
 
 export default function AdminPage() {
   const router = useRouter();
+  const { message: messageApi } = App.useApp();
   const { user, loading: authLoading } = useAuth();
   const [users, setUsers] = useState<any[]>([]);
   const [sool, setSool] = useState<any[]>([]);
@@ -94,7 +94,7 @@ export default function AdminPage() {
         setReviews(Array.isArray(data) ? data : data.items ?? []);
       }
     } catch (err) {
-      message.error("Failed to load admin data.");
+      messageApi.error("Failed to load admin data.");
     } finally {
       setLoading(false);
     }
@@ -103,13 +103,13 @@ export default function AdminPage() {
   useEffect(() => {
     if (!authLoading) {
       if (!user || !user.is_admin) {
-        message.error("Access denied. Admin only.");
+        messageApi.error("Access denied. Admin only.");
         router.push('/');
       } else {
         fetchData();
       }
     }
-  }, [user, authLoading, router]);
+  }, [user, authLoading]);
 
   const toggleAdmin = async (userId: number) => {
     const token = localStorage.getItem('sool_token');
@@ -119,11 +119,11 @@ export default function AdminPage() {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (res.ok) {
-        message.success("Role updated.");
+        messageApi.success("Role updated.");
         fetchData();
       }
     } catch (err) {
-      message.error("Update failed.");
+      messageApi.error("Update failed.");
     }
   };
 
@@ -139,11 +139,11 @@ export default function AdminPage() {
         body: JSON.stringify({ status })
       });
       if (res.ok) {
-        message.success("Account status updated.");
+        messageApi.success("Account status updated.");
         fetchData();
       }
     } catch (err) {
-      message.error("Status update failed.");
+      messageApi.error("Status update failed.");
     }
   };
 
@@ -155,14 +155,14 @@ export default function AdminPage() {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (res.ok) {
-        message.success("User permanently removed.");
+        messageApi.success("User permanently removed.");
         fetchData();
       } else {
         const data = await res.json();
-        message.error(data.detail || "Delete failed.");
+        messageApi.error(data.detail || "Delete failed.");
       }
     } catch (err) {
-      message.error("Connection error.");
+      messageApi.error("Connection error.");
     }
   };
 
@@ -194,15 +194,15 @@ export default function AdminPage() {
         body: JSON.stringify(values)
       });
       if (res.ok) {
-        message.success(`Spirit ${editingSool ? 'updated' : 'created'} successfully.`);
+        messageApi.success(`Spirit ${editingSool ? 'updated' : 'created'} successfully.`);
         setIsSoolModalOpen(false);
         fetchData();
       } else {
         const error = await res.json();
-        message.error(error.detail || "Operation failed.");
+        messageApi.error(error.detail || "Operation failed.");
       }
     } catch (err) {
-      message.error("Connection failed.");
+      messageApi.error("Connection failed.");
     }
   };
 
@@ -214,11 +214,11 @@ export default function AdminPage() {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (res.ok) {
-        message.success("Spirit removed from archive.");
+        messageApi.success("Spirit removed from archive.");
         fetchData();
       }
     } catch (err) {
-      message.error("Failed to delete.");
+      messageApi.error("Failed to delete.");
     }
   };
 
@@ -242,7 +242,7 @@ export default function AdminPage() {
           className="w-32 admin-select" 
           size="small"
           variant="borderless"
-          dropdownStyle={{ background: '#111', border: '1px solid rgba(255,255,255,0.1)' }}
+          styles={{ popup: { root: { background: '#111', border: '1px solid rgba(255,255,255,0.1)' } } }}
           onChange={(val) => updateStatus(record.id, val)}
           disabled={record.id === user?.id}
         >
@@ -256,7 +256,7 @@ export default function AdminPage() {
       title: "Permissions", 
       key: "permissions", 
       render: (record: any) => (
-        <Space>
+        <Space orientation="horizontal">
           <Switch 
             checked={record.is_admin} 
             onChange={() => toggleAdmin(record.id)} 
@@ -393,7 +393,10 @@ export default function AdminPage() {
               <Row gutter={24}>
                 <Col span={12}>
                   <Form.Item name="category" label={<span className="text-white/30 text-xs font-bold uppercase tracking-widest">Category</span>}>
-                    <Select className="admin-select h-12" dropdownStyle={{ background: '#111', border: '1px solid rgba(255,255,255,0.1)' }}>
+                    <Select 
+                      className="admin-select h-12" 
+                      styles={{ popup: { root: { background: '#111', border: '1px solid rgba(255,255,255,0.1)' } } }}
+                    >
                       <Option value="막걸리">막걸리</Option>
                       <Option value="약주">약주</Option>
                       <Option value="청주">청주</Option>

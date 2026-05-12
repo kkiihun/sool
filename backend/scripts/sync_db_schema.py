@@ -12,6 +12,7 @@ from app.models.sool import Sool  # noqa: F401
 from app.models.tasting_note import TastingNote  # noqa: F401
 from app.models.user import User  # noqa: F401
 from app.models.sool_v2 import SoolV2, Category, Region, Producer, TastingNoteV2, ReviewV2, Tag, SoolTag  # noqa: F401
+from app.models.food_pairing import FoodTag  # noqa: F401
 
 
 def apply_alter(conn, sql: str, success_message: str, exists_message: str):

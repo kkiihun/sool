@@ -47,7 +47,7 @@ function ShellLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <Layout style={{ minHeight: "100vh", background: "#050505" }}>
-      {/* Global Header - Premium Redesign Aesthetics + Unified Layout */}
+      {/* Global Header */}
       <header
         className={[
           "fixed top-0 left-0 right-0 z-50 transition-all duration-500",
@@ -70,7 +70,6 @@ function ShellLayout({ children }: { children: React.ReactNode }) {
             <span className="text-xl font-black tracking-[0.2em] text-white group-hover:text-amber-500 transition-colors">SOOL</span>
           </Link>
 
-          {/* Local Premium: Command Center Search Bar */}
           <div className="max-w-xl w-full hidden md:block group">
             <div className="relative flex items-center">
               <span className="absolute left-5 text-white/20 group-focus-within:text-amber-500 transition-colors text-lg">
@@ -104,7 +103,6 @@ function ShellLayout({ children }: { children: React.ReactNode }) {
       </header>
 
       <Layout style={{ marginTop: 80, background: "transparent", minHeight: "calc(100vh - 80px)" }}>
-        {/* Global Sidebar - Premium Styling + Unified Logic */}
         <Sider
           collapsible
           collapsed={collapsed}
@@ -139,7 +137,6 @@ function ShellLayout({ children }: { children: React.ReactNode }) {
             />
           </div>
 
-          {/* Sidebar Toggle at Bottom */}
           <div style={{ 
             height: 80, 
             display: "flex", 
@@ -159,7 +156,6 @@ function ShellLayout({ children }: { children: React.ReactNode }) {
           </div>
         </Sider>
 
-        {/* Main Content Area */}
         <Content 
           style={{ 
             transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
@@ -197,33 +193,6 @@ function ShellLayout({ children }: { children: React.ReactNode }) {
 
 export default function AppShellClient({ children }: { children: React.ReactNode }) {
   return (
-    <AppShellProvider>
-      <ConfigProvider 
-        theme={{ 
-          algorithm: theme.darkAlgorithm,
-          token: {
-            colorPrimary: '#f59e0b',
-            colorBgBase: '#050505',
-            colorText: 'rgba(255, 255, 255, 0.95)',
-            colorTextPlaceholder: 'rgba(255, 255, 255, 0.3)',
-          },
-          components: {
-            Select: {
-              optionSelectedColor: '#f59e0b',
-              optionSelectedBg: 'rgba(245, 158, 11, 0.15)',
-              selectorBg: 'rgba(255, 255, 255, 0.05)',
-            },
-            Table: {
-              headerBg: 'rgba(255, 255, 255, 0.03)',
-              headerColor: 'rgba(255, 255, 255, 0.5)',
-            }
-          }
-        }}
-      >
-        <App>
-          <ShellLayout>{children}</ShellLayout>
-        </App>
-      </ConfigProvider>
-    </AppShellProvider>
+    <ShellLayout>{children}</ShellLayout>
   );
 }

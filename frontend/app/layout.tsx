@@ -1,11 +1,11 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import { ConfigProvider, App, theme } from "antd";
 
 import "./globals.css";
 import "antd/dist/reset.css";
 import { AuthProvider } from "./components/AuthProvider";
-
-import BuildBadge from "@/components/BuildBadge";
+import AppShellProvider from "./components/AppShellProvider";
 import AppShellClient from "./components/AppShellClient";
 
 const geistSans = Geist({
@@ -29,10 +29,36 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased h-full bg-black text-white`}
       >
-        <AuthProvider>
-          {/* ✅ App 전체 구조는 AppShellClient가 책임 */}
-          <AppShellClient>{children}</AppShellClient>
-        </AuthProvider>
+        <ConfigProvider 
+          theme={{ 
+            algorithm: theme.darkAlgorithm,
+            token: {
+              colorPrimary: '#f59e0b',
+              colorBgBase: '#050505',
+              colorText: 'rgba(255, 255, 255, 0.95)',
+              colorTextPlaceholder: 'rgba(255, 255, 255, 0.3)',
+            },
+            components: {
+              Select: {
+                optionSelectedColor: '#f59e0b',
+                optionSelectedBg: 'rgba(245, 158, 11, 0.15)',
+                selectorBg: 'rgba(255, 255, 255, 0.05)',
+              },
+              Table: {
+                headerBg: 'rgba(255, 255, 255, 0.03)',
+                headerColor: 'rgba(255, 255, 255, 0.5)',
+              }
+            }
+          }}
+        >
+          <App>
+            <AppShellProvider>
+              <AuthProvider>
+                <AppShellClient>{children}</AppShellClient>
+              </AuthProvider>
+            </AppShellProvider>
+          </App>
+        </ConfigProvider>
       </body>
     </html>
   );

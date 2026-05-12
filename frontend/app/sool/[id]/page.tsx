@@ -36,6 +36,12 @@ import { useAuth } from "@/app/components/AuthProvider";
 const { Title, Text, Paragraph } = Typography;
 const { TextArea } = Input;
 
+type FoodTag = {
+  id: number;
+  name: string;
+  icon?: string;
+};
+
 type Sool = {
   id: number;
   name: string;
@@ -45,6 +51,7 @@ type Sool = {
   description?: string;
   producer?: string;
   ingredients?: string;
+  food_tags?: FoodTag[];
 };
 
 type SenseNote = {
@@ -283,6 +290,25 @@ export default function SoolDetail({
             </div>
 
             <div className="mt-20 px-4">
+              <Title level={3} className="!text-white !mb-8 !text-3xl !font-black !tracking-tight uppercase">
+                Perfect Pairings
+              </Title>
+              <div className="flex flex-wrap gap-4 mb-12">
+                {sool.food_tags && sool.food_tags.length > 0 ? (
+                  sool.food_tags.map((tag) => (
+                    <div 
+                      key={tag.id}
+                      className="bg-amber-500/10 border border-amber-500/20 px-6 py-3 rounded-2xl flex items-center gap-3 transition-all hover:bg-amber-500/20 hover:scale-105 cursor-default"
+                    >
+                      <span className="text-2xl">{tag.icon || "🍽️"}</span>
+                      <Text className="text-amber-500 font-bold text-lg">{tag.name}</Text>
+                    </div>
+                  ))
+                ) : (
+                  <Text className="text-white/20 italic">Curating recommended pairings for this spirit...</Text>
+                )}
+              </div>
+
               <Title level={3} className="!text-white !mb-8 !text-3xl !font-black !tracking-tight uppercase">
                 The Heritage
               </Title>

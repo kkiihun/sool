@@ -20,8 +20,17 @@ class SoolCreate(SoolBase):
     pass
 
 
+class FoodTagSchema(BaseModel):
+    id: int
+    name: str
+    icon: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
 class SoolResponse(SoolBase):
     id: int
+    food_tags: List[FoodTagSchema] = []
 
     class Config:
         from_attributes = True
