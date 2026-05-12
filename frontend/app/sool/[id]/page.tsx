@@ -62,11 +62,13 @@ type SenseNote = {
 export default function SoolDetail({
   params,
 }: {
-  params: Promise<{ id: string }>;
+  params: any;
 }) {
   const router = useRouter();
   const { user } = useAuth();
-  const resolvedParams = use(params);
+  
+  // params가 Promise인 경우와 일반 객체인 경우 모두 대응
+  const resolvedParams = params && typeof params.then === 'function' ? use(params) : params;
   const soolId = resolvedParams?.id;
   
   const [sool, setSool] = useState<Sool | null>(null);
@@ -89,7 +91,10 @@ export default function SoolDetail({
   const API_URL = getApiUrl();
 
   useEffect(() => {
-    if (!soolId) return;
+    if (!soolId) {
+      setLoading(false);
+      return;
+    }
 
     const fetchData = async () => {
       try {
@@ -302,7 +307,7 @@ export default function SoolDetail({
               <Title level={4} className="!text-amber-500 !mb-10 !text-lg !font-black !tracking-widest uppercase">
                 Record Discovery
               </Title>
-              <Space direction="vertical" size={40} className="w-full">
+              <Space orientation="vertical" size={40} className="w-full">
                 <div>
                   <Text className="!text-white/30 !text-[10px] !font-black !tracking-widest !block !mb-4 !uppercase">
                     Overall Impression

@@ -111,3 +111,8 @@ docker compose exec backend python scripts/load_data.py
 ## 📄 Documentation
 - [서비스 타겟 분석 보고서](docs/analysis/service_target_analysis.md)
 - [데이터 마이그레이션 가이드](docs/runbooks/migration-from-development-copy.md)
+
+
+## 관리자 정보 ##
+Email (ID) : admin@sool.com
+PW         : admin1234

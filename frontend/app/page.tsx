@@ -210,7 +210,7 @@ export default function Home() {
                   value={category}
                   onChange={handleCategoryChange}
                   options={CATEGORIES}
-                  dropdownStyle={{ background: '#0a0a0a', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '18px' }}
+                  styles={{ popup: { root: { background: '#0a0a0a', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '18px' } } }}
                 />
               </div>
               
@@ -221,7 +221,7 @@ export default function Home() {
                   value={region}
                   onChange={handleRegionChange}
                   options={regionOptions.map((r) => ({ label: r, value: r }))}
-                  dropdownStyle={{ background: '#0a0a0a', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '18px' }}
+                  styles={{ popup: { root: { background: '#0a0a0a', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '18px' } } }}
                 />
               </div>
 
@@ -232,7 +232,7 @@ export default function Home() {
                   value={sortOption}
                   onChange={handleSortChange}
                   options={SORT_OPTIONS}
-                  dropdownStyle={{ background: '#0a0a0a', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '18px' }}
+                  styles={{ popup: { root: { background: '#0a0a0a', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '18px' } } }}
                 />
               </div>
             </div>

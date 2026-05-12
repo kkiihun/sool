@@ -121,7 +121,7 @@ export default function DiscoveryPage() {
               Community Pulse
             </Title>
             <Timeline 
-              mode="left"
+              mode="start"
               reverse={false}
               items={[
                 ...recentActivity.map((act) => ({
@@ -162,7 +162,7 @@ export default function DiscoveryPage() {
               <FireOutlined className="text-amber-500" />
               Hot Picks
             </Title>
-            <Space direction="vertical" size="large" className="w-full">
+            <Space orientation="vertical" size="large" className="w-full">
               <div className="bg-white/5 p-6 rounded-2xl border border-white/10 transition-colors hover:bg-white/10 cursor-pointer">
                 <Text className="text-white/30 block mb-2 text-xs font-bold tracking-widest uppercase">MOST REVIEWED THIS WEEK</Text>
                 <Title level={5} className="!text-white !m-0">나루 약주</Title>

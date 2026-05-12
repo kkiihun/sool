@@ -2,14 +2,14 @@
 
 import pandas as pd
 import re
-from app.core.database import SessionLocal, Base, engine
-# 모든 모델을 임포트하여 SQLAlchemy가 관계를 해석할 수 있게 합니다.
+import os
+import sys
+
+# 프로젝트 루트를 path에 추가하여 app 모듈을 찾을 수 있게 함
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from app.core.database import SessionLocal
 from app.models.sool import Sool
-from app.models.user import User
-from app.models.sense import Sense
-from app.models.review import Review
-from app.models.tasting import Tasting
-from app.models.tasting_note import TastingNote
 
 CSV_PATH = "data/sool_basic_clean.csv"
 

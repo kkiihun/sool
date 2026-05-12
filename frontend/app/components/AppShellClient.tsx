@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Layout, Menu, Button, Tooltip, ConfigProvider, theme, Input } from "antd";
+import { Layout, Menu, Button, Tooltip, ConfigProvider, theme, Input, App } from "antd";
 import {
   AppstoreOutlined,
   StarOutlined,
@@ -24,11 +24,12 @@ const { Sider, Content } = Layout;
 
 function ShellLayout({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
-  const { isAdmin, search, setSearch, collapsed, setCollapsed } = useAppShell();
+  const { search, setSearch, collapsed, setCollapsed } = useAppShell();
   const pathname = usePathname();
   const router = useRouter();
   
   const isLogged = !!user;
+  const isAdmin = !!user?.is_admin;
   const sidebarWidth = 260;
   const collapsedWidth = 80;
 
@@ -102,68 +103,69 @@ function ShellLayout({ children }: { children: React.ReactNode }) {
         </div>
       </header>
 
-      <Layout style={{ marginTop: 80, background: "transparent" }}>
+      <Layout style={{ marginTop: 80, background: "transparent", minHeight: "calc(100vh - 80px)" }}>
         {/* Global Sidebar - Premium Styling + Unified Logic */}
-        {isLogged && (
-          <Sider
-            collapsible
-            collapsed={collapsed}
-            onCollapse={setCollapsed}
-            trigger={null}
-            theme="dark"
-            width={sidebarWidth}
-            collapsedWidth={collapsedWidth}
-            className="fixed left-0 top-20 bottom-0 z-40 border-r border-white/5"
-            style={{ 
-              background: "#080808",
-              paddingTop: 16,
-              display: "flex",
-              flexDirection: "column",
-              height: "calc(100vh - 80px)"
-            }}
-          >
-            <div style={{ flex: 1, overflowY: "auto", overflowX: "hidden", padding: "0 12px" }}>
-              <Menu
-                theme="dark"
-                mode="inline"
-                selectedKeys={[pathname]}
-                onClick={({ key }) => {
-                  if (!key.includes('divider')) router.push(key);
-                }}
-                items={menuItems}
-                style={{ background: "transparent", border: "none" }}
-                className="premium-sidebar-menu"
-              />
-            </div>
+        <Sider
+          collapsible
+          collapsed={collapsed}
+          onCollapse={setCollapsed}
+          trigger={null}
+          theme="dark"
+          width={sidebarWidth}
+          collapsedWidth={collapsedWidth}
+          style={{ 
+            background: "#080808",
+            paddingTop: 16,
+            display: "flex",
+            flexDirection: "column",
+            borderRight: "1px solid rgba(255,255,255,0.05)",
+            position: "sticky",
+            top: 80,
+            height: "calc(100vh - 80px)",
+            zIndex: 40
+          }}
+        >
+          <div style={{ flex: 1, overflowY: "auto", overflowX: "hidden", padding: "0 12px" }}>
+            <Menu
+              theme="dark"
+              mode="inline"
+              selectedKeys={[pathname]}
+              onClick={({ key }) => {
+                if (!key.includes('divider')) router.push(key);
+              }}
+              items={menuItems}
+              style={{ background: "transparent", border: "none" }}
+              className="premium-sidebar-menu"
+            />
+          </div>
 
-            {/* Sidebar Toggle at Bottom */}
-            <div style={{ 
-              height: 80, 
-              display: "flex", 
-              alignItems: "center", 
-              justifyContent: "center",
-              borderTop: "1px solid rgba(255,255,255,0.05)",
-              background: "rgba(0, 0, 0, 0.2)"
-            }}>
-              <Tooltip title={collapsed ? "Expand" : "Collapse"} placement="right">
-                <Button
-                  type="text"
-                  icon={collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
-                  onClick={() => setCollapsed(!collapsed)}
-                  className="bg-white/5 border border-white/10 text-white/30 hover:text-amber-500 hover:border-amber-500/50 transition-all flex items-center justify-center w-10 h-10 rounded-xl"
-                />
-              </Tooltip>
-            </div>
-          </Sider>
-        )}
+          {/* Sidebar Toggle at Bottom */}
+          <div style={{ 
+            height: 80, 
+            display: "flex", 
+            alignItems: "center", 
+            justifyContent: "center",
+            borderTop: "1px solid rgba(255,255,255,0.05)",
+            background: "rgba(0, 0, 0, 0.2)"
+          }}>
+            <Tooltip title={collapsed ? "Expand" : "Collapse"} placement="right">
+              <Button
+                type="text"
+                icon={collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
+                onClick={() => setCollapsed(!collapsed)}
+                className="bg-white/5 border border-white/10 text-white/30 hover:text-amber-500 hover:border-amber-500/50 transition-all flex items-center justify-center w-10 h-10 rounded-xl"
+              />
+            </Tooltip>
+          </div>
+        </Sider>
 
         {/* Main Content Area */}
         <Content 
           style={{ 
-            marginLeft: isLogged ? (collapsed ? collapsedWidth : sidebarWidth) : 0, 
             transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
             minHeight: "calc(100vh - 80px)",
-            padding: "0"
+            padding: "0",
+            background: "transparent"
           }}
         >
           {children}
@@ -218,7 +220,9 @@ export default function AppShellClient({ children }: { children: React.ReactNode
           }
         }}
       >
-        <ShellLayout>{children}</ShellLayout>
+        <App>
+          <ShellLayout>{children}</ShellLayout>
+        </App>
       </ConfigProvider>
     </AppShellProvider>
   );

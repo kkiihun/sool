@@ -1,12 +1,16 @@
 import os
 import re
+import sys
 from collections import Counter
 
 import pandas as pd
 from sqlalchemy.exc import SQLAlchemyError
 
+# 프로젝트 루트를 path에 추가하여 app 모듈을 찾을 수 있게 함
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 from app.core.database import SessionLocal
-from app.models.sense import Sense
+from app.models.tasting_note import TastingNote
 from app.models.sool import Sool
 from app.models.user import User  # noqa: F401
 
@@ -107,7 +111,7 @@ def import_sense():
 
     print(f"rows={len(df)} cols={len(df.columns)} (sool_cnt={sool_count})")
 
-    sense_cols = set(Sense.__table__.columns.keys())
+    sense_cols = set(TastingNote.__table__.columns.keys())
 
     for idx, row in df.iterrows():
         sool_id = clean_int(row.get("sool_id"))
@@ -130,7 +134,7 @@ def import_sense():
 
         sool_id = sool.id
 
-        exists = db.query(Sense).filter(Sense.sool_id == sool_id).first()
+        exists = db.query(TastingNote).filter(TastingNote.sool_id == sool_id).first()
         if exists:
             skipped_exists += 1
             continue
@@ -158,7 +162,7 @@ def import_sense():
 
         try:
             with db.begin_nested():
-                db.add(Sense(**payload))
+                db.add(TastingNote(**payload))
                 db.flush()
             inserted_total += 1
 

@@ -38,6 +38,12 @@ def sync_db():
             )
             apply_alter(
                 conn,
+                "ALTER TABLE users ADD COLUMN status VARCHAR(20) DEFAULT 'active'",
+                "Added 'status' column to 'users' table.",
+                "'status' column already exists in 'users'.",
+            )
+            apply_alter(
+                conn,
                 "ALTER TABLE reviews ADD COLUMN user_id INTEGER REFERENCES users(id)",
                 "Added 'user_id' column to 'reviews' table.",
                 "'user_id' column already exists in 'reviews'.",
@@ -53,6 +59,18 @@ def sync_db():
                 "ALTER TABLE sool ADD COLUMN image_url VARCHAR(500)",
                 "Added 'image_url' column to 'sool' table.",
                 "'image_url' column already exists in 'sool'.",
+            )
+            apply_alter(
+                conn,
+                "ALTER TABLE tasting_notes ADD COLUMN user_id INTEGER REFERENCES users(id)",
+                "Added 'user_id' column to 'tasting_notes' table.",
+                "'user_id' column already exists in 'tasting_notes'.",
+            )
+            apply_alter(
+                conn,
+                "ALTER TABLE tasting_notes ADD COLUMN created_at DATETIME DEFAULT CURRENT_TIMESTAMP",
+                "Added 'created_at' column to 'tasting_notes' table.",
+                "'created_at' column already exists in 'tasting_notes'.",
             )
             conn.commit()
 

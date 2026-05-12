@@ -111,7 +111,7 @@ export default function CommunityPage() {
     <div className="animate-in fade-in duration-700">
       <Row gutter={[40, 40]}>
         <Col xs={24} lg={16}>
-          <Space direction="vertical" size={32} className="w-full">
+          <Space orientation="vertical" size={32} className="w-full">
             {feed.map((item) => (
               <Card 
                 key={item.id}
@@ -158,7 +158,7 @@ export default function CommunityPage() {
             className="bg-white/5 border-white/10 rounded-[32px] mb-8"
             styles={{ header: { borderBottom: "1px solid rgba(255,255,255,0.05)", padding: "24px 32px" }, body: { padding: "32px" } }}
           >
-            <Space direction="vertical" size="middle" className="w-full">
+            <Space orientation="vertical" size="middle" className="w-full">
               {[
                 { name: "Andong Soju", tag: "Heavy Hitter", count: 124 },
                 { name: "Naru Yakju", tag: "Popular", count: 89 },
@@ -254,7 +254,7 @@ export default function CommunityPage() {
           header: { background: "transparent", borderBottom: "1px solid rgba(255,255,255,0.05)", paddingBottom: "24px", marginBottom: "32px" },
         }}
       >
-        <Space direction="vertical" size="large" className="w-full">
+        <Space orientation="vertical" size="large" className="w-full">
           <div>
             <Text className="text-white/30 text-xs font-bold uppercase tracking-widest block mb-3">Spirit ID</Text>
             <Input 
