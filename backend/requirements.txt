@@ -28,6 +28,9 @@ python-multipart==0.0.9
 # Utils
 # =========================
 python-dotenv==1.2.1
+authlib==1.4.1
+httpx==0.28.1
+itsdangerous==2.2.0
 
 # =========================
 # Data & Visualization  ← ⭐ 분석/리포트용 추가 구역

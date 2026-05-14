@@ -17,4 +17,11 @@ class Settings(BaseSettings):
     DB_PASSWORD: str = "soolpass"
     DB_NAME: str = "sool"
 
+    # Social Login (OAuth2)
+    GOOGLE_CLIENT_ID: str = ""
+    GOOGLE_CLIENT_SECRET: str = ""
+    KAKAO_CLIENT_ID: str = ""
+    KAKAO_CLIENT_SECRET: str = "" # Optional
+    SESSION_SECRET_KEY: str = "session-secret-key-change-this"
+
 settings = Settings()

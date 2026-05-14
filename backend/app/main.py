@@ -4,7 +4,9 @@ load_dotenv()
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from starlette.middleware.sessions import SessionMiddleware
 from fastapi import HTTPException
+from app.core.config import settings
 from sqlalchemy import text
 
 # =====================#
@@ -38,6 +40,7 @@ from app.api import update_log, auth, users
 from app.api import report
 from app.api.utils.recommender import flavor_vector
 from app.api.tasting_note import router as tasting_note_router
+from app.api.social_auth import router as social_auth_router
 
 # =====================#
 #   Router 등록
@@ -50,6 +53,7 @@ app.include_router(auth.router)
 app.include_router(users.router)
 app.include_router(report.router)
 app.include_router(tasting_note_router) # 신규 표준 API
+app.include_router(social_auth_router)
 
 # =====================#
 #   DB Table 생성
@@ -66,6 +70,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+app.add_middleware(SessionMiddleware, secret_key=settings.SESSION_SECRET_KEY)
 
 # =====================#
 #   Static Files
