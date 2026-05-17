@@ -19,14 +19,16 @@ function safeExec(cmd: string) {
 }
 
 export async function GET() {
-  let sha = "unknown";
-  let branch = "unknown";
+  let sha = process.env.NEXT_PUBLIC_GIT_SHA || "unknown";
+  let branch = process.env.NEXT_PUBLIC_GIT_BRANCH || "unknown";
 
-  try {
-    sha = safeExec("git rev-parse --short HEAD");
-    branch = safeExec("git branch --show-current") || "detached";
-  } catch (err) {
-    // git이 없거나 에러가 나면 조용히 넘어감
+  if (sha === "unknown" || branch === "unknown") {
+    try {
+      sha = safeExec("git rev-parse --short HEAD");
+      branch = safeExec("git branch --show-current") || "detached";
+    } catch (err) {
+      // Git metadata is optional in Docker images.
+    }
   }
 
   return NextResponse.json(

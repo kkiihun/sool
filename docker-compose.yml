@@ -3,12 +3,12 @@ services:
     image: mariadb:10.11
     container_name: sool-mariadb
     environment:
-      MYSQL_ROOT_PASSWORD: rootpass
-      MYSQL_DATABASE: sool
-      MYSQL_USER: sool
-      MYSQL_PASSWORD: soolpass
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-rootpass}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-sool}
+      MYSQL_USER: ${MYSQL_USER:-sool}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-soolpass}
     ports:
-      - "3307:3306"
+      - "${DB_PUBLIC_PORT:-127.0.0.1:3307}:3306"
     volumes:
       - sool_mariadb_data:/var/lib/mysql
     healthcheck:
@@ -16,6 +16,7 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    restart: unless-stopped
 
   backend:
     build: ./backend
@@ -23,37 +24,50 @@ services:
     env_file:
       - .env
     environment:
-      - DB_HOST=db
-      - DB_USER=sool
-      - DB_PASSWORD=soolpass
-      - DB_NAME=sool
+      ENVIRONMENT: ${ENVIRONMENT:-production}
+      DB_HOST: db
+      DB_PORT: 3306
+      DB_USER: ${MYSQL_USER:-sool}
+      DB_PASSWORD: ${MYSQL_PASSWORD:-soolpass}
+      DB_NAME: ${MYSQL_DATABASE:-sool}
+      SECRET_KEY: ${SECRET_KEY:-dev-secret-key-change-this}
+      SESSION_SECRET_KEY: ${SESSION_SECRET_KEY:-session-secret-key-change-this}
+      SESSION_COOKIE_SECURE: ${SESSION_COOKIE_SECURE:-false}
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3300}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3300}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+      KAKAO_CLIENT_ID: ${KAKAO_CLIENT_ID:-}
+      KAKAO_CLIENT_SECRET: ${KAKAO_CLIENT_SECRET:-}
     depends_on:
       db:
         condition: service_healthy
     ports:
-      - "8000:8000"
+      - "${BACKEND_PUBLIC_PORT:-8000}:8000"
     volumes:
-      - ./backend:/app  # ⭐ 로컬 백엔드 코드 연동 (실시간 반영)
       - ./backend/app/static:/app/app/static
-    # FastAPI 개발용 핫 리로딩 활성화
-    command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+    restart: unless-stopped
 
   frontend:
     build:
       context: ./frontend
+      args:
+        BACKEND_URL: ${BACKEND_URL:-http://backend:8000}
+        NEXT_PUBLIC_BACKEND_URL: ${NEXT_PUBLIC_BACKEND_URL:-http://localhost:8000}
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8000}
+        NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-/proxy}
     container_name: sool-frontend
-    ports:
-      - "3300:3000"
     environment:
-      - NEXT_PUBLIC_API_URL=http://localhost:8000
-      - BACKEND_URL=http://backend:8000
-      - WATCHPACK_POLLING=true # 도커 환경에서 핫 리로딩 신뢰성 향상
-    volumes:
-      - ./frontend:/app
-      - /app/node_modules
-      - /app/.next
+      NODE_ENV: production
+      BACKEND_URL: ${BACKEND_URL:-http://backend:8000}
+      NEXT_PUBLIC_BACKEND_URL: ${NEXT_PUBLIC_BACKEND_URL:-http://localhost:8000}
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8000}
+      NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-/proxy}
+    ports:
+      - "${FRONTEND_PUBLIC_PORT:-3300}:3000"
     depends_on:
       - backend
+    restart: unless-stopped
 
 volumes:
   sool_mariadb_data:

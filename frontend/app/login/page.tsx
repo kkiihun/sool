@@ -26,6 +26,8 @@ export default function LoginPage() {
     return process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
   };
   const API_URL = getApiUrl();
+  const getBackendUrl = () =>
+    (process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000").replace(/\/+$/, "");
 
   const onFinish = async (values: any) => {
     setLoading(true);
@@ -57,9 +59,9 @@ export default function LoginPage() {
     const left = window.screenX + (window.outerWidth - width) / 2;
     const top = window.screenY + (window.outerHeight - height) / 2;
     
-    // Using direct backend URL to bypass proxy issues during OAuth flow
-    // In production, this would be your API domain
-    const authUrl = `http://localhost:8000/auth/social/login/${provider}`;
+    const backendUrl = getBackendUrl();
+    const authUrl = `${backendUrl}/auth/social/login/${provider}`;
+    const expectedOrigin = new URL(backendUrl).origin;
     
     const popup = window.open(
       authUrl,
@@ -68,6 +70,7 @@ export default function LoginPage() {
     );
 
     const handleMessage = async (event: MessageEvent) => {
+      if (event.origin !== expectedOrigin) return;
       if (event.data && event.data.token) {
         await login(event.data.token);
         popup?.close();
@@ -77,6 +80,13 @@ export default function LoginPage() {
     };
 
     window.addEventListener("message", handleMessage);
+
+    const popupTimer = window.setInterval(() => {
+      if (popup?.closed) {
+        window.clearInterval(popupTimer);
+        window.removeEventListener("message", handleMessage);
+      }
+    }, 500);
   };
 
   return (

@@ -3,6 +3,7 @@
 import { use, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import SliderInput from "@/components/SliderInput";
+import { getToken } from "@/lib/auth";
 
 type TastingForm = {
   aroma?: number;
@@ -11,6 +12,7 @@ type TastingForm = {
   body?: number;
   finish?: number;
   comment?: string;
+  notes?: string;
   [key: string]: any;
 };
 
@@ -40,6 +42,9 @@ export default function EditTastingPage({ params }: { params: Promise<{ id: stri
 
         const res = await fetch(apiUrl(`/v2/tasting/note/${id}`), {
           cache: "no-store",
+          headers: {
+            Authorization: `Bearer ${getToken() ?? ""}`,
+          },
         });
 
         if (!res.ok) {
@@ -51,7 +56,7 @@ export default function EditTastingPage({ params }: { params: Promise<{ id: stri
         if (cancelled) return;
         setForm({
           ...data,
-          comment: typeof data?.comment === "string" ? data.comment : "",
+          comment: typeof data?.notes === "string" ? data.notes : "",
         });
       } catch (e: any) {
         if (!cancelled) {
@@ -77,8 +82,11 @@ export default function EditTastingPage({ params }: { params: Promise<{ id: stri
 
       const res = await fetch(apiUrl(`/v2/tasting/note/${id}`), {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${getToken() ?? ""}`,
+        },
+        body: JSON.stringify({ ...form, notes: form.comment }),
       });
 
       if (!res.ok) {

@@ -9,6 +9,10 @@ class Settings(BaseSettings):
     SECRET_KEY: str = "dev-secret-key-change-this"
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24  # 1 day
+    ENVIRONMENT: str = "development"
+    FRONTEND_URL: str = "http://localhost:3300"
+    CORS_ORIGINS: str = "http://localhost:3300,http://localhost:3000"
+    SESSION_COOKIE_SECURE: bool = False
 
     # DB settings (Loaded from env if available)
     DB_HOST: str = "db"

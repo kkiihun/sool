@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, Response
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
+from app.core.config import settings
 from app.core.security import hash_password, verify_password, create_access_token
 from app.models.user import User
 from app.schemas.auth import UserCreate, UserLogin, Token
@@ -37,18 +38,18 @@ def login(user: UserLogin, response: Response, db: Session = Depends(get_db)):
 
     token = create_access_token({"sub": str(db_user.id)})
 
-    # ✅ HttpOnly 쿠키 심기 (C안 핵심)
+    # ??HttpOnly 쿠키 ?�기 (C???�심)
     response.set_cookie(
         key="access_token",
         value=token,
         httponly=True,
         samesite="lax",
-        secure=False,   # https 배포 시 True
+        secure=settings.SESSION_COOKIE_SECURE,
         path="/",
-        max_age=60 * 60 * 24 * 7,  # 7일
+        max_age=60 * 60 * 24 * 7,  # 7??
     )
 
-    # 지금은 프론트 호환 위해 토큰도 같이 반환 (나중에 제거 가능)
+    # 지금�? ?�론???�환 ?�해 ?�큰??같이 반환 (?�중???�거 가??
     return {"access_token": token, "token_type": "bearer"}
 
 @router.post("/logout")

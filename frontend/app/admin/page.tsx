@@ -21,7 +21,6 @@ import {
   Modal,
   Input,
   InputNumber,
-  Badge,
 } from "antd";
 import {
   StarOutlined,
@@ -374,7 +373,7 @@ export default function AdminPage() {
             width={700}
             styles={{
               mask: { backdropFilter: 'blur(10px)' },
-              content: { background: '#080808', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '32px', padding: '40px' },
+              body: { background: '#080808', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '32px', padding: '40px' },
               header: { background: 'transparent', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '24px', marginBottom: '32px' },
             }}
             okButtonProps={{ className: 'bg-amber-500 text-black border-none font-black h-12 px-8 rounded-xl' }}

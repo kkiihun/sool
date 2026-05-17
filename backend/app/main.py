@@ -63,14 +63,25 @@ Base.metadata.create_all(bind=engine)
 # =====================#
 #   Middleware
 # =====================#
+cors_origins = [
+    origin.strip()
+    for origin in settings.CORS_ORIGINS.split(",")
+    if origin.strip()
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=cors_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
-app.add_middleware(SessionMiddleware, secret_key=settings.SESSION_SECRET_KEY)
+app.add_middleware(
+    SessionMiddleware,
+    secret_key=settings.SESSION_SECRET_KEY,
+    https_only=settings.SESSION_COOKIE_SECURE,
+    same_site="lax",
+)
 
 # =====================#
 #   Static Files

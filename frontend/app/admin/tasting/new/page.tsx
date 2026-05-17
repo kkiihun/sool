@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 
 import SliderInput from "@/components/SliderInput";
+import { getToken } from "@/lib/auth";
 
 const API_BASE = (process.env.NEXT_PUBLIC_API_BASE_URL ?? "/proxy").replace(/\/$/, "");
 
@@ -49,7 +50,10 @@ export default function NewTastingNotePage() {
 
       const res = await fetch(apiUrl("/v2/tasting/note"), {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${getToken() ?? ""}`,
+        },
         body: JSON.stringify({
           sool_id: soolId,
           aroma: form.aroma,
@@ -57,7 +61,7 @@ export default function NewTastingNotePage() {
           acidity: form.acidity,
           body: form.body,
           finish: form.finish,
-          comment: form.comment,
+          notes: form.comment,
         }),
       });
 

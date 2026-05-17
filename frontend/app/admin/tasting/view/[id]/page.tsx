@@ -1,6 +1,7 @@
 "use client";
 
 import { use, useEffect, useState } from "react";
+import { getToken } from "@/lib/auth";
 import { Radar } from "react-chartjs-2";
 import {
   Chart as ChartJS,
@@ -30,6 +31,7 @@ type TastingNote = {
   body?: number | null;
   finish?: number | null;
   comment?: string | null;
+  notes?: string | null;
 };
 
 export default function TastingDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -46,6 +48,9 @@ export default function TastingDetailPage({ params }: { params: Promise<{ id: st
 
         const res = await fetch(apiUrl(`/v2/tasting/note/${id}`), {
           cache: "no-store",
+          headers: {
+            Authorization: `Bearer ${getToken() ?? ""}`,
+          },
         });
         if (!res.ok) {
           throw new Error(`Load failed (HTTP ${res.status})`);
@@ -99,7 +104,7 @@ export default function TastingDetailPage({ params }: { params: Promise<{ id: st
           <b>SOOL ID:</b> {note.sool_id}
         </p>
         <p>
-          <b>Comment:</b> {note.comment || "-"}
+          <b>Comment:</b> {note.notes || note.comment || "-"}
         </p>
       </div>
 
@@ -120,6 +125,9 @@ export default function TastingDetailPage({ params }: { params: Promise<{ id: st
 
             const res = await fetch(apiUrl(`/v2/tasting/note/${note.id}`), {
               method: "DELETE",
+              headers: {
+                Authorization: `Bearer ${getToken() ?? ""}`,
+              },
             });
             if (!res.ok) {
               alert(`Delete failed (HTTP ${res.status})`);

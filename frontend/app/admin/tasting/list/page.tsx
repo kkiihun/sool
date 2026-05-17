@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { getToken } from "@/lib/auth";
 
 interface TastingNote {
   id: number;
@@ -12,6 +13,7 @@ interface TastingNote {
   body: number;
   finish: number;
   comment: string;
+  notes?: string;
   created_at?: string;
 }
 
@@ -43,6 +45,9 @@ export default function TastingListPage() {
 
         const res = await fetch(apiUrl("/v2/tasting/note/all"), {
           cache: "no-store",
+          headers: {
+            Authorization: `Bearer ${getToken() ?? ""}`,
+          },
         });
 
         if (!res.ok) throw new Error(`목록 조회 실패 (HTTP ${res.status})`);
@@ -97,7 +102,7 @@ export default function TastingListPage() {
               <td className="border p-2">{item.acidity}</td>
               <td className="border p-2">{item.body}</td>
               <td className="border p-2">{item.finish}</td>
-              <td className="border p-2">{item.comment}</td>
+              <td className="border p-2">{item.notes ?? item.comment}</td>
 
               <td className="border p-2">
                 <Link

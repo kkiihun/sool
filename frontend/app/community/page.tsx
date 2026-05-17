@@ -250,7 +250,7 @@ export default function CommunityPage() {
         width={600}
         styles={{
           mask: { backdropFilter: "blur(10px)" },
-          content: { background: "#080808", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "32px", padding: "40px" },
+          body: { background: "#080808", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "32px", padding: "40px" },
           header: { background: "transparent", borderBottom: "1px solid rgba(255,255,255,0.05)", paddingBottom: "24px", marginBottom: "32px" },
         }}
       >

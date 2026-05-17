@@ -2,6 +2,7 @@ import os
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, declarative_base
 from dotenv import load_dotenv
+from app.core.config import settings
 
 load_dotenv()  # ← 이 한 줄이 .env 불러오는 핵심
 
@@ -36,7 +37,7 @@ if DATABASE_URL.startswith("sqlite"):
 engine = create_engine(
     DATABASE_URL,
     pool_pre_ping=True,
-    echo=True,          # 개발 단계에서 SQL 로그 확인용
+    echo=settings.ENVIRONMENT == "development",
     connect_args=connect_args
 )
 

@@ -4,7 +4,9 @@ from sqlalchemy import func
 from typing import Optional
 
 from app.core.database import get_db
+from app.core.deps import get_current_admin_user
 from app.models.sool import Sool
+from app.models.user import User
 from app.models.tasting_note import TastingNote
 from app.models.food_pairing import FoodTag
 from app.schemas.sool_schema import (
@@ -24,7 +26,11 @@ router = APIRouter(prefix="/sool", tags=["Sool"])
 # 📌 CREATE
 # ------------------------
 @router.post("/", response_model=SoolResponse)
-def create_sool(payload: SoolCreate, db: Session = Depends(get_db)):
+def create_sool(
+    payload: SoolCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_admin_user),
+):
     if db.query(Sool).filter(Sool.name == payload.name).first():
         raise HTTPException(status_code=400, detail="이미 등록된 술입니다.")
 
@@ -35,7 +41,12 @@ def create_sool(payload: SoolCreate, db: Session = Depends(get_db)):
     return new_sool
 
 @router.put("/{sool_id}", response_model=SoolResponse)
-def update_sool(sool_id: int, payload: SoolCreate, db: Session = Depends(get_db)):
+def update_sool(
+    sool_id: int,
+    payload: SoolCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_admin_user),
+):
     db_sool = db.query(Sool).filter(Sool.id == sool_id).first()
     if not db_sool:
         raise HTTPException(status_code=404, detail="Sool not found")
@@ -48,7 +59,11 @@ def update_sool(sool_id: int, payload: SoolCreate, db: Session = Depends(get_db)
     return db_sool
 
 @router.delete("/{sool_id}")
-def delete_sool(sool_id: int, db: Session = Depends(get_db)):
+def delete_sool(
+    sool_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_admin_user),
+):
     db_sool = db.query(Sool).filter(Sool.id == sool_id).first()
     if not db_sool:
         raise HTTPException(status_code=404, detail="Sool not found")

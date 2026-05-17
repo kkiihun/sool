@@ -1,6 +1,8 @@
+import json
+
 from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi.responses import HTMLResponse
 from sqlalchemy.orm import Session
-from starlette.middleware.sessions import SessionMiddleware
 from authlib.integrations.starlette_client import OAuth
 from app.core.config import settings
 from app.core.database import get_db
@@ -35,6 +37,11 @@ oauth.register(
 async def social_login(provider: str, request: Request):
     if provider not in ['google', 'kakao']:
         raise HTTPException(status_code=400, detail="Invalid provider")
+
+    if provider == "google" and (not settings.GOOGLE_CLIENT_ID or not settings.GOOGLE_CLIENT_SECRET):
+        raise HTTPException(status_code=503, detail="Google login is not configured")
+    if provider == "kakao" and (not settings.KAKAO_CLIENT_ID or not settings.KAKAO_CLIENT_SECRET):
+        raise HTTPException(status_code=503, detail="Kakao login is not configured")
     
     # Render or Localhost frontend redirect
     # In production, this should be your domain
@@ -84,10 +91,24 @@ async def social_auth_callback(provider: str, request: Request, db: Session = De
         db.refresh(user)
 
     # Create JWT for our system
-    access_token = create_access_token(data={"sub": user.email})
+    access_token = create_access_token(data={"sub": str(user.id)})
     
     # Redirect back to frontend with token
     # In a real app, you might want to use a more secure way to pass the token
     # or redirect to a page that handles the query param.
-    frontend_url = "http://localhost:3300/login/callback" # Or from settings
-    return f"<html><script>window.opener.postMessage({{token: '{access_token}'}}, '*'); window.close();</script></html>"
+    frontend_origin = settings.FRONTEND_URL.rstrip("/")
+    callback_url = f"{frontend_origin}/login/callback?token={access_token}"
+    html = (
+        "<html><body><script>"
+        f"const token = {json.dumps(access_token)};"
+        f"const origin = {json.dumps(frontend_origin)};"
+        f"const callbackUrl = {json.dumps(callback_url)};"
+        "if (window.opener && !window.opener.closed) {"
+        "window.opener.postMessage({ token }, origin);"
+        "window.close();"
+        "} else {"
+        "window.location.replace(callbackUrl);"
+        "}"
+        "</script></body></html>"
+    )
+    return HTMLResponse(html)

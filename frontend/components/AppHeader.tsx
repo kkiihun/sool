@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useAuth } from "../app/components/AuthProvider";
-import { Avatar, Dropdown, Typography, Skeleton, Space } from "antd";
+import { Avatar, Dropdown, Typography, Skeleton } from "antd";
 import { 
   UserOutlined, 
   LogoutOutlined, 
@@ -70,12 +70,6 @@ export default function AppHeader() {
       menu={{ items: menuItems as any }} 
       placement="bottomRight" 
       arrow={{ pointAtCenter: true }}
-      dropdownStyle={{ 
-        background: '#111', 
-        border: '1px solid rgba(255,255,255,0.1)', 
-        borderRadius: '16px',
-        padding: '8px'
-      }}
     >
       <div className="flex items-center gap-4 cursor-pointer group px-4 py-2 rounded-2xl hover:bg-white/5 transition-all border border-transparent hover:border-white/10">
         <div className="flex flex-col items-end hidden lg:flex">
