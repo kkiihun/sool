@@ -7,5 +7,5 @@ router = APIRouter(prefix="/report", tags=["Report"])
 
 @router.get("/{name}")
 def make_report(name: str):
-    file = generate_report_base64(name)
-    return {"image": img}
+    image_data = generate_report_base64(name)
+    return {"image": image_data}

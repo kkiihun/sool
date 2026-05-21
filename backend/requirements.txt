@@ -35,6 +35,7 @@ itsdangerous==2.2.0
 # =========================
 # Data & Visualization  ← ⭐ 분석/리포트용 추가 구역
 # =========================
+numpy==1.26.4
 pandas==2.2.0
 matplotlib==3.8.2
 seaborn==0.13.1

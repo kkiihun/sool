@@ -36,7 +36,7 @@ from app.models.tasting_note import TastingNote
 from app.api.sool import router as sool_router
 from app.api.review import router as review_router
 from app.api.sense import router as sense_router
-from app.api import update_log, auth, users
+from app.api import update_log, auth, users, activity
 from app.api import report
 from app.api.utils.recommender import flavor_vector
 from app.api.tasting_note import router as tasting_note_router
@@ -54,6 +54,7 @@ app.include_router(users.router)
 app.include_router(report.router)
 app.include_router(tasting_note_router) # 신규 표준 API
 app.include_router(social_auth_router)
+app.include_router(activity.router)
 
 # =====================#
 #   DB Table 생성

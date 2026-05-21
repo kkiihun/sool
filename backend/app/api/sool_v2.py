@@ -3,10 +3,14 @@ from sqlalchemy.orm import Session
 from app.core.database import SessionLocal
 from app.models.sool import Sool
 from sqlalchemy import func
+import numpy as np
 from app.models.tasting_note import TastingNote
 from app.api.utils.recommender import flavor_vector
 from app.schemas.sool_schema import SoolResponse, FoodTagSchema
 from app.models.food_pairing import FoodTag
+from app.models.activity import ActivityLog
+from app.core.deps import get_optional_user
+from fastapi import Depends
 from typing import List
 
 router = APIRouter(
@@ -275,12 +279,27 @@ def similar_by_flavor(sool_id: int, limit: int = 5):
 # 🔥 ID 조회 (항상 마지막)
 # ================================
 @router.get("/{sool_id:int}", summary="Get SOOL by ID", response_model=SoolResponse, operation_id="get_sool_v2")
-def get_sool(sool_id: int):
-    db: Session = SessionLocal()
+def get_sool(
+    sool_id: int,
+    db: Session = Depends(SessionLocal),
+    user = Depends(get_optional_user)
+):
     sool = db.query(Sool).filter(Sool.id == sool_id).first()
 
     if not sool:
-        db.close()
         raise HTTPException(status_code=404, detail="SOOL not found")
+
+    # 📈 활동 로그 기록 (View)
+    try:
+        log = ActivityLog(
+            user_id=user.id if user else None,
+            sool_id=sool_id,
+            action="view"
+        )
+        db.add(log)
+        db.commit()
+    except Exception as e:
+        print(f"Failed to log activity: {e}")
+        db.rollback()
 
     return sool

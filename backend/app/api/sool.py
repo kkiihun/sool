@@ -330,6 +330,52 @@ def get_sool_stats(db: Session = Depends(get_db)):
             "error": str(e)
         }
 
+@router.get("/{sool_id}/analysis")
+def get_sool_analysis(sool_id: int, db: Session = Depends(get_db)):
+    """
+    특정 제품의 맛 지표가 전체 시장에서 어느 정도 위치(백분위)인지 분석
+    """
+    # 해당 술의 평균 맛 데이터 가져오기
+    target = db.query(
+        func.avg(TastingNote.aroma).label("aroma"),
+        func.avg(TastingNote.sweetness).label("sweetness"),
+        func.avg(TastingNote.acidity).label("acidity"),
+        func.avg(TastingNote.body).label("body"),
+        func.avg(TastingNote.finish).label("finish")
+    ).filter(TastingNote.sool_id == sool_id).one()
+
+    if target.aroma is None:
+        raise HTTPException(status_code=404, detail="No tasting notes for this product")
+
+    # 전체 시장 데이터 (모든 제품의 평균 맛 리스트)
+    all_notes = db.query(
+        TastingNote.sool_id,
+        func.avg(TastingNote.aroma).label("aroma"),
+        func.avg(TastingNote.sweetness).label("sweetness"),
+        func.avg(TastingNote.acidity).label("acidity"),
+        func.avg(TastingNote.body).label("body"),
+        func.avg(TastingNote.finish).label("finish")
+    ).group_by(TastingNote.sool_id).all()
+
+    def get_percentile(target_val, all_vals):
+        if not all_vals: return 0
+        sorted_vals = sorted([v for v in all_vals if v is not None])
+        rank = sum(1 for v in sorted_vals if v < target_val)
+        return round((rank / len(sorted_vals)) * 100, 1)
+
+    analysis = {
+        "aroma": {"value": round(float(target.aroma), 2), "percentile": get_percentile(target.aroma, [n.aroma for n in all_notes])},
+        "sweetness": {"value": round(float(target.sweetness), 2), "percentile": get_percentile(target.sweetness, [n.sweetness for n in all_notes])},
+        "acidity": {"value": round(float(target.acidity), 2), "percentile": get_percentile(target.acidity, [n.acidity for n in all_notes])},
+        "body": {"value": round(float(target.body), 2), "percentile": get_percentile(target.body, [n.body for n in all_notes])},
+        "finish": {"value": round(float(target.finish), 2), "percentile": get_percentile(target.finish, [n.finish for n in all_notes])},
+    }
+
+    return {
+        "sool_id": sool_id,
+        "market_analysis": analysis
+    }
+
 @router.get("/food-tags", response_model=list[FoodTagSchema])
 def get_food_tags(db: Session = Depends(get_db)):
     return db.query(FoodTag).order_by(FoodTag.name).all()

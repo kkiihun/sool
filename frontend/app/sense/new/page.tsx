@@ -71,6 +71,9 @@ function SenseFormContent() {
       color: 3,
       aroma: 3,
       sweetness: 3,
+      acidity: 3,
+      body: 3,
+      finish: 3,
       smoothness: 3,
       rating: 5,
       sool_id: preSelectedSoolId ? Number(preSelectedSoolId) : undefined,
@@ -217,6 +220,9 @@ function SenseFormContent() {
               { name: "color", label: "Color Intensity" },
               { name: "aroma", label: "Aroma Complexity" },
               { name: "sweetness", label: "Sweetness Level" },
+              { name: "acidity", label: "Acidity / Sourness" },
+              { name: "body", label: "Body / Thickness" },
+              { name: "finish", label: "Finish / Aftertaste" },
               { name: "smoothness", label: "Smoothness / Mouthfeel" },
             ].map((metric) => (
               <Col span={24} key={metric.name}>

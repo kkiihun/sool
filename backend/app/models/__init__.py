@@ -4,6 +4,7 @@ from .sool import Sool
 from .tasting_note import TastingNote
 from .review import Review
 from .food_pairing import FoodTag, sool_food_tags
+from .activity import ActivityLog
 
 __all__ = [
     "User",
@@ -19,5 +20,6 @@ __all__ = [
     "TastingNote",
     "Review",
     "FoodTag",
-    "sool_food_tags"
+    "sool_food_tags",
+    "ActivityLog"
 ]
