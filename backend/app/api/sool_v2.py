@@ -13,10 +13,32 @@ from app.core.deps import get_optional_user
 from fastapi import Depends
 from typing import List
 
+from app.services.recommender import RecommenderService
+
 router = APIRouter(
     prefix="/v2/sool",
     tags=["SOOL V2"]
 )
+
+@router.get("/recommend/personalized", summary="Get personalized recommendations based on activity")
+def recommend_personalized(
+    limit: int = Query(10, ge=1, le=50),
+    db: Session = Depends(SessionLocal),
+    user = Depends(get_optional_user)
+):
+    if not user:
+        # 로그인하지 않은 경우 인기 제품 추천
+        return {
+            "type": "popular",
+            "recommendations": RecommenderService.get_popular_sools(db, limit)
+        }
+    
+    recs = RecommenderService.recommend_personalized(db, user.id, limit)
+    return {
+        "type": "personalized",
+        "user_id": user.id,
+        "recommendations": recs
+    }
 
 @router.get("/food-tags", summary="Get all available food tags", response_model=List[FoodTagSchema])
 def get_food_tags():
@@ -272,6 +294,79 @@ def similar_by_flavor(sool_id: int, limit: int = 5):
         "base_sool_id": sool_id,
         "count": len(sools),
         "recommendations": sools
+    }
+
+
+# ================================
+# 🔥 Wizard Recommendation (취향 맞춤 추천)
+# ================================
+
+@router.get("/recommend/wizard", summary="Wizard-based personalized recommendation")
+def recommend_by_wizard(
+    sweetness: float = Query(3.0, ge=1, le=5),
+    acidity: float = Query(3.0, ge=1, le=5),
+    body: float = Query(3.0, ge=1, le=5),
+    abv_type: str = Query("all", description="low, medium, high, all"),
+    category: str = Query(None),
+    limit: int = Query(5, ge=1, le=20)
+):
+    db: Session = SessionLocal()
+    
+    # 기본 쿼리: 술과 평균 맛 지표 가져오기
+    query = db.query(
+        Sool,
+        func.avg(TastingNote.sweetness).label("avg_sweetness"),
+        func.avg(TastingNote.acidity).label("avg_acidity"),
+        func.avg(TastingNote.body).label("avg_body")
+    ).outerjoin(TastingNote, TastingNote.sool_id == Sool.id)
+    
+    # 필터 적용
+    if category:
+        query = query.filter(Sool.category == category)
+    
+    if abv_type == "low":
+        query = query.filter(Sool.abv < 10)
+    elif abv_type == "medium":
+        query = query.filter(Sool.abv >= 10, Sool.abv < 20)
+    elif abv_type == "high":
+        query = query.filter(Sool.abv >= 20)
+
+    data = query.group_by(Sool.id).all()
+    
+    scored = []
+    for sool, s, a, b in data:
+        # 데이터가 없는 경우 기본값 3.0 가정 (중립)
+        s_val = float(s) if s is not None else 3.0
+        a_val = float(a) if a is not None else 3.0
+        b_val = float(b) if b is not None else 3.0
+        
+        # 유클리드 거리 기반 점수 (낮을수록 좋음 -> 10에서 빼서 높은 점수로 변환)
+        distance = (
+            (s_val - sweetness) ** 2 +
+            (a_val - acidity) ** 2 +
+            (b_val - body) ** 2
+        ) ** 0.5
+        
+        score = max(0, 10 - distance)
+        scored.append((score, sool))
+
+    scored.sort(key=lambda x: x[0], reverse=True)
+    
+    results = []
+    for score, s in scored[:limit]:
+        results.append({
+            "id": s.id,
+            "name": s.name,
+            "category": s.category,
+            "abv": s.abv,
+            "image_url": s.image_url,
+            "score": round(score, 2)
+        })
+
+    return {
+        "params": {"sweetness": sweetness, "acidity": acidity, "body": body, "abv_type": abv_type},
+        "count": len(results),
+        "recommendations": results
     }
 
 

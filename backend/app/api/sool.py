@@ -149,6 +149,16 @@ def get_regions(db: Session = Depends(get_db)):
 
 
 # ------------------------
+# 📌 양조장 목록
+# ------------------------
+@router.get("/producers", response_model=list[str])
+def get_producers(db: Session = Depends(get_db)):
+    producers = db.query(Sool.producer).distinct().all()
+    cleaned = sorted({p[0] for p in producers if p[0] and p[0] != "미등록"})
+    return cleaned
+
+
+# ------------------------
 # 📌 전체 조회
 # ------------------------
 @router.get("/all", response_model=list[SoolResponse])

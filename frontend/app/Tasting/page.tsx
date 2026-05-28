@@ -86,8 +86,27 @@ export default function TastingPage() {
       title: "NOTES",
       dataIndex: "notes",
       key: "notes",
-      ellipsis: true,
-      render: (n: string) => <Text style={{ color: "#888" }}>{n || "No comments recorded."}</Text>,
+      render: (n: string, record: any) => (
+        <Space direction="vertical" size={4}>
+          <div className="flex flex-wrap gap-1 mb-1">
+            {record.aroma_tags?.split(',').filter(Boolean).map((tag: string) => (
+              <Badge 
+                key={tag} 
+                count={tag} 
+                style={{ 
+                  backgroundColor: 'rgba(245, 158, 11, 0.05)', 
+                  color: '#f59e0b', 
+                  borderColor: 'rgba(245, 158, 11, 0.2)',
+                  fontSize: 9,
+                  fontWeight: 800,
+                  borderRadius: 4
+                }} 
+              />
+            ))}
+          </div>
+          <Text style={{ color: "#888", fontSize: 13 }}>{n || "No comments recorded."}</Text>
+        </Space>
+      ),
     },
     {
       title: "DATE",

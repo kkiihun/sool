@@ -36,6 +36,7 @@ class TastingNote(Base):
 
     # ⭐ 종합 평점 및 메모
     rating = Column(Float, nullable=False, default=3.0)
+    aroma_tags = Column(Text, nullable=True)               # 추가: 꽃향기, 과일향 등 태그
     notes = Column(Text, nullable=True)
 
     # ⏱️ 생성 시각

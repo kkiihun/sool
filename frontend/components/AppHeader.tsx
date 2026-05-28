@@ -7,6 +7,7 @@ import {
   UserOutlined, 
   LogoutOutlined, 
   DashboardOutlined,
+  BarChartOutlined,
   SafetyCertificateOutlined
 } from "@ant-design/icons";
 
@@ -41,17 +42,22 @@ export default function AppHeader() {
   const menuItems = [
     {
       key: 'profile',
-      label: <span className="font-bold">My Profile</span>,
+      label: <Link href="/profile" className="font-bold">My Profile</Link>,
       icon: <UserOutlined />,
     },
     {
       key: 'dashboard',
-      label: <span className="font-bold">Analytics</span>,
+      label: <Link href="/dashboard" className="font-bold">Analytics</Link>,
       icon: <DashboardOutlined />,
+    },
+    {
+      key: 'brewery-dashboard',
+      label: <Link href="/dashboard/brewery" className="font-bold">Brewery Intelligence</Link>,
+      icon: <BarChartOutlined />,
     },
     ...(user.is_admin ? [{
       key: 'admin',
-      label: <span className="font-bold">Admin Console</span>,
+      label: <Link href="/admin" className="font-bold">Admin Console</Link>,
       icon: <SafetyCertificateOutlined />,
     }] : []),
     {

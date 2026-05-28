@@ -19,10 +19,12 @@ import {
   ReloadOutlined,
   FilterOutlined,
   ControlOutlined,
+  RocketOutlined,
 } from "@ant-design/icons";
 import { useRouter } from "next/navigation";
 import { useAuth } from "./components/AuthProvider";
 import { useAppShell } from "./components/AppShellProvider";
+import WizardModal from "../components/WizardModal";
 
 const { Title, Text } = Typography;
 
@@ -68,6 +70,7 @@ const CATEGORY_TEXT_COLORS: Record<string, string> = {
 export default function Home() {
   const { user } = useAuth();
   const { search, setSearch } = useAppShell();
+  const [isWizardVisible, setIsWizardVisible] = useState(false);
   const [sool, setSool] = useState<any[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
@@ -79,7 +82,9 @@ export default function Home() {
   const [foodTags, setFoodTags] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
-  
+  const [recommendations, setRecommendations] = useState<any[]>([]);
+  const [recLoading, setRecLoading] = useState(false);
+
   const getApiUrl = () => {
     if (typeof window !== "undefined") return "/proxy";
     return process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
@@ -170,6 +175,28 @@ export default function Home() {
     setPage(1);
   };
 
+  useEffect(() => {
+    async function fetchRecommendations() {
+      setRecLoading(true);
+      try {
+        const token = localStorage.getItem("sool_token");
+        const headers: any = {};
+        if (token) headers["Authorization"] = `Bearer ${token}`;
+
+        const res = await fetch(`${API_URL}/v2/sool/recommend/personalized?limit=8`, { headers });
+        if (res.ok) {
+          const data = await res.json();
+          setRecommendations(data.recommendations ?? []);
+        }
+      } catch (err) {
+        console.error("Failed to fetch recommendations:", err);
+      } finally {
+        setRecLoading(false);
+      }
+    }
+    fetchRecommendations();
+  }, [API_URL, user]);
+
   return (
     <div className="bg-[#050505] min-h-screen">
       <div className="max-w-[1600px] mx-auto py-24 px-16">
@@ -182,7 +209,77 @@ export default function Home() {
             Curated collection of Korea's finest traditional spirits. <br/>
             Discover <span className="text-white font-bold">{total}</span> unique flavors and their heritage.
           </Text>
+
+          <div className="mt-12 flex justify-center gap-6">
+            <Button 
+              type="primary" 
+              size="large" 
+              icon={<RocketOutlined className="text-xl" />}
+              onClick={() => setIsWizardVisible(true)}
+              className="h-16 px-12 bg-amber-500 text-black border-none font-black text-lg rounded-2xl shadow-2xl shadow-amber-500/20 hover:scale-105 transition-transform"
+            >
+              FIND MY PERFECT SPIRIT
+            </Button>
+            <Link href="/Tasting">
+              <Button 
+                size="large" 
+                className="h-16 px-12 bg-white/5 text-white border-white/10 font-bold text-lg rounded-2xl hover:bg-white/10"
+              >
+                MY TASTING LOG
+              </Button>
+            </Link>
+          </div>
         </div>
+
+        <WizardModal visible={isWizardVisible} onClose={() => setIsWizardVisible(false)} />
+
+        {/* Recommendations Section */}
+        {recommendations.length > 0 && !search && (
+          <div className="mb-24 animate-in fade-in slide-in-from-bottom-8 duration-1000">
+            <div className="flex items-center justify-between mb-8 px-4">
+              <Space direction="vertical" size={0}>
+                <Text className="text-amber-500 text-[11px] font-black uppercase tracking-[0.4em] opacity-70">
+                  {user ? `Tailored for ${user.username}` : "Trending Now"}
+                </Text>
+                <Title level={2} className="!text-white !m-0 !text-4xl !font-black !tracking-tighter">
+                  Picked for <span className="text-amber-500">You</span>
+                </Title>
+              </Space>
+              <Link href="/dashboard" className="text-white/20 hover:text-amber-500 transition-colors text-xs font-bold tracking-widest uppercase">
+                Explore All Intelligence →
+              </Link>
+            </div>
+            
+            <div className="flex gap-8 overflow-x-auto pb-8 px-4 no-scrollbar">
+              {recommendations.map((item) => (
+                <Link href={`/sool/${item.id}`} key={item.id} className="flex-shrink-0 w-[320px] group">
+                  <div className="relative aspect-[4/5] bg-white/[0.03] border border-white/10 rounded-[2.5rem] overflow-hidden group-hover:border-amber-500/40 transition-all duration-500 shadow-2xl">
+                    {item.image_url ? (
+                      <img src={resolveImageUrl(item.image_url) || ""} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-1000" />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-8xl bg-gradient-to-br from-neutral-900 to-black">
+                        {item.category === "탁주" ? "🍶" : "🥃"}
+                      </div>
+                    )}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent" />
+                    <div className="absolute bottom-8 left-8 right-8">
+                      <Badge count={item.category} style={{ backgroundColor: 'rgba(245, 158, 11, 0.1)', color: '#f59e0b', borderColor: 'transparent', fontSize: 10, fontWeight: 900, borderRadius: 6, marginBottom: 8 }} />
+                      <Title level={4} className="!text-white !m-0 !text-xl !font-black !tracking-tight line-clamp-1 group-hover:text-amber-500 transition-colors">
+                        {item.name}
+                      </Title>
+                      <div className="mt-4 flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-500">
+                        <StarOutlined className="text-amber-500 text-xs" />
+                        <Text className="text-amber-500 text-[10px] font-black uppercase tracking-widest">
+                          {Math.round(item.score * 100)}% Match
+                        </Text>
+                      </div>
+                    </div>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Command Center (Unified Bar) */}
         <div className="sticky top-20 z-40 mb-16">

@@ -27,6 +27,7 @@ class TastingNoteBase(BaseModel):
 
     # ⭐ 평점 및 메모
     rating: float = 3.0
+    aroma_tags: Optional[str] = None
     notes: Optional[str] = None
 
 class TastingNoteCreate(TastingNoteBase):
@@ -44,6 +45,7 @@ class TastingNoteUpdate(BaseModel):
     carbonation: Optional[float] = None
     complexity: Optional[float] = None
     rating: Optional[float] = None
+    aroma_tags: Optional[str] = None
     notes: Optional[str] = None
 
 class TastingNoteResponse(TastingNoteBase):
