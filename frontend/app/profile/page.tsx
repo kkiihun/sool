@@ -1,5 +1,6 @@
 "use client";
 
+import { API_BASE } from "@/lib/api";
 import { useState, useEffect } from "react";
 import {
   Layout,
@@ -44,8 +45,6 @@ export default function ProfilePage() {
   const [updating, setSubmitting] = useState(false);
   const [form] = Form.useForm();
 
-  const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
-
   useEffect(() => {
     if (!authLoading && !user) {
       router.push("/login");
@@ -56,13 +55,11 @@ export default function ProfilePage() {
 
   const onFinish = async (values: any) => {
     setSubmitting(true);
-    const token = localStorage.getItem("sool_token");
     try {
-      const res = await fetch(`${API_URL}/users/me`, {
+      const res = await fetch(`${API_BASE}/users/me`, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
           username: values.username,

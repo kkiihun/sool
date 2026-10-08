@@ -1,5 +1,6 @@
 "use client";
 
+import { API_BASE } from "@/lib/api";
 import { useEffect, useState, use } from "react";
 import { 
   Rate, 
@@ -81,25 +82,16 @@ export default function SoolDetail({
   const [sweetness, setSweetness] = useState<number>(3);
   const [aftertaste, setAftertaste] = useState<number>(3);
 
-  // 🔥 API URL 결정 로직 강화 (localhost 대신 127.0.0.1 시도)
-  const getApiUrl = () => {
-    const envUrl = process.env.NEXT_PUBLIC_API_URL;
-    if (envUrl) return envUrl;
-    return "http://127.0.0.1:8000"; // localhost 대신 127.0.0.1이 더 안정적임
-  };
-
-  const API_URL = getApiUrl();
-
   useEffect(() => {
     if (!soolId) return;
 
     const fetchData = async () => {
       try {
         setLoading(true);
-        console.log(`[Debug] Fetching Spirit #${soolId} from ${API_URL}`);
+        console.log(`[Debug] Fetching Spirit #${soolId} from ${API_BASE}`);
         
         // 1. 제품 정보 가져오기
-        const soolRes = await fetch(`${API_URL}/sool/by-id/${soolId}`, { 
+        const soolRes = await fetch(`${API_BASE}/sool/by-id/${soolId}`, { 
           cache: 'no-store',
           headers: { 'Accept': 'application/json' }
         });
@@ -110,7 +102,7 @@ export default function SoolDetail({
 
         // 2. 테이스팅 노트 가져오기 (실패해도 중단하지 않음)
         try {
-          const senseRes = await fetch(`${API_URL}/sense/list?sool_id=${Number(soolId)}`, { 
+          const senseRes = await fetch(`${API_BASE}/sense/list?sool_id=${Number(soolId)}`, { 
             cache: 'no-store',
             headers: { 'Accept': 'application/json' }
           });
@@ -124,14 +116,14 @@ export default function SoolDetail({
 
       } catch (e: any) {
         console.error("[Fatal Error]", e);
-        message.error(`Connection Failed: ${e.message}. URL: ${API_URL}`);
+        message.error(`Connection Failed: ${e.message}. URL: ${API_BASE}`);
       } finally {
         setLoading(false);
       }
     };
 
     fetchData();
-  }, [soolId, API_URL]);
+  }, [soolId]);
 
   const handleSubmit = async () => {
     if (rating === 0) {
@@ -139,20 +131,18 @@ export default function SoolDetail({
       return;
     }
 
-    const token = localStorage.getItem('sool_token');
-    if (!token) {
+    if (!user) {
       message.error("Please sign in to record a tasting note.");
       return;
     }
 
     try {
       setSubmitting(true);
-      const res = await fetch(`${API_URL}/sense/`, {
+      const res = await fetch(`${API_BASE}/sense/`, {
         method: "POST",
         headers: { 
           "Content-Type": "application/json",
           "Accept": "application/json",
-          "Authorization": `Bearer ${token}`
         },
         body: JSON.stringify({
           sool_id: Number(soolId),
@@ -173,7 +163,7 @@ export default function SoolDetail({
       setNotes("");
       
       // Refresh list
-      const refreshRes = await fetch(`${API_URL}/sense/list?sool_id=${soolId}`);
+      const refreshRes = await fetch(`${API_BASE}/sense/list?sool_id=${soolId}`);
       if (refreshRes.ok) {
         const newData = await refreshRes.json();
         setSenses(Array.isArray(newData) ? newData : newData.items ?? []);

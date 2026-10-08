@@ -8,6 +8,8 @@ from sqlalchemy import func
 from typing import Optional
 
 from app.core.database import get_db
+from app.core.deps import require_admin
+from app.models.user import User
 from app.models.sool import Sool
 from app.models.tasting_note import TastingNote
 from app.schemas.sool_schema import (
@@ -24,23 +26,23 @@ router = APIRouter(prefix="/sool", tags=["Sool"])
 # 📌 CREATE
 # ------------------------
 @router.post("/", response_model=SoolResponse)
-def create_sool(payload: SoolCreate, db: Session = Depends(get_db)):
+def create_sool(payload: SoolCreate, db: Session = Depends(get_db), _admin: User = Depends(require_admin)):
     if db.query(Sool).filter(Sool.name == payload.name).first():
         raise HTTPException(status_code=400, detail="이미 등록된 술입니다.")
 
-    new_sool = Sool(**payload.dict())
+    new_sool = Sool(**payload.model_dump())
     db.add(new_sool)
     db.commit()
     db.refresh(new_sool)
     return new_sool
 
 @router.put("/{sool_id}", response_model=SoolResponse)
-def update_sool(sool_id: int, payload: SoolCreate, db: Session = Depends(get_db)):
+def update_sool(sool_id: int, payload: SoolCreate, db: Session = Depends(get_db), _admin: User = Depends(require_admin)):
     db_sool = db.query(Sool).filter(Sool.id == sool_id).first()
     if not db_sool:
         raise HTTPException(status_code=404, detail="Sool not found")
     
-    for key, value in payload.dict().items():
+    for key, value in payload.model_dump().items():
         setattr(db_sool, key, value)
     
     db.commit()
@@ -48,7 +50,7 @@ def update_sool(sool_id: int, payload: SoolCreate, db: Session = Depends(get_db)
     return db_sool
 
 @router.delete("/{sool_id}")
-def delete_sool(sool_id: int, db: Session = Depends(get_db)):
+def delete_sool(sool_id: int, db: Session = Depends(get_db), _admin: User = Depends(require_admin)):
     db_sool = db.query(Sool).filter(Sool.id == sool_id).first()
     if not db_sool:
         raise HTTPException(status_code=404, detail="Sool not found")
@@ -296,5 +298,3 @@ def get_sool_detail(sool_id: int, db: Session = Depends(get_db)):
 
     return sool
 
-
-print("🔥 LOADED NEW SOOL ROUTER (catalog version)")

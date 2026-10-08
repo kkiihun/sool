@@ -13,5 +13,5 @@ COPY . /app
 
 EXPOSE 8000
 
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
-
+# 운영: reload 없이 실행 (개발용 --reload 는 docker-compose.dev.yml 에서)
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "2", "--proxy-headers"]

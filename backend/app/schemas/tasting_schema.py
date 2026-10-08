@@ -1,20 +1,18 @@
 # backend/app/schemas/tasting_schema.py
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 class TastingCreate(BaseModel):
     sool_id: int
-    rating: int  # ✅ 필수 (DB nullable=False)
 
-    aroma: float | None = None
-    flavor: float | None = None
-    body: float | None = None
-    texture: float | None = None
-    finish: float | None = None
+    aroma: float | None = Field(None, ge=0, le=5)
+    sweetness: float | None = Field(None, ge=0, le=5)
+    acidity: float | None = Field(None, ge=0, le=5)
+    body: float | None = Field(None, ge=0, le=5)
+    finish: float | None = Field(None, ge=0, le=5)
 
-    notes: str | None = None  # ✅ comment -> notes로 통일
+    comment: str | None = None
 
 class TastingResponse(TastingCreate):
     id: int
 
-    class Config:
-        orm_mode = True
+    model_config = {"from_attributes": True}

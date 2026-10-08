@@ -14,7 +14,7 @@ def generate_report_base64(product_name: str) -> str:
     df = pd.read_csv(CSV_PATH)
 
     if product_name not in df['name'].values:
-        raise Exception("제품명이 CSV에 없음")
+        raise LookupError("제품명이 CSV에 없음")
 
     product = df[df['name'] == product_name].iloc[0]
     attrs = ['aroma','sweetness','acidity','body','carbonation','complexity']

@@ -1,16 +1,15 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 class TastingNoteCreate(BaseModel):
     sool_id: int
-    aroma: float | None = None
-    sweetness: float | None = None
-    acidity: float | None = None
-    body: float | None = None
-    finish: float | None = None
+    aroma: float | None = Field(None, ge=0, le=5)
+    sweetness: float | None = Field(None, ge=0, le=5)
+    acidity: float | None = Field(None, ge=0, le=5)
+    body: float | None = Field(None, ge=0, le=5)
+    finish: float | None = Field(None, ge=0, le=5)
     comment: str | None = None
 
 class TastingNoteResponse(TastingNoteCreate):
     id: int
 
-    class Config:
-        from_attributes = True  # orm_mode(v1) 대체
+    model_config = {"from_attributes": True}

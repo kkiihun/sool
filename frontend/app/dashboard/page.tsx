@@ -1,5 +1,6 @@
 "use client";
 
+import { API_BASE } from "@/lib/api";
 import Link from "next/link";
 import { useState, useEffect } from "react";
 import {
@@ -46,12 +47,10 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState<any>(null);
 
-  const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
-
   useEffect(() => {
     async function fetchStats() {
       try {
-        const res = await fetch(`${API_URL}/sool/stats`);
+        const res = await fetch(`${API_BASE}/sool/stats`);
         if (res.ok) {
           const data = await res.json();
           setStats(data);
@@ -63,7 +62,7 @@ export default function DashboardPage() {
       }
     }
     fetchStats();
-  }, [API_URL]);
+  }, []);
 
   if (loading) {
     return (

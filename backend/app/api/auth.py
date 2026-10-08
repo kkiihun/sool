@@ -2,9 +2,12 @@ from fastapi import APIRouter, Depends, HTTPException, Response
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
-from app.core.security import hash_password, verify_password, create_access_token
+from app.core.security import (
+    hash_password, verify_password, create_access_token,
+    ACCESS_TOKEN_EXPIRE_MINUTES, COOKIE_SECURE, COOKIE_NAME,
+)
 from app.models.user import User
-from app.schemas.auth import UserCreate, UserLogin, Token
+from app.schemas.auth import UserCreate, UserLogin
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
 
@@ -24,7 +27,7 @@ def signup(user: UserCreate, db: Session = Depends(get_db)):
     db.refresh(new_user)
     return {"message": "User created successfully"}
 
-@router.post("/login", response_model=Token)
+@router.post("/login")
 def login(user: UserLogin, response: Response, db: Session = Depends(get_db)):
     db_user = db.query(User).filter(User.email == user.email).first()
     if not db_user or not verify_password(user.password, db_user.hashed_password):
@@ -37,21 +40,25 @@ def login(user: UserLogin, response: Response, db: Session = Depends(get_db)):
 
     token = create_access_token({"sub": str(db_user.id)})
 
-    # ✅ HttpOnly 쿠키 심기 (C안 핵심)
+    # ✅ HttpOnly 쿠키로만 전달 (JS 에서 토큰 접근 불가)
     response.set_cookie(
-        key="access_token",
+        key=COOKIE_NAME,
         value=token,
         httponly=True,
         samesite="lax",
-        secure=False,   # https 배포 시 True
+        secure=COOKIE_SECURE,
         path="/",
-        max_age=60 * 60 * 24 * 7,  # 7일
+        max_age=ACCESS_TOKEN_EXPIRE_MINUTES * 60,
     )
 
-    # 지금은 프론트 호환 위해 토큰도 같이 반환 (나중에 제거 가능)
-    return {"access_token": token, "token_type": "bearer"}
+    return {
+        "id": db_user.id,
+        "email": db_user.email,
+        "username": db_user.username,
+        "is_admin": db_user.is_admin,
+    }
 
 @router.post("/logout")
 def logout(response: Response):
-    response.delete_cookie(key="access_token", path="/")
+    response.delete_cookie(key=COOKIE_NAME, path="/")
     return {"ok": True}

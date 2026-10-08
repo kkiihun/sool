@@ -26,7 +26,7 @@ DATABASE_URL = (
 engine = create_engine(
     DATABASE_URL,
     pool_pre_ping=True,
-    echo=True,          # 개발 단계에서 SQL 로그 확인용
+    echo=os.getenv("SQL_ECHO", "false").lower() == "true",  # 개발 시 SQL 로그: SQL_ECHO=true
 )
 
 # =========================

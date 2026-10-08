@@ -1,5 +1,6 @@
 "use client";
 
+import { API_BASE, assetUrl } from "@/lib/api";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
@@ -63,28 +64,15 @@ export default function AdminPage() {
   const [editingSool, setEditingSool] = useState<any>(null);
   const [soolForm] = Form.useForm();
 
-  const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
-
-  const resolveImageUrl = (url: string) => {
-    if (!url) return null;
-    if (url.startsWith('http')) return url;
-    if (url.startsWith('/static')) return `${API_URL}${encodeURI(url)}`;
-    return url;
-  };
-
   const fetchData = async () => {
-    const token = localStorage.getItem('sool_token');
-    if (!token) return;
-
     try {
       setLoading(true);
       const [usersRes, statsRes, soolRes, reviewsRes] = await Promise.all([
-        fetch(`${API_URL}/users/all`, {
-          headers: { 'Authorization': `Bearer ${token}` }
+        fetch(`${API_BASE}/users/all`, {
         }),
-        fetch(`${API_URL}/sool/stats`),
-        fetch(`${API_URL}/sool/all`),
-        fetch(`${API_URL}/sense/list`)
+        fetch(`${API_BASE}/sool/stats`),
+        fetch(`${API_BASE}/sool/all`),
+        fetch(`${API_BASE}/sense/list`)
       ]);
 
       if (usersRes.ok) setUsers(await usersRes.json());
@@ -113,11 +101,9 @@ export default function AdminPage() {
   }, [user, authLoading, router]);
 
   const toggleAdmin = async (userId: number) => {
-    const token = localStorage.getItem('sool_token');
     try {
-      const res = await fetch(`${API_URL}/users/${userId}/toggle-admin`, {
-        method: 'PUT',
-        headers: { 'Authorization': `Bearer ${token}` }
+      const res = await fetch(`${API_BASE}/users/${userId}/toggle-admin`, {
+        method: 'PUT'
       });
       if (res.ok) {
         message.success("Role updated.");
@@ -129,12 +115,10 @@ export default function AdminPage() {
   };
 
   const updateStatus = async (userId: number, status: string) => {
-    const token = localStorage.getItem('sool_token');
     try {
-      const res = await fetch(`${API_URL}/users/${userId}/status`, {
+      const res = await fetch(`${API_BASE}/users/${userId}/status`, {
         method: 'PUT',
         headers: { 
-          'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({ status })
@@ -149,11 +133,9 @@ export default function AdminPage() {
   };
 
   const deleteUser = async (userId: number) => {
-    const token = localStorage.getItem('sool_token');
     try {
-      const res = await fetch(`${API_URL}/users/${userId}`, {
-        method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${token}` }
+      const res = await fetch(`${API_BASE}/users/${userId}`, {
+        method: 'DELETE'
       });
       if (res.ok) {
         message.success("User permanently removed.");
@@ -181,15 +163,13 @@ export default function AdminPage() {
   };
 
   const saveSool = async (values: any) => {
-    const token = localStorage.getItem('sool_token');
     const method = editingSool ? 'PUT' : 'POST';
-    const url = editingSool ? `${API_URL}/sool/${editingSool.id}` : `${API_URL}/sool/`;
+    const url = editingSool ? `${API_BASE}/sool/${editingSool.id}` : `${API_BASE}/sool/`;
 
     try {
       const res = await fetch(url, {
         method,
         headers: { 
-          'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify(values)
@@ -208,11 +188,9 @@ export default function AdminPage() {
   };
 
   const handleDeleteSool = async (soolId: number) => {
-    const token = localStorage.getItem('sool_token');
     try {
-      const res = await fetch(`${API_URL}/sool/${soolId}`, {
-        method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${token}` }
+      const res = await fetch(`${API_BASE}/sool/${soolId}`, {
+        method: 'DELETE'
       });
       if (res.ok) {
         message.success("Spirit removed from archive.");
@@ -297,7 +275,7 @@ export default function AdminPage() {
     { title: "Name", dataIndex: "name", key: "name", render: (text: string, record: any) => (
       <Space>
         <div style={{ width: 32, height: 32, background: '#1a1a1a', borderRadius: 4, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
-          {record.image_url ? <img src={resolveImageUrl(record.image_url) || ""} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : "🥃"}
+          {record.image_url ? <img src={assetUrl(record.image_url) || ""} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : "🥃"}
         </div>
         <Text style={{ color: "#fff", fontWeight: 600 }}>{text}</Text>
       </Space>

@@ -1,17 +1,23 @@
 import os
-from datetime import datetime, timedelta
-from jose import JWTError, jwt
+import warnings
+from datetime import datetime, timedelta, timezone
+from jose import jwt
 from passlib.context import CryptContext
 
-from fastapi import Depends, HTTPException, Request
-from sqlalchemy.orm import Session
+# =========================
+# 설정 (환경변수)
+# =========================
+_DEV_SECRET = "dev-secret-key-change-this"
+SECRET_KEY = os.getenv("SECRET_KEY", _DEV_SECRET)
+if SECRET_KEY == _DEV_SECRET:
+    warnings.warn("SECRET_KEY 가 설정되지 않아 개발용 키를 사용합니다. 서버에서는 .env 에 꼭 설정하세요.")
 
-from app.core.database import get_db
-from app.models.user import User
-
-SECRET_KEY = os.getenv("SECRET_KEY", "dev-secret-key")
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 60
+# 토큰 만료 = 쿠키 만료 (기본 7일)
+ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", 60 * 24 * 7))
+# https 로 공개할 때 true 로 변경
+COOKIE_SECURE = os.getenv("COOKIE_SECURE", "false").lower() == "true"
+COOKIE_NAME = "access_token"
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
@@ -23,40 +29,6 @@ def verify_password(plain: str, hashed: str) -> bool:
 
 def create_access_token(data: dict, expires_delta: timedelta | None = None):
     to_encode = data.copy()
-    expire = datetime.utcnow() + (expires_delta or timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES))
+    expire = datetime.now(timezone.utc) + (expires_delta or timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES))
     to_encode.update({"exp": expire})
     return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
-
-# =========================
-# ✅ (C안 쿠키 인증)
-# =========================
-
-def decode_access_token(token: str) -> dict:
-    try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        return payload
-    except JWTError:
-        raise HTTPException(status_code=401, detail="Invalid token")
-
-def get_current_user(request: Request, db: Session = Depends(get_db)) -> User:
-    token = request.cookies.get("access_token")
-
-    # ✅ 쿠키가 없으면 Authorization: Bearer 토큰도 허용
-    if not token:
-        auth = request.headers.get("authorization")
-        if auth and auth.lower().startswith("bearer "):
-            token = auth.split(" ", 1)[1].strip()
-
-    if not token:
-        raise HTTPException(status_code=401, detail="Not authenticated")
-
-    payload = decode_access_token(token)
-    user_id = payload.get("sub")
-    if not user_id:
-        raise HTTPException(status_code=401, detail="Invalid token payload")
-
-    user = db.query(User).filter(User.id == int(user_id)).first()
-    if not user:
-        raise HTTPException(status_code=401, detail="User not found")
-
-    return user

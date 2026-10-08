@@ -3,6 +3,8 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func
 
 from app.core.database import get_db
+from app.core.deps import require_admin
+from app.models.user import User
 from app.models.tasting_note import TastingNote
 from app.models.sool import Sool
 from app.schemas.tasting_schema import TastingCreate, TastingResponse
@@ -30,7 +32,7 @@ def get_tasting_notes(
 # 📌 POST: 테이스팅 노트 생성
 # -------------------------------------------------
 @router.post("/", response_model=TastingResponse, status_code=201)
-def create_tasting(note: TastingCreate, db: Session = Depends(get_db)):
+def create_tasting(note: TastingCreate, db: Session = Depends(get_db), _admin: User = Depends(require_admin)):
 
     sool_exists = db.query(Sool).filter(Sool.id == note.sool_id).first()
     if not sool_exists:
@@ -39,14 +41,7 @@ def create_tasting(note: TastingCreate, db: Session = Depends(get_db)):
             detail=f"Sool ID {note.sool_id} not found"
         )
 
-    # ✅ 모델 컬럼만 남겨서 안전하게 insert
-    data = note.model_dump(exclude_unset=True) if hasattr(note, "model_dump") else note.dict(exclude_unset=True)
-    
-    allowed = set(TastingNote.__table__.columns.keys())
-    data = {k: v for k, v in data.items() if k in allowed}
-
-    
-    new_note = TastingNote(**data)
+    new_note = TastingNote(**note.model_dump(exclude_unset=True))
     db.add(new_note)
     db.commit()
     db.refresh(new_note)
@@ -82,21 +77,13 @@ def tasting_profile(sool_id: int, db: Session = Depends(get_db)):
 
 
 # -------------------------------------------------
-# ⭐ GET: 평균 별점 요약 (프론트 핵심)
+# ⭐ GET: 노트 개수 요약 (tasting_notes 에는 rating 컬럼이 없음)
 # -------------------------------------------------
 @router.get("/summary/{sool_id}")
 def tasting_summary(sool_id: int, db: Session = Depends(get_db)):
-
-    result = (
-        db.query(
-            func.count(TastingNote.id).label("count"),
-            func.avg(TastingNote.rating).label("avg")
-        )
+    count = (
+        db.query(func.count(TastingNote.id))
         .filter(TastingNote.sool_id == sool_id)
-        .first()
+        .scalar()
     )
-
-    return {
-        "count": result.count,
-        "avg": round(result.avg, 2) if result.avg else 0,
-    }
+    return {"count": count or 0}

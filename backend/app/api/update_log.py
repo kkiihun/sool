@@ -4,6 +4,8 @@ from sqlalchemy.orm import Session
 from sqlalchemy import desc
 
 from app.core.database import get_db
+from app.core.deps import require_admin
+from app.models.user import User
 from app.schemas.update_schema import UpdateCreate, UpdateResponse
 from app.models.update import Update
 
@@ -11,7 +13,7 @@ router = APIRouter(prefix="/updates", tags=["Updates"])
 
 
 @router.post("/", response_model=UpdateResponse)
-def create_update(payload: UpdateCreate, db: Session = Depends(get_db)):
+def create_update(payload: UpdateCreate, db: Session = Depends(get_db), _admin: User = Depends(require_admin)):
     row = Update(message=payload.message, source="ui")
     db.add(row)
     db.commit()

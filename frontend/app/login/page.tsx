@@ -13,26 +13,13 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const router = useRouter();
   const { login } = useAuth();
-  const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
 
   const onFinish = async (values: any) => {
     setLoading(true);
     try {
-      const res = await fetch(`${API_URL}/auth/login`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(values),
-      });
-
-      if (res.ok) {
-        const data = await res.json();
-        await login(data.access_token);
-      } else {
-        const error = await res.json();
-        message.error(error.detail || "Login failed. Check your credentials.");
-      }
-    } catch (err) {
-      message.error("Server connection failed.");
+      await login(values.email, values.password);
+    } catch (err: any) {
+      message.error(err?.message || "Server connection failed.");
     } finally {
       setLoading(false);
     }

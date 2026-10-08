@@ -69,17 +69,34 @@
 
 ---
 
-# 실행 방법 (Windows 기준: Docker DB/Backend + Front 로컬)
+# 실행 방법
 
-## 0) 준비물
-- Docker Desktop (WSL2 권장)
-- Node.js **>= 20.9.0** (Next.js 16 요구사항)
-- Git
+구조: 브라우저 → **frontend(:3300)** → `/api/proxy/*` → backend(:8000, 내부망) → MariaDB(내부망)
+인증은 HttpOnly 쿠키(`access_token`) 하나로 통일되어 있고, 외부에 열리는 포트는 프론트 하나뿐입니다.
+
+## 0) 환경변수
+```bash
+cp .env.example .env
+# DB_PASSWORD / MYSQL_ROOT_PASSWORD / SECRET_KEY 값 변경 (SECRET_KEY: openssl rand -hex 32)
+```
+
+## 1) 운영 (리눅스 서버)
+```bash
+docker compose up -d --build        # 또는 ./ops/deploy.sh main
+```
+- 접속: `http://<서버IP>:3300`
+- 최초 1회 데이터 적재: `docker exec -it sool-backend bash -c "PYTHONPATH=. python scripts/import_sool_basic.py"`
+  (기존 DB를 옮길 땐 `./ops/backup.sh` → 파일 복사 → `./ops/restore.sh <파일>`)
+- 백업: `./ops/backup.sh` (crontab 예시는 스크립트 상단 참고)
+
+## 2) 개발 (맥: 소스 마운트 + 핫리로드)
+```bash
+docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d --build
+```
+- Frontend: http://localhost:3300
+- Backend API 문서: http://localhost:8000/docs (DB: localhost:3306)
 
 ---
-
-## 1) DB + Backend 실행 (Docker)
-프로젝트 루트에서:
 
 본 프로젝트는  
 **데이터 분석가 / 백엔드 포지션 지원을 위한 포트폴리오**로,
@@ -90,41 +107,3 @@
 - 서비스 구조 설계
 
 역량을 **실제 구현 결과물**로 증명하는 것을 목표로 합니다.
-
-
-  실행 방법
-
-  프로젝트 루트 디렉토리에서 아래 명령어를 순서대로 실행하세요.
-
-
-   1. 서비스 실행:
-   1     docker-compose up -d --build
-
-   2. 초기 데이터 로드 (Seeding):
-   1     docker exec -it sool-backend bash -c "PYTHONPATH=. python scripts/import_sool_basic.py"
-   3. 접속:
-       * Frontend: http://localhost:3000 (http://localhost:3000)
-       * Backend API: http://localhost:8000 (http://localhost:8000)
-
-
-  실행 방법
-
-  프로젝트 루트 디렉토리에서 아래 명령어를 순서대로 실행하세요.
-
-
-   1. 서비스 실행:
-      docker-compose up --build -d
-
-   2. 초기 데이터 로드 (Seeding):
-      docker exec -it sool-backend bash -c "PYTHONPATH=. python scripts/import_sool_basic.py"
-
-   3. 접속:
-       * Frontend: http://localhost:3300 (http://localhost:3000)
-       * Backend API: http://localhost:8000 (http://localhost:8000)
-
-   4. 관리자 아이디
-      Id : admin@sool.com
-      PW : admin1234
-   
-   5. 서비스 다운:
-      docker-compose down

@@ -1,5 +1,6 @@
 "use client";
 
+import { API_BASE, assetUrl } from "@/lib/api";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import {
@@ -62,26 +63,13 @@ export default function Home() {
   const [regionOptions, setRegionOptions] = useState<string[]>(["전체"]);
   const [loading, setLoading] = useState(false);
   
-  const getApiUrl = () => {
-    const envUrl = process.env.NEXT_PUBLIC_API_URL;
-    if (envUrl) return envUrl;
-    return "http://127.0.0.1:8000";
-  };
 
-  const API_URL = getApiUrl();
   const pageSize = 12;
-
-  const resolveImageUrl = (url: string) => {
-    if (!url) return null;
-    if (url.startsWith('http')) return url;
-    if (url.startsWith('/static')) return `${API_URL}${encodeURI(url)}`;
-    return url;
-  };
 
   useEffect(() => {
     async function loadRegions() {
       try {
-        const res = await fetch(`${API_URL}/sool/regions`, { headers: { 'Accept': 'application/json' } });
+        const res = await fetch(`${API_BASE}/sool/regions`, { headers: { 'Accept': 'application/json' } });
         if (res.ok) {
           const data = await res.json();
           setRegionOptions(["전체", ...(data ?? [])]);
@@ -92,13 +80,13 @@ export default function Home() {
     }
 
     loadRegions();
-  }, [API_URL]);
+  }, []);
 
   useEffect(() => {
     const handler = setTimeout(() => {
       async function fetchData() {
         setLoading(true);
-        let url = `${API_URL}/sool/filter?page=${page}&page_size=${pageSize}`;
+        let url = `${API_BASE}/sool/filter?page=${page}&page_size=${pageSize}`;
         if (search.length >= 2) url += `&q=${encodeURIComponent(search)}`;
         if (category) url += `&category=${encodeURIComponent(category)}`;
         if (region !== "전체") url += `&region=${encodeURIComponent(region)}`;
@@ -120,7 +108,7 @@ export default function Home() {
       fetchData();
     }, search ? 400 : 0);
     return () => clearTimeout(handler);
-  }, [page, search, category, region, sortOption, API_URL]);
+  }, [page, search, category, region, sortOption]);
 
   const resetFilters = () => {
     setSearch("");
@@ -385,7 +373,7 @@ export default function Home() {
                       }}>
                         {item.image_url ? (
                           <img 
-                            src={resolveImageUrl(item.image_url) || ""} 
+                            src={assetUrl(item.image_url) || ""} 
                             alt={item.name} 
                             style={{ width: "100%", height: "100%", objectFit: "cover" }} 
                           />

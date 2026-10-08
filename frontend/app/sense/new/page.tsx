@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { API_BASE } from "@/lib/api";
+import { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
 import {
   Layout,
@@ -38,7 +39,7 @@ const { Title, Text, Paragraph } = Typography;
 const { TextArea } = Input;
 const { Option } = Select;
 
-export default function SenseForm() {
+function SenseForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const preSelectedSoolId = searchParams.get("sool_id");
@@ -49,13 +50,6 @@ export default function SenseForm() {
   const [submitting, setSubmitting] = useState(false);
   const [soolOptions, setSoolOptions] = useState<any[]>([]);
   const [fetchingSool, setFetchingSool] = useState(false);
-
-  const getApiUrl = () => {
-    if (process.env.NEXT_PUBLIC_API_URL) return process.env.NEXT_PUBLIC_API_URL;
-    return "http://127.0.0.1:8000";
-  };
-
-  const API_URL = getApiUrl();
 
   useEffect(() => {
     form.setFieldsValue({
@@ -78,8 +72,8 @@ export default function SenseForm() {
     setFetchingSool(true);
     try {
       const url = value.length > 0 
-        ? `${API_URL}/v2/sool/suggest?q=${encodeURIComponent(value)}`
-        : `${API_URL}/sool/all`;
+        ? `${API_BASE}/sool/filter?q=${encodeURIComponent(value)}&page_size=50`
+        : `${API_BASE}/sool/all`;
       
       const res = await fetch(url);
       if (res.ok) {
@@ -95,8 +89,7 @@ export default function SenseForm() {
   };
 
   const onFinish = async (values: any) => {
-    const token = localStorage.getItem('sool_token');
-    if (!token) {
+    if (!user) {
       message.error("Please login to save tasting notes.");
       return;
     }
@@ -108,11 +101,10 @@ export default function SenseForm() {
     };
 
     try {
-      const res = await fetch(`${API_URL}/sense/`, {
+      const res = await fetch(`${API_BASE}/sense/`, {
         method: "POST",
         headers: { 
           "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`
         },
         body: JSON.stringify(payload),
       });
@@ -365,5 +357,14 @@ export default function SenseForm() {
         }
       `}</style>
     </Layout>
+  );
+}
+
+// useSearchParams 는 Suspense 경계가 필요 (next build 프리렌더 요구사항)
+export default function SenseNewPage() {
+  return (
+    <Suspense fallback={null}>
+      <SenseForm />
+    </Suspense>
   );
 }

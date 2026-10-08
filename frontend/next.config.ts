@@ -1,23 +1,13 @@
 import type { NextConfig } from "next";
 
-const rawBackend = process.env.BACKEND_URL ?? "http://127.0.0.1:8000";
-const backend = rawBackend.replace(/\/+$/, "");
-
 const nextConfig: NextConfig = {
-  async rewrites() {
-    return [
-      // ✅ /proxy/tasting 또는 /proxy/tasting/ 모두 백엔드의 /tasting/ 로 고정
-      { source: "/proxy/tasting", destination: `${backend}/tasting/` },
-      { source: "/proxy/tasting/", destination: `${backend}/tasting/` },
-
-      // ✅ 나머지는 일반 프록시
-      { source: "/proxy/:path*", destination: `${backend}/:path*` },
-
-      { source: "/auth/:path*", destination: "http://127.0.0.1:8000/auth/:path*" },
-      { source: "/users/:path*", destination: "http://127.0.0.1:8000/users/:path*" },
-
-    ];
-  },
+  // 운영 이미지용: .next/standalone 에 server.js + 필요한 node_modules 만 포함
+  output: "standalone",
+  // 상위 폴더의 다른 lockfile 때문에 루트를 잘못 잡지 않도록 frontend 폴더로 고정
+  outputFileTracingRoot: __dirname,
+  turbopack: { root: __dirname },
+  // /api/proxy/sense/ 처럼 끝 슬래시를 그대로 백엔드에 전달 (FastAPI 307 리다이렉트 방지)
+  skipTrailingSlashRedirect: true,
 };
 
 export default nextConfig;

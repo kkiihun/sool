@@ -1,5 +1,6 @@
 "use client";
 
+import { API_BASE } from "@/lib/api";
 import { useState } from "react";
 import { Form, Input, Button, Typography, Card, message } from "antd";
 import { UserOutlined, LockOutlined, ArrowLeftOutlined, MailOutlined } from "@ant-design/icons";
@@ -11,12 +12,11 @@ const { Title, Text } = Typography;
 export default function SignupPage() {
   const [loading, setLoading] = useState(false);
   const router = useRouter();
-  const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
 
   const onFinish = async (values: any) => {
     setLoading(true);
     try {
-      const res = await fetch(`${API_URL}/auth/signup`, {
+      const res = await fetch(`${API_BASE}/auth/signup`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(values),

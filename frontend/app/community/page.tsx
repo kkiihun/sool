@@ -1,5 +1,6 @@
 "use client";
 
+import { API_BASE } from "@/lib/api";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
@@ -59,11 +60,9 @@ export default function CommunityPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [newPost, setNewPost] = useState({ notes: "", rating: 5, sool_id: "" });
 
-  const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
-
   const fetchFeed = async () => {
     try {
-      const res = await fetch(`${API_URL}/sense/list?limit=20`);
+      const res = await fetch(`${API_BASE}/sense/list?limit=20`);
       if (res.ok) {
         const data = await res.json();
         setFeed(data);
@@ -77,7 +76,7 @@ export default function CommunityPage() {
 
   useEffect(() => {
     fetchFeed();
-  }, [API_URL]);
+  }, []);
 
   const handlePost = async () => {
     if (!newPost.notes || !newPost.sool_id) {
@@ -85,7 +84,7 @@ export default function CommunityPage() {
       return;
     }
     try {
-      const res = await fetch(`${API_URL}/sense/`, {
+      const res = await fetch(`${API_BASE}/sense/`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -314,7 +313,7 @@ export default function CommunityPage() {
         onCancel={() => setIsModalOpen(false)}
         footer={null}
         style={{ borderRadius: 20 }}
-        styles={{ content: { background: "#111", border: "1px solid #333" }, header: { background: "#111", borderBottom: "1px solid #222" } }}
+        styles={{ container: { background: "#111", border: "1px solid #333" }, header: { background: "#111", borderBottom: "1px solid #222" } }}
       >
 <Space direction="vertical" size="large" style={{ width: "100%", padding: "20px 0" }}>
           <div>

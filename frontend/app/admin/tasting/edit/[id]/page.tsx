@@ -1,5 +1,6 @@
 "use client";
 
+import { API_BASE } from "@/lib/api";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import SliderInput from "@/components/SliderInput";
@@ -15,15 +16,7 @@ type TastingForm = {
   [key: string]: any;
 };
 
-// ✅ env로 통일 (지금은 http://localhost:8000)
-// ✅ 추후 프록시 쓰면 NEXT_PUBLIC_API_BASE_URL=/proxy 로만 바꾸면 됨
-const API_BASE =
-  (process.env.NEXT_PUBLIC_API_BASE_URL ?? "/proxy").replace(/\/$/, "");
-
-const apiUrl = (path: string) => {
-  const p = path.startsWith("/") ? path : `/${path}`;
-  return `${API_BASE}${p}`;
-};
+const apiUrl = (path: string) => `${API_BASE}${path.startsWith("/") ? path : `/${path}`}`;
 
 export default function EditTastingPage({ params }: { params: { id: string } }) {
   const router = useRouter();

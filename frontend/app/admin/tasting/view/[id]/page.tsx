@@ -1,5 +1,6 @@
 "use client";
 
+import { API_BASE } from "@/lib/api";
 import { useEffect, useState } from "react";
 import { Radar } from "react-chartjs-2";
 import {
@@ -34,7 +35,7 @@ export default function TastingDetailPage({ params }: { params: Promise<{ id: st
   useEffect(() => {
     if (!id) return;
 
-    fetch(`http://127.0.0.1:8000/v2/tasting/note/${id}`)
+    fetch(`${API_BASE}/v2/tasting/note/${id}`)
       .then((res) => res.json())
       .then(setNote);
   }, [id]);
@@ -75,7 +76,7 @@ export default function TastingDetailPage({ params }: { params: Promise<{ id: st
         <button
           onClick={async () => {
             if (!confirm("정말 삭제할까요?")) return;
-            await fetch(`http://127.0.0.1:8000/v2/tasting/note/${note.id}`, { method:"DELETE" });
+            await fetch(`${API_BASE}/v2/tasting/note/${note.id}`, { method:"DELETE" });
             alert("삭제되었습니다");
             location.href="/admin/tasting/list";
           }}

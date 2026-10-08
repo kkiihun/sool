@@ -1,11 +1,11 @@
 "use client";
 
-import AppShellProvider, { useAppShell } from "./AppShellProvider";
+import { useAuth } from "./AuthProvider";
 import Link from "next/link";
 import AppHeader from "@/components/AppHeader";
 
 function HeaderBar() {
-  const { isAdmin } = useAppShell();
+  const isAdmin = !!useAuth().user?.is_admin;
 
   return (
     <header
@@ -36,9 +36,9 @@ function HeaderBar() {
 
 export default function AppShellClient({ children }: { children: React.ReactNode }) {
   return (
-    <AppShellProvider>
+    <>
       <HeaderBar />
       <div className="min-h-screen bg-black">{children}</div>
-    </AppShellProvider>
+    </>
   );
 }

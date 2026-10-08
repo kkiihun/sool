@@ -1,5 +1,6 @@
 "use client";
 
+import { API_BASE } from "@/lib/api";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
@@ -58,14 +59,12 @@ export default function DiscoveryPage() {
   const [recentActivity, setRecentActivity] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
-
   useEffect(() => {
     async function fetchData() {
       try {
         const [soolRes, activityRes] = await Promise.all([
-          fetch(`${API_URL}/sool/new-arrivals`),
-          fetch(`${API_URL}/sense/list`),
+          fetch(`${API_BASE}/sool/new-arrivals`),
+          fetch(`${API_BASE}/sense/list`),
         ]);
 
         if (soolRes.ok) setNewSool(await soolRes.json());
@@ -80,7 +79,7 @@ export default function DiscoveryPage() {
       }
     }
     fetchData();
-  }, [API_URL]);
+  }, []);
 
   return (
     <Layout style={{ minHeight: "100vh", backgroundColor: "#0a0a0a" }}>

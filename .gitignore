@@ -49,3 +49,6 @@ docker-compose.override.yml
 backend/.env.*
 docker-compose.override.yml
 
+
+# DB backups
+backups/

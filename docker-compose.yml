@@ -1,57 +1,55 @@
+# 운영(리눅스 서버) 기본 구성:  docker compose up -d --build
+# 맥 개발용:  docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d --build
+# 비밀값은 루트 .env 에서 읽음 (.env.example 참고)
+
 services:
   db:
     image: mariadb:10.11
     container_name: sool-mariadb
+    restart: unless-stopped
     environment:
-      MYSQL_ROOT_PASSWORD: rootpass
-      MYSQL_DATABASE: sool
-      MYSQL_USER: sool
-      MYSQL_PASSWORD: soolpass
-    ports:
-      - "3306:3306"
+      MARIADB_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?set MYSQL_ROOT_PASSWORD in .env}
+      MARIADB_DATABASE: ${DB_NAME:-sool}
+      MARIADB_USER: ${DB_USER:-sool}
+      MARIADB_PASSWORD: ${DB_PASSWORD:?set DB_PASSWORD in .env}
+    # 운영에서는 DB 포트를 외부에 열지 않음 (백엔드만 내부 네트워크로 접근)
     volumes:
       - sool_mariadb_data:/var/lib/mysql
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p$MYSQL_ROOT_PASSWORD"]
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
       interval: 10s
       timeout: 5s
-      retries: 5
+      retries: 10
 
   backend:
     build: ./backend
     container_name: sool-backend
-    env_file:
-      - .env
+    restart: unless-stopped
     environment:
-      - DB_HOST=db
-      - DB_USER=sool
-      - DB_PASSWORD=soolpass
-      - DB_NAME=sool
+      DB_HOST: db
+      DB_PORT: "3306"
+      DB_USER: ${DB_USER:-sool}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_NAME: ${DB_NAME:-sool}
+      SECRET_KEY: ${SECRET_KEY:?set SECRET_KEY in .env}
+      COOKIE_SECURE: ${COOKIE_SECURE:-false}
     depends_on:
       db:
         condition: service_healthy
-    ports:
-      - "8000:8000"
-    volumes:
-      - ./backend:/app  # ⭐ 로컬 백엔드 코드 연동 (실시간 반영)
-      - ./backend/app/static:/app/app/static
-    # FastAPI 개발용 핫 리로딩 활성화
-    command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+    # 백엔드도 외부 미노출: 브라우저 → frontend(/api/proxy) → backend:8000
 
   frontend:
     build:
       context: ./frontend
       target: runner
     container_name: sool-frontend
-    ports:
-      - "3300:3000"
+    restart: unless-stopped
     environment:
-      - NEXT_PUBLIC_API_URL=http://localhost:8000
-      - WATCHPACK_POLLING=true # 도커 환경에서 핫 리로딩 신뢰성 향상
-    volumes:
-      - ./frontend:/app
-      - /app/node_modules
-      - /app/.next
+      BACKEND_URL: http://backend:8000
+      GIT_BRANCH: ${GIT_BRANCH:-unknown-branch}
+      GIT_SHA: ${GIT_SHA:-unknown-sha}
+    ports:
+      - "${FRONT_PORT:-3300}:3000"
     depends_on:
       - backend
 

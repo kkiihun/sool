@@ -1,36 +1,14 @@
 import { NextResponse } from "next/server";
-import { execSync } from "node:child_process";
-import path from "node:path";
 
-export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-export const revalidate = 0;
 
-// repo root 강제: frontend/app/api/build/route.ts 기준으로
-// => frontend 폴더의 상위가 repo root
-const REPO_ROOT = path.resolve(process.cwd(), "..");
-
-function safeExec(cmd: string) {
-  return execSync(cmd, {
-    cwd: REPO_ROOT,                 // ✅ 여기 핵심
-    encoding: "utf8",
-    stdio: ["ignore", "pipe", "ignore"],
-  }).trim();
-}
-
+// 배포 시 deploy.sh 가 GIT_BRANCH / GIT_SHA 를 넣어줌 (컨테이너 안에는 git 이 없음)
 export async function GET() {
-  try {
-    const sha = safeExec("git rev-parse --short HEAD");
-    const branch = safeExec("git branch --show-current") || "detached";
-
-    return NextResponse.json(
-      { branch, sha },
-      { headers: { "Cache-Control": "no-store" } }
-    );
-  } catch {
-    return NextResponse.json(
-      { branch: "unknown-branch", sha: "unknown-sha" },
-      { headers: { "Cache-Control": "no-store" } }
-    );
-  }
+  return NextResponse.json(
+    {
+      branch: process.env.GIT_BRANCH || "unknown-branch",
+      sha: process.env.GIT_SHA || "unknown-sha",
+    },
+    { headers: { "Cache-Control": "no-store" } }
+  );
 }

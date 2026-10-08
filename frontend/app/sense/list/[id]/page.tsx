@@ -1,5 +1,6 @@
 "use client";
 
+import { API_BASE } from "@/lib/api";
 import { useEffect, useState } from "react";
 import axios from "axios";
 import { useParams } from "next/navigation";
@@ -11,7 +12,7 @@ export default function SenseDetail() {
 
   const fetchData = async () => {
     try {
-      const res = await axios.get(`http://localhost:8000/sense/${id}`);
+      const res = await axios.get(`${API_BASE}/sense/${id}`);
       setData(res.data);
     } catch (error) {
       alert("데이터 불러오기 실패");

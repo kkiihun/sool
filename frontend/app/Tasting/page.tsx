@@ -1,5 +1,6 @@
 "use client";
 
+import { API_BASE } from "@/lib/api";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "../components/AuthProvider";
@@ -40,33 +41,22 @@ export default function TastingPage() {
   const [notes, setNotes] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const getApiUrl = () => {
-    if (process.env.NEXT_PUBLIC_API_URL) return process.env.NEXT_PUBLIC_API_URL;
-    return "http://127.0.0.1:8000";
-  };
-
-  const API_URL = getApiUrl();
-
   const fetchNotes = async () => {
-    const token = localStorage.getItem('sool_token');
-    if (!token) {
+    if (!user) {
       setLoading(false);
       return;
     }
 
     try {
-      const res = await fetch(`${API_URL}/sense/`, {
+      const res = await fetch(`${API_BASE}/sense/`, {
         method: 'GET',
         headers: { 
-          'Authorization': `Bearer ${token}`,
           'Accept': 'application/json'
         }
       });
       
       if (res.ok) {
         setNotes(await res.json());
-      } else if (res.status === 401) {
-        localStorage.removeItem('sool_token');
       }
     } catch (err) {
       console.error("Connection Refused:", err);

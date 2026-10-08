@@ -1,5 +1,6 @@
 "use client";
 
+import { API_BASE } from "@/lib/api";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
@@ -41,15 +42,7 @@ interface Sense {
   created_at?: string;
 }
 
-// ✅ env로 통일 (현재: http://localhost:8000)
-// ✅ 프록시로 바꾸면 NEXT_PUBLIC_API_BASE_URL=/proxy 로만 바꾸면 됨
-const API_BASE =
-  (process.env.NEXT_PUBLIC_API_BASE_URL ?? "/proxy").replace(/\/$/, "");
-
-const apiUrl = (path: string) => {
-  const p = path.startsWith("/") ? path : `/${path}`;
-  return `${API_BASE}${p}`;
-};
+const apiUrl = (path: string) => `${API_BASE}${path.startsWith("/") ? path : `/${path}`}`;
 
 export default function SenseListPage() {
   const router = useRouter();
@@ -57,11 +50,9 @@ export default function SenseListPage() {
   const [data, setData] = useState<Sense[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
-
   const fetchData = async () => {
     try {
-      const res = await fetch(`${API_URL}/sense/`);
+      const res = await fetch(`${API_BASE}/sense/`);
       if (res.ok) {
         const json = await res.json();
         setData(json);
@@ -75,7 +66,7 @@ export default function SenseListPage() {
 
   useEffect(() => {
     fetchData();
-  }, [API_URL]);
+  }, []);
 
   const columns = [
     {
