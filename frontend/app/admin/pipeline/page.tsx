@@ -10,6 +10,7 @@ import { CheckCircleOutlined, CloseCircleOutlined, ReloadOutlined, WarningOutlin
 import { useAuth } from "../../components/AuthProvider";
 import CategoryReview from "./CategoryReview";
 import PlaceMap from "./PlaceMap";
+import MarketView from "./MarketView";
 
 const { Title, Text } = Typography;
 
@@ -349,6 +350,7 @@ export default function PipelinePage() {
           }} />
       </Card>
       </>) },
+        { key: "market", label: "시장 구조", children: <MarketView /> },
         { key: "map", label: "양조장 지도", children: <PlaceMap /> },
         { key: "review", label: "주종 검증", children: <CategoryReview /> },
       ]} />

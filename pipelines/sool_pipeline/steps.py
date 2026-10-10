@@ -16,8 +16,9 @@ from .categorize import standardize, suggest
 from .geo import clean_address, geocode, kakao_fetcher, short_sido
 from .links import check as check_link, classify as classify_link, interpret as interpret_link, normalize_url
 from .normalize import is_missing, normalize_name, normalize_producer
+from .market import build_market
 from .profile import build_profile
-from .taste import taste_profile
+from .taste import TASTE_AXES, taste_profile
 from .runner import Context, StepResult
 
 
@@ -245,11 +246,13 @@ def analyze(ctx: Context) -> StepResult:
     profiles = _build_profiles(ctx)
     places = _build_places(ctx)
     purchases = _build_purchases(ctx)
+    market = _build_market(ctx)
 
     ctx.metrics.update({
         "profiles": profiles,
         "places": places,
         "purchases": purchases,
+        "market_metrics": market,
         "total_items": int(len(sug)),
         "category_missing": int(len(missing)),
         "category_rule_resolved": resolved,
@@ -392,8 +395,13 @@ def publish(ctx: Context) -> StepResult:
             conn.execute(text("DELETE FROM analytics_purchase"))
             conn.execute(text(f"INSERT INTO analytics_purchase ({', '.join(_PURCHASE_COLS)}) "
                               f"VALUES ({', '.join(':' + c for c in _PURCHASE_COLS)})"), purchase_rows)
-    return StepResult(out=len(rows) + len(place_rows) + len(purchase_rows),
-                      message=f"술 카드 {len(rows)}행, 장소 {len(place_rows)}행, 구매 경로 {len(purchase_rows)}행 교체")
+        market_rows = _mart_rows(ctx, "mart_market", ["key", "run_date", "payload"])
+        if market_rows:
+            conn.execute(text("DELETE FROM analytics_market"))
+            conn.execute(text("INSERT INTO analytics_market (`key`, run_date, payload) VALUES (:key, :run_date, :payload)"),
+                         market_rows)
+    return StepResult(out=len(rows) + len(place_rows) + len(purchase_rows) + len(market_rows),
+                      message=f"술 카드 {len(rows)}, 장소 {len(place_rows)}, 구매 경로 {len(purchase_rows)}, 시장 지표 {len(market_rows)}행 교체")
 
 
 _PURCHASE_COLS = ["sool_id", "run_date", "url", "channel", "online_buy", "link_state", "http_code",
@@ -565,3 +573,45 @@ def _build_purchases(ctx: Context) -> int:
         "online_buy_reachable": int((out["online_buy"] & out["link_state"].isin(["alive", "login", "blocked"])).sum()),
     }
     return int(len(out))
+
+
+# 시장 구조 지표 (P6): 술 카드 + 시도 + 장소 + 구매 경로를 제품 단위로 합쳐 계산 → mart_market (key, payload JSON)
+def _build_market(ctx: Context) -> int:
+    with duckdb.connect(str(ctx.warehouse)) as con:
+        tables = {r[0] for r in con.execute("SHOW TABLES").fetchall()}
+        df = con.execute("SELECT * FROM mart_sool_profile").df()
+        geo = con.execute("SELECT key, sido FROM geo_cache").df() if "geo_cache" in tables else pd.DataFrame(columns=["key", "sido"])
+        places = con.execute("SELECT place_id, products FROM mart_place").df() if "mart_place" in tables else pd.DataFrame(columns=["place_id", "products"])
+        purchase = (con.execute("SELECT sool_id, online_buy, link_state FROM mart_purchase").df()
+                    if "mart_purchase" in tables else pd.DataFrame(columns=["sool_id", "online_buy", "link_state"]))
+
+    # 시도: 좌표 변환 결과 우선, 없으면 DB 의 region
+    df["geo_key"] = [_geo_key(a, p) for a, p in zip(df["address"], df["producer"])]
+    df = df.merge(geo.rename(columns={"key": "geo_key", "sido": "geo_sido"}), on="geo_key", how="left")
+    df["sido"] = [short_sido(g) if isinstance(g, str) and g else (
+        short_sido(r) if isinstance(r, str) and not is_missing(r) else None) for g, r in zip(df["geo_sido"], df["region"])]
+    # 장소: mart_place 의 제품 목록에서 sool_id → place_id
+    place_of = {p["sool_id"]: pid for pid, prods in zip(places["place_id"], places["products"]) for p in json.loads(prods)}
+    df["place_id"] = df["sool_id"].map(place_of)
+    # 구매 경로
+    df = df.merge(purchase, on="sool_id", how="left")
+    df["online_reachable"] = df["online_buy"].fillna(False).astype(bool) & df["link_state"].isin(["alive", "login", "blocked"])
+    df["special_ingredients"] = df["special_ingredients"].map(lambda v: list(v) if v is not None and len(v) else [])
+
+    market = build_market(df, list(TASTE_AXES))
+    rows = pd.DataFrame([{"key": k, "run_date": ctx.run_date, "payload": json.dumps(v, ensure_ascii=False, default=str)}
+                         for k, v in market.items()])
+    with duckdb.connect(str(ctx.warehouse)) as con:
+        con.register("rows", rows)
+        con.execute("CREATE OR REPLACE TABLE mart_market AS SELECT * FROM rows")
+    (ctx.output_dir / f"market-{ctx.run_date}.json").write_text(
+        json.dumps(market, ensure_ascii=False, indent=2, default=str), encoding="utf-8")
+
+    bs, pa = market["brewery_structure"], market["purchase_access"]
+    ctx.metrics["market_summary"] = {
+        "top_specialized": [f'{x["sido"]} {x["category"]} LQ {x["lq"]}' for x in market["region_specialization"]["top_specialized"][:3]],
+        "breweries": bs["breweries"], "top10_share": bs["top10_share"], "gini": bs["gini"],
+        "online_reachable": pa["overall"], "abv_outliers": market["abv_profile"]["outlier_count"],
+        "hidden_gems": len(market["hidden_gems"]),
+    }
+    return len(rows)

@@ -116,3 +116,12 @@ class AnalyticsPurchase(Base):
     http_code = Column(Integer)
     final_url = Column(String(500))
     checked_at = Column(DateTime)
+
+
+class AnalyticsMarket(Base):
+    """시장 구조 지표 (P6): 지표 이름 → 화면용 JSON. 파이프라인이 매 실행마다 교체."""
+    __tablename__ = "analytics_market"
+
+    key = Column(String(40), primary_key=True)
+    run_date = Column(Date, nullable=False)
+    payload = Column(JSON, nullable=False)

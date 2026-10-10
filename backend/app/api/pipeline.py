@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.core.deps import require_admin
-from app.models.analytics import AnalyticsPlace, AnalyticsPurchase, AnalyticsSoolProfile, CategoryReview, PipelineRun
+from app.models.analytics import AnalyticsMarket, AnalyticsPlace, AnalyticsPurchase, AnalyticsSoolProfile, CategoryReview, PipelineRun
 from app.models.sool import Sool
 from app.models.user import User
 
@@ -140,6 +140,13 @@ def pipeline_places(visit_only: bool = False, sido: Optional[str] = None, db: Se
         "items": [{c: getattr(p, c) for c in cols} for p in places if p.lat is not None],
         "unlocated": [{"name": p.name, "address": p.address} for p in places if p.lat is None][:50],
     }
+
+
+@router.get("/market")
+def pipeline_market(db: Session = Depends(get_db)):
+    """시장 구조 지표 전체 (지표 이름 → 내용)"""
+    rows = db.query(AnalyticsMarket).all()
+    return {"run_date": rows[0].run_date if rows else None, **{r.key: r.payload for r in rows}}
 
 
 # ---------------------------------------------------------------------------
