@@ -55,3 +55,12 @@ def test_unknown_step_rejected(tmp_path):
         Job("t", tmp_path).step("deploy")
     with pytest.raises(ValueError):
         make_job(tmp_path, []).run(only=["publish"])
+
+
+def test_finish_hook_receives_status_and_failure_is_isolated(tmp_path):
+    got = []
+    job = make_job(tmp_path, [])
+    job.finish_hooks.append(lambda st: got.append(st["ok"]))
+    job.finish_hooks.append(lambda st: 1 / 0)          # 훅 실패는 실행 결과에 영향 없음
+    status = job.run()
+    assert got == [True] and status["ok"] is True

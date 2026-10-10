@@ -79,6 +79,8 @@ class Job:
         self.data_dir = Path(data_dir)
         self.config = config or {}
         self.steps: dict[str, StepFn] = {}
+        # 실행이 끝난 뒤 status 를 받아 처리할 함수들 (예: DB 에 실행 기록). 실패해도 실행 결과는 바뀌지 않음
+        self.finish_hooks: list[Callable[[dict[str, Any]], None]] = []
 
     def step(self, name: str) -> Callable[[StepFn], StepFn]:
         if name not in STEP_ORDER:
@@ -141,6 +143,11 @@ class Job:
             "message": "실패한 단계가 있습니다" if failed else "정상 완료",
         }
         self._write_status(status)
+        for hook in self.finish_hooks:
+            try:
+                hook(status)
+            except Exception as ex:
+                print(f"⚠️  finish hook 실패 ({getattr(hook, '__name__', hook)}): {ex}")
         return status
 
     def _select(self, only: list[str] | None, start_from: str | None) -> set[str]:

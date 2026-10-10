@@ -11,6 +11,7 @@ import {
   CompassOutlined,
   HeartOutlined,
   SafetyCertificateOutlined,
+  DeploymentUnitOutlined,
   MenuFoldOutlined,
   MenuUnfoldOutlined,
   BellOutlined,
@@ -41,7 +42,8 @@ function ShellLayout({ children }: { children: React.ReactNode }) {
     { key: "/community", icon: <HeartOutlined style={{ fontSize: '18px' }} />, label: "Community" },
     ...(isAdmin ? [
       { key: "admin-divider", type: "divider" as const, style: { margin: "24px 0", borderColor: "rgba(255,255,255,0.05)" } },
-      { key: "/admin", icon: <SafetyCertificateOutlined style={{ fontSize: '18px' }} />, label: "Admin Console" }
+      { key: "/admin", icon: <SafetyCertificateOutlined style={{ fontSize: '18px' }} />, label: "Admin Console" },
+      { key: "/admin/pipeline", icon: <DeploymentUnitOutlined style={{ fontSize: '18px' }} />, label: "Data Pipeline" }
     ] : [])
   ];
 

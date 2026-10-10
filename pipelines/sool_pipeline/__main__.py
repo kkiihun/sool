@@ -21,6 +21,9 @@ def build_job(config_path: Path, data_dir: Path) -> Job:
     job.step("collect")(steps.collect)
     job.step("clean")(steps.clean)
     job.step("analyze")(steps.analyze)
+    job.step("publish")(steps.publish)
+    if config.get("record_runs", True):
+        job.finish_hooks.append(steps.record_run)
     return job
 
 

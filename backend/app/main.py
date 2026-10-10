@@ -25,6 +25,7 @@ from app.models.review import Review
 from app.models.sense import Sense
 from app.models.tasting import Tasting
 from app.models.tasting_note import TastingNote
+from app.models.analytics import AnalyticsSoolProfile, PipelineRun
 
 # =====================#
 #   Router Import
@@ -37,6 +38,7 @@ from app.api import update_log, auth, users
 from app.api import report
 from app.api.utils.recommender import flavor_vector
 from app.api.tasting_note import router as tasting_note_router
+from app.api.pipeline import router as pipeline_router
 
 
 
@@ -54,6 +56,7 @@ app.include_router(auth.router)
 app.include_router(users.router)
 app.include_router(report.router)
 app.include_router(tasting_note_router)
+app.include_router(pipeline_router)
 
 
 # =====================#
