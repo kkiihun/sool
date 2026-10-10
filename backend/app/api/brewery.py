@@ -127,7 +127,7 @@ def brewery_report(place_id: str, db: Session = Depends(get_db)):
         "summary": s,
         "ingredients": ingredients,
         "ranks": ranks,
-        "issues": build_issues(s, place),
+        "issues": build_issues(s, place, ingredients),
         "strengths": strengths(s, place, ranks),
         "products": sorted(products, key=lambda p: (p["card_score"] or 0, p["name"])),
         "pairing": pairing,

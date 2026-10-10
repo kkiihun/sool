@@ -78,6 +78,11 @@ def _collect_ingredient_prices(ctx: Context) -> dict:
             unit VARCHAR, unit_sz VARCHAR, prc DOUBLE, kg_prc DOUBLE)""")
         con.execute("""CREATE TABLE IF NOT EXISTS ingredient_fetch (
             ingredient VARCHAR, ym VARCHAR, rows INTEGER, fetched_at TIMESTAMP, PRIMARY KEY (ingredient, ym))""")
+        # 목록에서 뺀 원료의 쌓인 행 정리
+        keep = list(ingr.INGREDIENTS)
+        marks = ",".join("?" * len(keep))
+        con.execute(f"DELETE FROM ingredient_price WHERE ingredient NOT IN ({marks})", keep)
+        con.execute(f"DELETE FROM ingredient_fetch WHERE ingredient NOT IN ({marks})", keep)
         done = {(r[0], r[1]) for r in con.execute("SELECT ingredient, ym FROM ingredient_fetch").fetchall()}
         # 최근 달부터 (모든 원료가 먼저 최신 시세를 갖도록), 같은 달 안에서는 원료 순
         todo = [(name, ym) for ym in reversed(months) for name in ingr.INGREDIENTS if (name, ym) not in done or ym in recent]

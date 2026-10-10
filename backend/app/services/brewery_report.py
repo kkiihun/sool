@@ -38,7 +38,17 @@ def summarize(products: list[dict]) -> dict:
     }
 
 
-def build_issues(s: dict, place: dict) -> list[dict]:
+FRUITS = {"포도", "사과", "감귤", "복숭아", "배", "단감", "참다래"}   # 파이프라인 ingredients.FRUITS 와 같게
+SWING_PCT = 15
+
+
+def ingredient_swings(ingredients: list[dict]) -> list[dict]:
+    """내 제품 과일 원료 중 전년 같은 달보다 ±15% 넘게 움직인 것"""
+    return [g for g in ingredients
+            if g["ingredient"] in FRUITS and g.get("yoy_pct") is not None and abs(g["yoy_pct"]) >= SWING_PCT]
+
+
+def build_issues(s: dict, place: dict, ingredients: list[dict] | None = None) -> list[dict]:
     """개선할 점: (심각도 high/mid/low, 제목, 설명, 해당 제품 수). 심각도 → 영향 큰 순"""
     out = []
 
@@ -76,6 +86,11 @@ def build_issues(s: dict, place: dict) -> list[dict]:
         add("low", "제품 소개 글이 없는 제품", "한두 문장의 소개(원료·만드는 방식·이야기)를 넣어 주세요.", s["missing"]["description"])
     if s["missing"]["category"]:
         add("low", "주종이 확인되지 않는 제품", "주종(탁주·약주·증류주…)을 정확히 등록해 주세요.", s["missing"]["category"])
+    for g in ingredient_swings(ingredients or []):
+        up = g["yoy_pct"] > 0
+        add("mid" if up else "low", f"원료 가격 {'급등' if up else '하락'}: {g['ingredient']} {'+' if up else ''}{g['yoy_pct']}%",
+            f"도매가(aT, {g['latest_ym'][:4]}.{g['latest_ym'][4:]})가 전년 같은 달보다 {'올랐습니다. 원료 구매 시기·가격 계획을 점검해 보세요' if up else '내렸습니다. 원료를 미리 확보하기 좋은 시기일 수 있습니다'}.",
+            g.get("my_products"))
     if place.get("geo_method") and place["geo_method"] != "address":
         add("low", "지도 위치가 추정값", "등록 주소로 위치를 찾지 못해 양조장 이름으로 찾은 위치입니다. 주소를 확인해 주세요.")
     if not out and n:

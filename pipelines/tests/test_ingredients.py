@@ -10,6 +10,7 @@ def test_match_ingredients_avoids_false_friends():
     assert match_ingredients("배합주정, 정제수") == []                    # 배합 ≠ 배
     assert set(match_ingredients("배(국산), 사과농축액, 땅콩")) == {"배", "사과", "땅콩"}
     assert match_ingredients("복분자, 오미자") == []                      # 시세 API 에 없는 원료
+    assert match_ingredients("현미, 팥, 참깨") == []                       # 목록에서 뺀 원료
 
 
 def raw(rows):
