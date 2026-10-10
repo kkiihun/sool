@@ -1,71 +1,66 @@
-# 🍶 sool
-## 전통주 데이터 기반 분석 & 추천 시스템 (MVP → v1 전환중)
+# sool (술): Traditional Spirits Data Platform
 
-전통주 데이터를 구조화하고  
-**검색 · 조회 · 분석(그래프)까지 가능한 데이터 중심 서비스**로 구현한 프로젝트입니다.
+[![FastAPI](https://img.shields.io/badge/FastAPI-005571?style=flat&logo=fastapi)](https://fastapi.tiangolo.com/)
+[![Next.js](https://img.shields.io/badge/Next.js-000000?style=flat&logo=nextdotjs)](https://nextjs.org/)
+[![MariaDB](https://img.shields.io/badge/MariaDB-003545?style=flat&logo=mariadb)](https://mariadb.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=flat&logo=typescript)](https://www.typescriptlang.org/)
 
-> 🍶 Data before recommendation.  
-> Structure first, intelligence later.
-
----
-
-## 프로젝트 개요
-- 전통주 정형 데이터 모델링 (sool / sense / user 기반)
-- DB → API → Frontend 엔드투엔드 파이프라인 구축
-- 분석 기반 추천 시스템 확장 가능 구조
+sool은 한국 전통주의 데이터를 체계화하고 시각화하여, 소비자에게는 개인화된 취향 발견을, 양조장에게는 데이터 기반의 시장 인사이트를 제공하는 플랫폼입니다.
 
 ---
 
-## 기술 스택
-- Backend: FastAPI, SQLAlchemy
-- Database: MariaDB (Docker 기반)
-- Frontend: Next.js, Tailwind CSS
-- Data / Analysis: Pandas
+## 🌟 Key Features
+
+### 1. 소비자 (B2C) - 취향 발견과 기록
+- 테이스팅 노트 (Tasting Notes): 향, 단맛, 산미, 바디감 등을 정밀하게 기록하고 관리.
+- 맛 지표 시각화 (Flavor Radar): 레이더 차트를 통해 복잡한 전통주의 풍미를 한눈에 파악.
+- 취향 기반 추천: 코사인 유사도(Cosine Similarity) 알고리즘을 활용한 맞춤형 전통주 추천.
+
+### 2. 양조장 (B2B) - 데이터 기반 의사결정
+- 제품 분석 리포트: 전체 시장 데이터 대비 자사 제품의 위치를 백분위로 분석.
+- 시장 트렌드 대시보드: 카테고리별, 지역별 전통주 분포 및 선호도 데이터 제공.
 
 ---
 
-## 문서
-- [주요 기능](docs/FEATURES.md)
-- [데이터 분석 결과](docs/ANALYSIS.md)
-- [실행 방법](docs/RUN.md)
-- [로드맵 & 목적](docs/ROADMAP.md)
+## 🛠 Tech Stack
+
+### Backend
+- Framework: FastAPI (Python 3.11+)
+- ORM: SQLAlchemy 2.0
+- Database: MariaDB 10.11
+- Data Analysis: Pandas, Matplotlib, Seaborn
+- Security: JWT (python-jose), Passlib (bcrypt)
+
+### Frontend
+- Framework: Next.js 16 (App Router)
+- UI Library: Ant Design (v6)
+- Visualization: Recharts, Chart.js
+- Styling: Tailwind CSS, CSS Modules
+
+### DevOps & Infrastructure
+- Containerization: Docker, Docker Compose
+- Environment: Windows/Linux Support
 
 ---
 
-# 주요 기능
+## 📁 Repository Layout
 
-## 전통주 검색
-- 이름 / 지역 / 주종 기반 검색
-- DB 쿼리 기반 빠른 조회
-
-## 상세 페이지
-- 전통주 기본 정보
-- 도수, 지역, 제조사 등 정형 데이터 제공
-- (옵션) 감각 데이터(sense) 기반 레이더/그래프 표시
-
-## 리뷰 저장 구조
-- 사용자 리뷰 저장 가능한 테이블 설계
-- 평점 및 취향 데이터 확장 가능
-
-## 데이터 기반 통계
-- 도수 평균
-- 지역별 분포
-- 주종별 개수 통계
-
----
-
-# 데이터 분석 결과 (MVP)
-현재는 **기초 통계 분석 중심의 MVP 단계**입니다.  
-데이터 구조 검증 및 분석 파이프라인 구축을 목적으로 합니다.
-
-## 전통주 도수 분포
-![ABV Distribution](images/abv_distribution.png)
-
-## 지역별 전통주 분포
-![Region Distribution](images/region_distribution.png)
-
-## 주종별 전통주 비율
-![Type Ratio](images/type_ratio.png)
+```text
+.
+├── backend/            # FastAPI app, models, migrations, data loaders
+│   ├── app/            # Core application logic (API, Models, Schemas)
+│   ├── data/           # Raw CSV datasets (sool_basic, sense)
+│   └── scripts/        # DB sync, data migration & loading scripts
+├── frontend/           # Next.js app
+│   ├── app/            # App Router pages and components
+│   └── components/     # Reusable UI components
+├── data/               # Shared project data and datasets
+├── docs/               # Project documentation and analysis
+│   └── analysis/       # Service target & market analysis
+├── exports/            # Generated reports (PDF/CSV) and dumps
+├── scripts/            # Root-level utility scripts
+└── docker-compose.yml  # 운영용 compose (개발은 docker-compose.dev.yml 덮어쓰기)
+```
 
 ---
 
@@ -95,6 +90,21 @@ docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d --build
 ```
 - Frontend: http://localhost:3300
 - Backend API 문서: http://localhost:8000/docs (DB: localhost:3306)
+
+---
+
+## 🗺️ Development Roadmap
+
+- [ ] Data Consolidation: Legacy API를 TastingNote 구조로 통합 완료.
+- [ ] Recommendation Engine: 활동 로그 기반 하이브리드 추천 모델 도입.
+- [ ] B2B Dashboard: 양조장 관리자를 위한 실시간 분석 대시보드 구현.
+- [ ] UX Enhancement: 테이스팅 노트 작성 프로세스 인터랙티브 UI 강화.
+
+---
+
+## 📄 Documentation
+- [서비스 타겟 분석 보고서](docs/analysis/service_target_analysis.md)
+- [데이터 마이그레이션 가이드](docs/runbooks/migration-from-development-copy.md)
 
 ---
 

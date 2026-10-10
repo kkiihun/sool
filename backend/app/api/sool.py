@@ -172,11 +172,14 @@ def filter_sool(
     if q and len(q) >= 2:
         query = query.filter(Sool.name.like(f"%{q}%"))
 
-    if region and region != "전체":
+    if region and region not in ("전체", "전체 지역"):
         query = query.filter(Sool.region == region)
 
     if category and category.strip():
-        query = query.filter(Sool.category == category)
+        if category == "탁주":
+            query = query.filter(Sool.category.in_(["탁주", "막걸리"]))
+        else:
+            query = query.filter(Sool.category == category)
 
     if order == "abv_low":
         query = query.order_by(Sool.abv.asc())
@@ -264,6 +267,33 @@ def get_sool_stats(db: Session = Depends(get_db)):
         )
         region_data = [{"name": r[0] or "Unknown", "value": r[1]} for r in reg_dist]
         
+        # 카테고리별 맛 평균 (사용자 감각 노트 기준, 여운=aftertaste)
+        flavor_rows = (
+            db.query(
+                Sool.category,
+                func.avg(Sense.aroma).label("aroma"),
+                func.avg(Sense.sweetness).label("sweetness"),
+                func.avg(Sense.acidity).label("acidity"),
+                func.avg(Sense.body).label("body"),
+                func.avg(Sense.aftertaste).label("finish"),
+            )
+            .join(Sense, Sense.sool_id == Sool.id)
+            .group_by(Sool.category)
+            .all()
+        )
+        flavor_data = [
+            {
+                "category": f.category,
+                "aroma": round(float(f.aroma or 0), 2),
+                "sweetness": round(float(f.sweetness or 0), 2),
+                "acidity": round(float(f.acidity or 0), 2),
+                "body": round(float(f.body or 0), 2),
+                "finish": round(float(f.finish or 0), 2),
+            }
+            for f in flavor_rows
+            if f.category
+        ]
+
         # 리뷰 총수
         total_reviews = db.query(Sense).count()
         
@@ -273,6 +303,7 @@ def get_sool_stats(db: Session = Depends(get_db)):
             "total_reviews": total_reviews,
             "category_distribution": category_data,
             "region_distribution": region_data,
+            "flavor_stats": flavor_data,
         }
     except Exception as e:
         print(f"Error in /stats: {e}")
@@ -282,6 +313,7 @@ def get_sool_stats(db: Session = Depends(get_db)):
             "total_reviews": 0,
             "category_distribution": [],
             "region_distribution": [],
+            "flavor_stats": [],
             "error": str(e)
         }
 

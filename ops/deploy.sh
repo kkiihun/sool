@@ -6,6 +6,11 @@ cd "$(dirname "$0")/.."
 
 BRANCH="${1:-main}"
 [ -f .env ] || { echo "❌ .env 가 없습니다. cp .env.example .env 후 값을 채우세요."; exit 1; }
+set -a; source .env; set +a
+
+# 헬스체크 주소: 프론트가 바인딩된 IP (운영은 Tailscale IP 라 localhost 로는 안 열림)
+HOST="${FRONT_BIND:-127.0.0.1}"
+[ "$HOST" = "0.0.0.0" ] && HOST=127.0.0.1
 
 git fetch origin
 git checkout "$BRANCH"
@@ -19,7 +24,7 @@ docker image prune -f >/dev/null
 
 echo "⏳ 기동 확인 중..."
 for i in $(seq 1 30); do
-  if curl -sf "http://localhost:${FRONT_PORT:-3300}/api/proxy/ready" >/dev/null; then
+  if curl -sf "http://${HOST}:${FRONT_PORT:-3300}/api/proxy/ready" >/dev/null; then
     echo "✅ 배포 완료: ${GIT_BRANCH}@${GIT_SHA}"
     docker compose ps
     exit 0

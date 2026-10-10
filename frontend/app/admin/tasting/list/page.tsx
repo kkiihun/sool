@@ -1,6 +1,7 @@
 "use client";
 
 import { API_BASE } from "@/lib/api";
+
 import { useEffect, useState } from "react";
 import Link from "next/link";
 
@@ -16,7 +17,11 @@ interface TastingNote {
   created_at?: string;
 }
 
-const apiUrl = (path: string) => `${API_BASE}${path.startsWith("/") ? path : `/${path}`}`;
+
+const apiUrl = (path: string) => {
+  const p = path.startsWith("/") ? path : `/${path}`;
+  return `${API_BASE}${p}`;
+};
 
 export default function TastingListPage() {
   const [data, setData] = useState<TastingNote[]>([]);

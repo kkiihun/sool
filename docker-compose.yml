@@ -2,11 +2,20 @@
 # 맥 개발용:  docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d --build
 # 비밀값은 루트 .env 에서 읽음 (.env.example 참고)
 
+# 컨테이너 로그 크기 제한 (서버 디스크 보호)
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
 services:
   db:
     image: mariadb:10.11
     container_name: sool-mariadb
     restart: unless-stopped
+    logging: *logging
+    mem_limit: 768m
     environment:
       MARIADB_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?set MYSQL_ROOT_PASSWORD in .env}
       MARIADB_DATABASE: ${DB_NAME:-sool}
@@ -25,6 +34,8 @@ services:
     build: ./backend
     container_name: sool-backend
     restart: unless-stopped
+    logging: *logging
+    mem_limit: 768m
     environment:
       DB_HOST: db
       DB_PORT: "3306"
@@ -44,12 +55,14 @@ services:
       target: runner
     container_name: sool-frontend
     restart: unless-stopped
+    logging: *logging
+    mem_limit: 512m
     environment:
       BACKEND_URL: http://backend:8000
       GIT_BRANCH: ${GIT_BRANCH:-unknown-branch}
       GIT_SHA: ${GIT_SHA:-unknown-sha}
     ports:
-      - "${FRONT_PORT:-3300}:3000"
+      - "${FRONT_BIND:-127.0.0.1}:${FRONT_PORT:-3300}:3000"
     depends_on:
       - backend
 
