@@ -5,9 +5,10 @@ import { API_BASE } from "@/lib/api";
 
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Button, Card, Col, Descriptions, Empty, Input, Row, Select, Spin, Table, Tag, Tooltip, Typography } from "antd";
+import { Button, Card, Col, Descriptions, Empty, Input, Row, Select, Spin, Table, Tabs, Tag, Tooltip, Typography } from "antd";
 import { CheckCircleOutlined, CloseCircleOutlined, ReloadOutlined, WarningOutlined } from "@ant-design/icons";
 import { useAuth } from "../../components/AuthProvider";
+import CategoryReview from "./CategoryReview";
 
 const { Title, Text } = Typography;
 
@@ -178,6 +179,8 @@ export default function PipelinePage() {
         </Button>
       </div>
 
+      <Tabs className="pipeline-tabs" items={[
+        { key: "overview", label: "개요", children: (<>
       {loading ? <div className="p-20 text-center"><Spin /></div> : error ? (
         <Card className="bg-white/5 border-white/10 rounded-3xl"><Text className="text-red-400">{error}</Text></Card>
       ) : !status ? (
@@ -313,6 +316,9 @@ export default function PipelinePage() {
             ),
           }} />
       </Card>
+      </>) },
+        { key: "review", label: "주종 검증", children: <CategoryReview /> },
+      ]} />
 
       <style jsx global>{`
         .custom-table .ant-table { background: transparent !important; color: rgba(255,255,255,0.7) !important; }
@@ -320,6 +326,9 @@ export default function PipelinePage() {
         .custom-table .ant-table-tbody > tr > td { border-bottom: 1px solid rgba(255,255,255,0.05) !important; background: transparent !important; }
         .custom-table .ant-table-tbody > tr:hover > td { background: rgba(255,255,255,0.03) !important; }
         .custom-table .ant-table-expanded-row > td { background: rgba(255,255,255,0.02) !important; }
+        .pipeline-tabs .ant-tabs-tab { color: rgba(255,255,255,0.35) !important; font-weight: 700; }
+        .pipeline-tabs .ant-tabs-tab-active .ant-tabs-tab-btn { color: #f59e0b !important; }
+        .pipeline-tabs .ant-tabs-ink-bar { background: #f59e0b !important; }
       `}</style>
     </div>
   );

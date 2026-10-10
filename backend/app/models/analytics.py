@@ -63,3 +63,17 @@ class PipelineRun(Base):
     duration_sec = Column(Float)
     status = Column(JSON, nullable=False)
     created_at = Column(DateTime, server_default=func.now(), nullable=False)
+
+
+class CategoryReview(Base):
+    """주종 제안 검증 라벨 (관리자가 화면에서 표시). 규칙 정확도 측정 + 이후 승인 반영의 근거."""
+    __tablename__ = "category_review"
+
+    sool_id = Column(Integer, primary_key=True)
+    suggested = Column(String(20))                  # 검증 당시 제안값 (미분류면 NULL)
+    rule = Column(String(40), index=True)
+    confidence = Column(Float)
+    verdict = Column(String(10), nullable=False)    # correct / wrong / unsure
+    correct_category = Column(String(20))           # 사람이 정한 정답 (unsure 면 NULL)
+    reviewer_id = Column(Integer)
+    reviewed_at = Column(DateTime, server_default=func.now(), onupdate=func.now(), nullable=False)
