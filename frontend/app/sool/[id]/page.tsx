@@ -34,6 +34,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import SoolRadar from "@/components/SoolRadar";
 import { useAuth } from "@/app/components/AuthProvider";
+import { SoolProfileCard, WhereToTaste, useSoolCard } from "./SoolCard";
 
 const { Title, Text, Paragraph } = Typography;
 const { TextArea } = Input;
@@ -77,6 +78,7 @@ export default function SoolDetail({
   const [senses, setSenses] = useState<SenseNote[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [submitting, setSubmitting] = useState(false);
+  const card = useSoolCard(soolId);
 
   // Form State
   const [rating, setRating] = useState<number>(0);
@@ -227,7 +229,7 @@ export default function SoolDetail({
             <div className="flex flex-col gap-6">
               <div className="flex items-center gap-3">
                 <Badge 
-                  count={sool.category} 
+                  count={sool.category || card?.profile?.category} 
                   className="custom-category-badge"
                 />
                 <Badge 
@@ -276,6 +278,13 @@ export default function SoolDetail({
                 ))}
               </Row>
             </div>
+
+            {card?.profile && (
+              <div className="mt-12"><SoolProfileCard profile={card.profile} /></div>
+            )}
+            {card && (
+              <div className="mt-12"><WhereToTaste card={card} soolId={Number(soolId)} /></div>
+            )}
 
             <div className="mt-20 px-4">
               <Title level={3} className="!text-white !mb-8 !text-3xl !font-black !tracking-tight uppercase">

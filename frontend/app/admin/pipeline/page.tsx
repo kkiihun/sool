@@ -2,6 +2,7 @@
 
 // 데이터 파이프라인 결과 (관리자 전용): 최근 실행 상태 · 술 카드 요약 · 제품별 술 카드
 import { API_BASE } from "@/lib/api";
+import { CHANNEL_LABEL, LINK_STATE, TASTE_LABEL } from "@/lib/soolLabels";
 
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -9,7 +10,7 @@ import { Button, Card, Col, Descriptions, Empty, Input, Row, Select, Spin, Table
 import { CheckCircleOutlined, CloseCircleOutlined, ReloadOutlined, WarningOutlined } from "@ant-design/icons";
 import { useAuth } from "../../components/AuthProvider";
 import CategoryReview from "./CategoryReview";
-import PlaceMap from "./PlaceMap";
+import PlaceMap from "@/components/PlaceMap";
 import MarketView from "./MarketView";
 
 const { Title, Text } = Typography;
@@ -31,19 +32,6 @@ type Summary = {
 type Profile = Record<string, any>;
 
 const STEP_LABEL: Record<string, string> = { collect: "수집", clean: "정제", analyze: "분석", publish: "발행", feedback: "피드백" };
-const TASTE_LABEL: Record<string, string> = {
-  sweetness: "단맛", acidity: "산미", body: "바디", carbonation: "탄산", smoothness: "부드러움",
-  aroma: "향", nutty: "고소함", bitterness: "쌉쌀함", clean: "깔끔함",
-};
-const CHANNEL_LABEL: Record<string, string> = {
-  smartstore: "스마트스토어", shop_mall: "판매몰", own_site: "자체 사이트", modoo: "모두홈페이지",
-  instagram: "인스타그램", facebook: "페이스북", blog: "블로그", kakao: "카카오",
-};
-const LINK_STATE: Record<string, { label: string; color: string }> = {
-  alive: { label: "접속됨", color: "green" }, login: { label: "스토어 있음 · 성인 인증 필요", color: "green" },
-  blocked: { label: "요청 제한(확인 불가)", color: "gold" }, ended: { label: "서비스 종료", color: "red" },
-  dead: { label: "없는 페이지", color: "red" }, error: { label: "접속 실패", color: "red" }, unchecked: { label: "미검사", color: "default" },
-};
 const FLAG_OPTIONS = [
   { value: "online_buy", label: "온라인 구매 가능" },
   { value: "visit_brewery", label: "찾아가는 양조장" }, { value: "food_master", label: "식품명인" },

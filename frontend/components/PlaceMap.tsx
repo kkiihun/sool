@@ -1,7 +1,8 @@
 "use client";
 
-// 양조장 지도: 파이프라인이 좌표 변환한 양조장(analytics_place)을 OpenStreetMap 위에 표시
+// 양조장 지도: 파이프라인이 좌표 변환한 양조장(analytics_place)을 OpenStreetMap 위에 표시 (관리자·공개 공용)
 import { API_BASE } from "@/lib/api";
+import { CAT_COLOR } from "@/lib/soolLabels";
 import "leaflet/dist/leaflet.css";
 
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -22,12 +23,10 @@ type Resp = {
   items: Place[]; unlocated: { name: string; address: string }[];
 };
 
-const CAT_COLOR: Record<string, string> = {
-  탁주: "#f5f5f4", 약주: "#fbbf24", 청주: "#a3e635", 과실주: "#f472b6", 증류주: "#60a5fa", 리큐르: "#c084fc", 기타주류: "#94a3b8",
-};
 const mainCategory = (c: Record<string, number>) => Object.entries(c || {}).sort((a, b) => b[1] - a[1])[0]?.[0];
 
-export default function PlaceMap() {
+// endpoint 를 바꾸면 공개 지도(/explore/places)로도 쓴다. diagnostics=false 면 좌표 변환 정보를 숨김
+export default function PlaceMap({ endpoint = "/admin/pipeline/places", diagnostics = true }: { endpoint?: string; diagnostics?: boolean }) {
   const [data, setData] = useState<Resp | null>(null);
   const [loading, setLoading] = useState(true);
   const [visitOnly, setVisitOnly] = useState(false);
@@ -39,11 +38,11 @@ export default function PlaceMap() {
   const layer = useRef<LayerGroup | null>(null);
 
   useEffect(() => {
-    fetch(`${API_BASE}/admin/pipeline/places`, { cache: "no-store" })
+    fetch(`${API_BASE}${endpoint}`, { cache: "no-store" })
       .then((r) => (r.ok ? r.json() : null))
       .then(setData)
       .finally(() => setLoading(false));
-  }, []);
+  }, [endpoint]);
 
   const items = useMemo(
     () => (data?.items ?? []).filter((p) => (!visitOnly || p.visit_brewery) && (!sido || p.sido === sido)),
@@ -97,7 +96,7 @@ export default function PlaceMap() {
       <Col xs={24} xl={16}>
         <Card className="bg-white/5 border-white/10 rounded-3xl" styles={{ body: { padding: 16 } }}>
           <div className="flex flex-wrap items-center gap-3 mb-3">
-            <Text className="text-white/70">양조장 {items.length} / 좌표 {data.located} / 전체 {data.total}</Text>
+            <Text className="text-white/70">{diagnostics ? `양조장 ${items.length} / 좌표 ${data.located} / 전체 ${data.total}` : `양조장 ${items.length}곳`}</Text>
             <span className="flex items-center gap-2 text-white/60"><Switch size="small" checked={visitOnly} onChange={setVisitOnly} /> 찾아가는 양조장만</span>
             <Select allowClear placeholder="시도" style={{ width: 120 }} value={sido} onChange={setSido}
               options={Object.entries(data.by_sido).sort((a, b) => b[1] - a[1]).map(([k, n]) => ({ value: k, label: `${k} (${n})` }))} />
@@ -113,7 +112,7 @@ export default function PlaceMap() {
             </span>
           </div>
           <div ref={mapEl} style={{ height: 620, borderRadius: 16, overflow: "hidden" }} />
-          <Text className="text-white/30 text-xs">색 = 대표 주종, 크기 = 제품 수. 좌표 변환: {Object.entries(data.by_method).map(([k, n]) => `${k} ${n}`).join(" · ")}</Text>
+          <Text className="text-white/30 text-xs">색 = 대표 주종, 크기 = 제품 수.{diagnostics && ` 좌표 변환: ${Object.entries(data.by_method).map(([k, n]) => `${k} ${n}`).join(" · ")}`}</Text>
         </Card>
       </Col>
       <Col xs={24} xl={8}>
@@ -125,7 +124,7 @@ export default function PlaceMap() {
                 {selected.food_master && <Tag color="purple">식품명인</Tag>}
                 {selected.intangible_heritage && <Tag color="purple">무형문화재</Tag>}
                 {selected.awarded_products > 0 && <Tag color="gold">수상 제품 {selected.awarded_products}</Tag>}
-                <Tag>{selected.geo_method === "address" ? "주소 일치" : "이름 검색 위치"}</Tag>
+                <Tag>{selected.geo_method === "address" ? "주소 일치" : "위치 추정(이름 검색)"}</Tag>
               </div>
               <div className="text-white/60 text-sm">{selected.address || "-"}</div>
               {selected.homepage && (
@@ -148,7 +147,7 @@ export default function PlaceMap() {
             <Text className="text-white/40">지도에서 점을 누르면 양조장 정보와 제품 목록이 나옵니다.</Text>
           )}
         </Card>
-        {data.unlocated.length > 0 && (
+        {diagnostics && data.unlocated.length > 0 && (
           <Card size="small" title={<span className="text-white/70">좌표를 못 찾은 곳 ({data.total - data.located})</span>} className="bg-white/5 border-white/10 rounded-3xl mt-4">
             <ul className="text-xs text-white/50 space-y-1 max-h-60 overflow-auto">
               {data.unlocated.map((u, i) => <li key={i}>{u.name ?? "-"} · {u.address ?? "주소 없음"}</li>)}

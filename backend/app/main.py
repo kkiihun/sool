@@ -39,6 +39,7 @@ from app.api import report
 from app.api.utils.recommender import flavor_vector
 from app.api.tasting_note import router as tasting_note_router
 from app.api.pipeline import router as pipeline_router
+from app.api.explore import router as explore_router
 
 
 
@@ -57,6 +58,7 @@ app.include_router(users.router)
 app.include_router(report.router)
 app.include_router(tasting_note_router)
 app.include_router(pipeline_router)
+app.include_router(explore_router)
 
 
 # =====================#

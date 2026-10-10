@@ -16,6 +16,7 @@ import {
   MenuUnfoldOutlined,
   BellOutlined,
   SearchOutlined,
+  EnvironmentOutlined,
 } from "@ant-design/icons";
 import { useAuth } from "./AuthProvider";
 import AppShellProvider, { useAppShell } from "./AppShellProvider";
@@ -36,6 +37,7 @@ function ShellLayout({ children }: { children: React.ReactNode }) {
 
   const menuItems = [
     { key: "/", icon: <AppstoreOutlined style={{ fontSize: '18px' }} />, label: "Explore" },
+    { key: "/breweries", icon: <EnvironmentOutlined style={{ fontSize: '18px' }} />, label: "Breweries" },
     { key: "/Tasting", icon: <StarOutlined style={{ fontSize: '18px' }} />, label: "Tasting Notes" },
     { key: "/dashboard", icon: <BarChartOutlined style={{ fontSize: '18px' }} />, label: "Analytics" },
     { key: "/updates", icon: <CompassOutlined style={{ fontSize: '18px' }} />, label: "Discovery" },

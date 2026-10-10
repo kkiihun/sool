@@ -1,6 +1,7 @@
 "use client";
 
 import { API_BASE, assetUrl } from "@/lib/api";
+import { PAIRINGS } from "@/lib/soolLabels";
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
@@ -35,6 +36,17 @@ const CATEGORIES = [
   { label: "청주", value: "청주" },
   { label: "증류주", value: "증류주" },
   { label: "과실주", value: "과실주" },
+  { label: "리큐르", value: "리큐르" },
+  { label: "기타주류", value: "기타주류" },
+];
+
+// 술 카드(파이프라인 결과) 필터 — 백엔드 /explore/sool 의 flags 이름과 같다
+const FLAGS = [
+  { value: "no_sweetener", label: "무감미료" },
+  { value: "raw", label: "생(비살균)" },
+  { value: "visit", label: "찾아가는 양조장" },
+  { value: "online_buy", label: "온라인 구매" },
+  { value: "awarded", label: "수상작" },
 ];
 
 const SORT_OPTIONS = [
@@ -79,6 +91,16 @@ export default function Home() {
   const [regionOptions, setRegionOptions] = useState<string[]>(["전체 지역"]);
   const [loading, setLoading] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
+  const [flags, setFlags] = useState<string[]>([]);
+  const [pairing, setPairing] = useState("");
+  const [flagCounts, setFlagCounts] = useState<Record<string, number>>({});
+
+  // 상세 페이지의 페어링 태그(/?pairing=...)로 들어온 경우
+  useEffect(() => {
+    const p = new URLSearchParams(window.location.search).get("pairing");
+    if (p && PAIRINGS.includes(p)) { setPairing(p); setShowFilters(true); }
+    fetch(`${API_BASE}/explore/meta`).then((r) => (r.ok ? r.json() : null)).then((d) => d && setFlagCounts(d.flags ?? {})).catch(() => {});
+  }, []);
   
 
   const pageSize = 12;
@@ -103,11 +125,13 @@ export default function Home() {
     const handler = setTimeout(() => {
       async function fetchData() {
         setLoading(true);
-        let url = `${API_BASE}/sool/filter?page=${page}&page_size=${pageSize}`;
+        let url = `${API_BASE}/explore/sool?page=${page}&page_size=${pageSize}`;
         if (search && search.length >= 2) url += `&q=${encodeURIComponent(search)}`;
         if (category) url += `&category=${encodeURIComponent(category)}`;
         if (region !== "전체 지역") url += `&region=${encodeURIComponent(region)}`;
         if (sortOption) url += `&order=${sortOption}`;
+        if (flags.length) url += `&flags=${flags.join(",")}`;
+        if (pairing) url += `&pairing=${encodeURIComponent(pairing)}`;
 
         try {
           const res = await fetch(url);
@@ -125,18 +149,22 @@ export default function Home() {
       fetchData();
     }, search ? 400 : 0);
     return () => clearTimeout(handler);
-  }, [page, search, category, region, sortOption]);
+  }, [page, search, category, region, sortOption, flags, pairing]);
 
   // 필터 변경 핸들러 - 페이지 1로 초기화 보장
   const handleCategoryChange = (val: string) => { setCategory(val); setPage(1); };
   const handleRegionChange = (val: string) => { setRegion(val); setPage(1); };
   const handleSortChange = (val: string) => { setSortOption(val); setPage(1); };
+  const toggleFlag = (f: string) => { setFlags((cur) => (cur.includes(f) ? cur.filter((x) => x !== f) : [...cur, f])); setPage(1); };
+  const handlePairingChange = (val: string) => { setPairing(val); setPage(1); };
 
   const resetFilters = () => {
     setSearch("");
     setCategory("");
     setRegion("전체 지역");
     setSortOption("name");
+    setFlags([]);
+    setPairing("");
     setPage(1);
   };
 
@@ -226,6 +254,39 @@ export default function Home() {
                   styles={{ popup: { root: { background: '#0a0a0a', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '18px' } } }}
                 />
               </div>
+
+              <div className="flex flex-col gap-3">
+                <Text className="!text-amber-500 !text-[11px] !font-black !tracking-[0.3em] !uppercase !opacity-70 ml-1">Pairing</Text>
+                <Select
+                  className="w-full h-14 premium-select"
+                  value={pairing}
+                  onChange={handlePairingChange}
+                  options={[{ label: "어울리는 음식 전체", value: "" }, ...PAIRINGS.map((g) => ({ label: g, value: g }))]}
+                  styles={{ popup: { root: { background: '#0a0a0a', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '18px' } } }}
+                />
+              </div>
+
+              <div className="flex flex-col gap-3 md:col-span-2">
+                <Text className="!text-amber-500 !text-[11px] !font-black !tracking-[0.3em] !uppercase !opacity-70 ml-1">Sool Card</Text>
+                <div className="flex flex-wrap gap-2">
+                  {FLAGS.map((f) => {
+                    const on = flags.includes(f.value);
+                    return (
+                      <button
+                        key={f.value}
+                        type="button"
+                        onClick={() => toggleFlag(f.value)}
+                        className={[
+                          "h-11 px-5 rounded-2xl text-sm font-bold border transition-colors",
+                          on ? "bg-amber-500 text-black border-amber-500" : "bg-white/5 text-white/60 border-white/10 hover:border-amber-500/50",
+                        ].join(" ")}
+                      >
+                        {f.label}{flagCounts[f.value] != null && <span className="ml-1 opacity-50">{flagCounts[f.value]}</span>}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
             </div>
           )}
         </div>
@@ -287,7 +348,7 @@ export default function Home() {
                         
                         <div className="flex flex-wrap gap-2.5 mb-6">
                           <Badge 
-                            count={item.category} 
+                            count={item.category ? (item.category_auto ? `${item.category}·추정` : item.category) : null} 
                             style={{ 
                               backgroundColor: catBg, 
                               color: catText, 
@@ -316,6 +377,12 @@ export default function Home() {
                               lineHeight: '24px'
                             }} 
                           />
+                        </div>
+                        <div className="flex flex-wrap gap-1.5">
+                          {item.visit_brewery && <span className="text-[11px] font-bold px-2 py-0.5 rounded-md bg-cyan-500/15 text-cyan-300">찾아가는 양조장</span>}
+                          {item.is_raw && <span className="text-[11px] font-bold px-2 py-0.5 rounded-md bg-green-500/15 text-green-300">생</span>}
+                          {item.no_sweetener && <span className="text-[11px] font-bold px-2 py-0.5 rounded-md bg-white/5 text-white/50">무감미료</span>}
+                          {item.online_buy && <span className="text-[11px] font-bold px-2 py-0.5 rounded-md bg-amber-500/15 text-amber-300">온라인 구매</span>}
                         </div>
                       </div>
                       
