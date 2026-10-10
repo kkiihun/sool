@@ -77,3 +77,27 @@ class CategoryReview(Base):
     correct_category = Column(String(20))           # 사람이 정한 정답 (unsure 면 NULL)
     reviewer_id = Column(Integer)
     reviewed_at = Column(DateTime, server_default=func.now(), onupdate=func.now(), nullable=False)
+
+
+class AnalyticsPlace(Base):
+    """양조장(장소): 같은 양조장·주소의 제품 묶음 + 좌표. 파이프라인이 매 실행마다 교체."""
+    __tablename__ = "analytics_place"
+
+    place_id = Column(String(12), primary_key=True)
+    run_date = Column(Date, nullable=False)
+    name = Column(String(100))
+    aliases = Column(JSON)                          # 같은 장소로 묶인 양조장 이름 표기들
+    address = Column(String(255))
+    homepage = Column(String(500))
+    lat = Column(Float)
+    lng = Column(Float)
+    sido = Column(String(20), index=True)
+    sigungu = Column(String(30))
+    geo_method = Column(String(10))                 # address / keyword / none / pending
+    product_count = Column(Integer)
+    categories = Column(JSON)                       # {"탁주": 3, ...}
+    products = Column(JSON)                         # [{sool_id, name, category, abv}]
+    visit_brewery = Column(Boolean, index=True)
+    food_master = Column(Boolean)
+    intangible_heritage = Column(Boolean)
+    awarded_products = Column(Integer)

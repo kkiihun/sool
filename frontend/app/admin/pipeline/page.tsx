@@ -9,6 +9,7 @@ import { Button, Card, Col, Descriptions, Empty, Input, Row, Select, Spin, Table
 import { CheckCircleOutlined, CloseCircleOutlined, ReloadOutlined, WarningOutlined } from "@ant-design/icons";
 import { useAuth } from "../../components/AuthProvider";
 import CategoryReview from "./CategoryReview";
+import PlaceMap from "./PlaceMap";
 
 const { Title, Text } = Typography;
 
@@ -317,6 +318,7 @@ export default function PipelinePage() {
           }} />
       </Card>
       </>) },
+        { key: "map", label: "양조장 지도", children: <PlaceMap /> },
         { key: "review", label: "주종 검증", children: <CategoryReview /> },
       ]} />
 

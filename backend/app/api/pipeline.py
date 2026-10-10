@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.core.deps import require_admin
-from app.models.analytics import AnalyticsSoolProfile, CategoryReview, PipelineRun
+from app.models.analytics import AnalyticsPlace, AnalyticsSoolProfile, CategoryReview, PipelineRun
 from app.models.sool import Sool
 from app.models.user import User
 
@@ -103,6 +103,27 @@ def pipeline_profiles(
         d.update(name=name, producer=producer, region=region, abv=abv)
         items.append(d)
     return {"total": total, "page": page, "size": size, "items": items}
+
+
+@router.get("/places")
+def pipeline_places(visit_only: bool = False, sido: Optional[str] = None, db: Session = Depends(get_db)):
+    """양조장 지도용: 좌표가 있는 장소 전체 + 좌표 변환 현황"""
+    P = AnalyticsPlace
+    qry = db.query(P)
+    if visit_only:
+        qry = qry.filter(P.visit_brewery.is_(True))
+    if sido:
+        qry = qry.filter(P.sido == sido)
+    places = qry.all()
+    cols = [c.name for c in P.__table__.columns]
+    return {
+        "total": len(places),
+        "located": sum(1 for p in places if p.lat is not None),
+        "by_method": dict(db.query(P.geo_method, func.count()).group_by(P.geo_method).all()),
+        "by_sido": dict(db.query(P.sido, func.count()).filter(P.sido.isnot(None)).group_by(P.sido).all()),
+        "items": [{c: getattr(p, c) for c in cols} for p in places if p.lat is not None],
+        "unlocated": [{"name": p.name, "address": p.address} for p in places if p.lat is None][:50],
+    }
 
 
 # ---------------------------------------------------------------------------

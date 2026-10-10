@@ -9,7 +9,11 @@ import duckdb
 import pandas as pd
 from sqlalchemy import create_engine, text
 
+import hashlib
+from collections import Counter
+
 from .categorize import standardize, suggest
+from .geo import clean_address, geocode, kakao_fetcher, short_sido
 from .normalize import is_missing, normalize_name, normalize_producer
 from .profile import build_profile
 from .taste import taste_profile
@@ -48,7 +52,58 @@ def collect(ctx: Context) -> StepResult:
         ctx.warn(f"시드 CSV 없음: {seed_path}")
 
     ctx.metrics["snapshot"] = counts
-    return StepResult(out=sum(counts.values()), extra={"tables": counts})
+    geo = _geocode_new(ctx)
+    return StepResult(out=sum(counts.values()), extra={"tables": counts, "geocode": geo})
+
+
+def _geo_key(address, producer) -> str:
+    """캐시 키: 정리한 주소. 주소가 없으면 양조장 이름"""
+    a = clean_address(address)
+    return a if a else f"producer:{(producer or '').strip()}"
+
+
+def _geocode_new(ctx: Context) -> dict:
+    """시드의 (주소, 양조장) 중 geo_cache 에 없는 것만 카카오 API 로 좌표 변환"""
+    cfg = ctx.config.get("geocode", {})
+    seed_src = ctx.raw_dir / "seed_sool_basic.parquet"
+    if not cfg.get("enabled", True) or not seed_src.exists():
+        return {"state": "skipped"}
+    api_key = os.environ.get("KAKAO_REST_API_KEY")
+    if not api_key:
+        ctx.warn("KAKAO_REST_API_KEY 없음 → 좌표 변환 건너뜀")
+        return {"state": "skipped"}
+
+    seed = pd.read_parquet(seed_src)
+    targets = {}
+    for a, p in zip(seed["address"], seed["producer"]):
+        if (a or "").strip() or (p or "").strip():
+            targets.setdefault(_geo_key(a, p), (a, p))
+
+    with duckdb.connect(str(ctx.warehouse)) as con:
+        con.execute("""CREATE TABLE IF NOT EXISTS geo_cache (
+            key VARCHAR PRIMARY KEY, address VARCHAR, producer VARCHAR, lat DOUBLE, lng DOUBLE,
+            sido VARCHAR, sigungu VARCHAR, matched VARCHAR, method VARCHAR, fetched_at TIMESTAMP)""")
+        # retry_failed: 지난번에 못 찾은 주소(method='none')를 다시 시도
+        where = "WHERE method <> 'none'" if cfg.get("retry_failed") else ""
+        cached = {r[0] for r in con.execute(f"SELECT key FROM geo_cache {where}").fetchall()}
+        todo = [k for k in targets if k not in cached][: int(cfg.get("max_calls", 2000))]
+
+        fetch = kakao_fetcher(api_key)
+        done, errors = 0, 0
+        for k in todo:
+            addr, prod = targets[k]
+            try:
+                g = geocode(addr if not k.startswith("producer:") else "", prod, fetch)
+            except Exception as ex:          # 키 오류·한도 초과 등: 기록하고 이번 실행은 중단
+                errors += 1
+                ctx.warn(f"좌표 변환 중단: {type(ex).__name__}: {ex}")
+                break
+            con.execute("INSERT OR REPLACE INTO geo_cache VALUES (?,?,?,?,?,?,?,?,?, now())",
+                        [k, addr, prod, g["lat"], g["lng"], g["sido"], g["sigungu"], g["matched"], g["method"]])
+            done += 1
+        by_method = dict(con.execute("SELECT method, COUNT(*) FROM geo_cache GROUP BY 1").fetchall())
+    ctx.metrics["geocode"] = {"targets": len(targets), "new_calls": done, "cache": by_method}
+    return {"state": "error" if errors else "ok", "new_calls": done, "cache": by_method}
 
 
 def match_seed(sool: pd.DataFrame, seed: pd.DataFrame) -> pd.DataFrame:
@@ -160,9 +215,11 @@ def analyze(ctx: Context) -> StepResult:
     by_rule.to_csv(ctx.output_dir / f"category_rules-{ctx.run_date}.csv", index=False, encoding="utf-8-sig")
 
     profiles = _build_profiles(ctx)
+    places = _build_places(ctx)
 
     ctx.metrics.update({
         "profiles": profiles,
+        "places": places,
         "total_items": int(len(sug)),
         "category_missing": int(len(missing)),
         "category_rule_resolved": resolved,
@@ -291,10 +348,34 @@ def publish(ctx: Context) -> StepResult:
 
     cols = ", ".join(_PROFILE_COLS)
     params = ", ".join(f":{c}" for c in _PROFILE_COLS)
+    place_rows = _place_rows(ctx)
+    pcols = ", ".join(_PLACE_COLS)
+    pparams = ", ".join(f":{c}" for c in _PLACE_COLS)
     with _engine().begin() as conn:      # 실패하면 DELETE 도 롤백 → 화면이 빈 채로 남지 않음
         conn.execute(text("DELETE FROM analytics_sool_profile"))
         conn.execute(text(f"INSERT INTO analytics_sool_profile ({cols}) VALUES ({params})"), rows)
-    return StepResult(out=len(rows), message=f"analytics_sool_profile {len(rows)}행 교체")
+        if place_rows:
+            conn.execute(text("DELETE FROM analytics_place"))
+            conn.execute(text(f"INSERT INTO analytics_place ({pcols}) VALUES ({pparams})"), place_rows)
+    return StepResult(out=len(rows) + len(place_rows),
+                      message=f"술 카드 {len(rows)}행, 장소 {len(place_rows)}행 교체")
+
+
+_PLACE_COLS = ["place_id", "run_date", "name", "aliases", "address", "homepage", "lat", "lng", "sido", "sigungu",
+               "geo_method", "product_count", "categories", "products", "visit_brewery", "food_master",
+               "intangible_heritage", "awarded_products"]
+
+
+def _place_rows(ctx: Context) -> list[dict]:
+    with duckdb.connect(str(ctx.warehouse), read_only=True) as con:
+        if "mart_place" not in {r[0] for r in con.execute("SHOW TABLES").fetchall()}:
+            return []
+        df = con.execute("SELECT * FROM mart_place").df()
+    out = []
+    for r in df.to_dict("records"):
+        r = {k: _clean_value(v) for k, v in r.items()}
+        out.append({c: r.get(c) for c in _PLACE_COLS})
+    return out
 
 
 def record_run(status: dict) -> None:
@@ -305,3 +386,113 @@ def record_run(status: dict) -> None:
             {"job": status["job"], "run_id": status["run_id"], "ok": status["ok"],
              "d": status["duration_sec"], "s": json.dumps(status, ensure_ascii=False, default=str)},
         )
+
+
+# 양조장(장소) 단위 집계 → mart_place
+#   같은 장소 판단: 좌표가 같거나(소수 4자리 ≈ 10m), 정규화한 양조장 이름이 같고 1km 이내.
+#   좌표가 없으면 양조장 이름으로만 묶는다. (주소 표기 차이: 도로명/지번, 전남/전라남도 등을 흡수)
+def _haversine_km(a, b) -> float:
+    import math
+    la1, lo1, la2, lo2 = map(math.radians, (a[0], a[1], b[0], b[1]))
+    h = math.sin((la2 - la1) / 2) ** 2 + math.cos(la1) * math.cos(la2) * math.sin((lo2 - lo1) / 2) ** 2
+    return 6371 * 2 * math.asin(math.sqrt(h))
+
+
+def cluster_places(rows: list[dict], same_name_km: float = 1.0) -> list[int]:
+    """rows: [{producer_norm, lat, lng}] → 행마다 장소 번호 (union-find)"""
+    parent = list(range(len(rows)))
+
+    def find(i):
+        while parent[i] != i:
+            parent[i] = parent[parent[i]]
+            i = parent[i]
+        return i
+
+    def union(i, j):
+        parent[find(i)] = find(j)
+
+    by_coord, by_name = {}, {}
+    for i, r in enumerate(rows):
+        has_loc = r["lat"] is not None and not pd.isna(r["lat"])
+        if has_loc:
+            key = (round(r["lat"], 4), round(r["lng"], 4))
+            if key in by_coord:
+                union(i, by_coord[key])
+            by_coord.setdefault(key, i)
+        if r["producer_norm"]:
+            by_name.setdefault(r["producer_norm"], []).append(i)
+    for idxs in by_name.values():
+        for a in range(len(idxs)):
+            for b in range(a + 1, len(idxs)):
+                ra, rb = rows[idxs[a]], rows[idxs[b]]
+                la, lb = ra["lat"] is not None and not pd.isna(ra["lat"]), rb["lat"] is not None and not pd.isna(rb["lat"])
+                if (la and lb and _haversine_km((ra["lat"], ra["lng"]), (rb["lat"], rb["lng"])) <= same_name_km) or not (la and lb):
+                    union(idxs[a], idxs[b])
+    return [find(i) for i in range(len(rows))]
+
+
+def _build_places(ctx: Context) -> int:
+    with duckdb.connect(str(ctx.warehouse)) as con:
+        tables = {r[0] for r in con.execute("SHOW TABLES").fetchall()}
+        prof = con.execute("""
+            SELECT sool_id, name, producer, abv, category, address, homepage, visit_brewery, food_master,
+                   intangible_heritage, award_count
+            FROM mart_sool_profile""").df()
+        geo = (con.execute("SELECT key, lat, lng, sido, sigungu, method FROM geo_cache").df()
+               if "geo_cache" in tables else pd.DataFrame(columns=["key", "lat", "lng", "sido", "sigungu", "method"]))
+
+    prof = prof[(prof["address"].fillna("").str.strip() != "") | (prof["producer"].fillna("").str.strip() != "")].copy()
+    prof["geo_key"] = [_geo_key(a, p) for a, p in zip(prof["address"], prof["producer"])]
+    prof["producer_norm"] = prof["producer"].map(normalize_producer)
+    prof = prof.merge(geo.rename(columns={"key": "geo_key", "method": "geo_method"}), on="geo_key", how="left")
+    prof["geo_method"] = prof["geo_method"].fillna("pending")
+    prof = prof.reset_index(drop=True)
+    prof["cluster"] = cluster_places(prof[["producer_norm", "lat", "lng"]].to_dict("records"))
+
+    rows = []
+    for _, g in prof.groupby("cluster"):
+        located = g[g["lat"].notna()]
+        best = located[located["geo_method"] == "address"]
+        loc = (best if len(best) else located).iloc[0] if len(located) else None
+        producers = Counter(p for p in g["producer"] if p)
+        rows.append({
+            # 장소 id: 대표 좌표(없으면 양조장 이름) 기준이라 실행마다 같은 값
+            "place_id": hashlib.md5(
+                (f"{round(loc['lat'], 4)},{round(loc['lng'], 4)}" if loc is not None else g["producer_norm"].iloc[0]).encode()
+            ).hexdigest()[:12],
+            "name": producers.most_common(1)[0][0] if producers else None,
+            "aliases": json.dumps(sorted(producers), ensure_ascii=False),
+            "address": (loc["address"] if loc is not None and loc["address"] else next((a for a in g["address"] if a), None)),
+            "homepage": next((h for h in g["homepage"] if h), None),
+            "lat": None if loc is None else float(loc["lat"]), "lng": None if loc is None else float(loc["lng"]),
+            # 캐시에 긴 표기가 남아 있어도 짧은 표기로 통일
+            "sido": None if loc is None else short_sido(loc["sido"]),
+            "sigungu": None if loc is None else loc["sigungu"],
+            "geo_method": "pending" if loc is None and (g["geo_method"] == "pending").all() else (
+                "none" if loc is None else loc["geo_method"]),
+            "product_count": int(len(g)),
+            # dict/list 는 DuckDB 구조 타입 충돌을 피하려고 JSON 문자열로 저장
+            "categories": json.dumps(dict(Counter(c for c in g["category"] if c)), ensure_ascii=False),
+            "products": json.dumps([{"sool_id": int(r.sool_id), "name": r.name, "category": r.category,
+                                     "abv": None if pd.isna(r.abv) else float(r.abv)} for r in g.itertuples()],
+                                   ensure_ascii=False),
+            "visit_brewery": bool(g["visit_brewery"].any()),
+            "food_master": bool(g["food_master"].any()),
+            "intangible_heritage": bool(g["intangible_heritage"].any()),
+            "awarded_products": int((g["award_count"] > 0).sum()),
+            "run_date": ctx.run_date,
+        })
+    places = pd.DataFrame(rows)
+    # place_id 충돌(같은 좌표가 다른 클러스터로 남은 경우)은 번호를 붙여 구분
+    places["place_id"] = places["place_id"] + places.groupby("place_id").cumcount().map(lambda n: "" if n == 0 else f"-{n}")
+    with duckdb.connect(str(ctx.warehouse)) as con:
+        con.register("places", places)
+        con.execute("CREATE OR REPLACE TABLE mart_place AS SELECT * FROM places")
+
+    ctx.metrics["place_summary"] = {
+        "places": int(len(places)), "located": int(places["lat"].notna().sum()),
+        "by_method": places["geo_method"].value_counts().to_dict(),
+        "visit_brewery": int(places["visit_brewery"].sum()),
+        "merged_rows": int(len(prof)),
+    }
+    return int(len(places))

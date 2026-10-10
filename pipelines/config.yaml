@@ -13,6 +13,11 @@ seed_csv: /seed/sool_basic_clean.csv
 seed_columns: [name, description, abv, volume, ingredients, special_notes, features,
                available, producer, address, homepage, awards]
 
+# ① collect: 양조장 주소 → 좌표 (카카오 로컬). 캐시에 없는 것만 호출
+geocode:
+  enabled: true
+  max_calls: 2000        # 한 번 실행에 최대 호출 수 (일 한도 10만)
+
 # ② clean: 품질 검사 기준
 quality:
   abv_range: [0.5, 70]

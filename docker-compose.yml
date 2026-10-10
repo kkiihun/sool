@@ -80,6 +80,7 @@ services:
       DB_USER: sool_pipeline
       DB_PASSWORD: ${PIPELINE_DB_PASSWORD:-}
       DB_NAME: ${DB_NAME:-sool}
+      KAKAO_REST_API_KEY: ${KAKAO_REST_API_KEY:-}
     volumes:
       - ./data/pipeline:/data
       - ./backend/data:/seed:ro
