@@ -130,3 +130,17 @@ class AnalyticsMarket(Base):
     key = Column(String(40), primary_key=True)
     run_date = Column(Date, nullable=False)
     payload = Column(JSON, nullable=False)
+
+
+class AnalyticsBlog(Base):
+    """블로그 후기: 카카오 블로그 검색 결과 중 술 이름이 나오는 글, 제품당 최대 5개. 본문은 저장하지 않음."""
+    __tablename__ = "analytics_blog"
+
+    sool_id = Column(Integer, primary_key=True)
+    seq = Column(Integer, primary_key=True)          # 1부터. 양조장까지 맞는 글이 앞
+    run_date = Column(Date, nullable=False)
+    title = Column(String(300))
+    url = Column(String(500))
+    blogname = Column(String(100))
+    posted_at = Column(Date)
+    match = Column(String(20))                       # name+producer / name

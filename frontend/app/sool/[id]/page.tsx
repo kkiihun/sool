@@ -34,7 +34,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import SoolRadar from "@/components/SoolRadar";
 import { useAuth } from "@/app/components/AuthProvider";
-import { SoolProfileCard, WhereToTaste, useSoolCard } from "./SoolCard";
+import { BlogReviews, SoolProfileCard, WhereToTaste, useSoolCard } from "./SoolCard";
 
 const { Title, Text, Paragraph } = Typography;
 const { TextArea } = Input;
@@ -273,6 +273,9 @@ export default function SoolDetail({
             )}
             {card && (
               <div className="mt-8"><WhereToTaste card={card} soolId={Number(soolId)} /></div>
+            )}
+            {!!card?.blogs?.length && (
+              <div className="mt-8"><BlogReviews blogs={card.blogs} /></div>
             )}
 
             {/* 이용자 감상 평균: 감상이 있을 때만 */}

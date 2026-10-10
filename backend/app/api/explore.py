@@ -7,7 +7,7 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
-from app.models.analytics import AnalyticsPlace, AnalyticsPurchase, AnalyticsSoolProfile
+from app.models.analytics import AnalyticsBlog, AnalyticsPlace, AnalyticsPurchase, AnalyticsSoolProfile
 from app.models.sool import Sool
 
 router = APIRouter(prefix="/explore", tags=["Explore"])
@@ -86,6 +86,8 @@ def sool_card(sool_id: int, db: Session = Depends(get_db)):
         "profile": profile,
         "purchase": _purchase_public(db.get(U, sool_id)),
         "place": {c: getattr(place, c) for c in PLACE_PUBLIC} if place else None,
+        "blogs": [{"title": b.title, "url": b.url, "blogname": b.blogname, "posted_at": b.posted_at}
+                  for b in db.query(AnalyticsBlog).filter(AnalyticsBlog.sool_id == sool_id).order_by(AnalyticsBlog.seq)],
     }
 
 

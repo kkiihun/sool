@@ -12,6 +12,7 @@ from sqlalchemy import create_engine, text
 import hashlib
 from collections import Counter
 
+from .blogs import build_query, kakao_blog_fetcher, pick as pick_blogs
 from .categorize import standardize, suggest
 from .completeness import card_completeness, summarize
 from .geo import clean_address, geocode, kakao_fetcher, short_sido
@@ -57,7 +58,46 @@ def collect(ctx: Context) -> StepResult:
     ctx.metrics["snapshot"] = counts
     geo = _geocode_new(ctx)
     links = _check_links(ctx)
-    return StepResult(out=sum(counts.values()), extra={"tables": counts, "geocode": geo, "links": links})
+    blogs = _search_blogs(ctx)
+    return StepResult(out=sum(counts.values()), extra={"tables": counts, "geocode": geo, "links": links, "blogs": blogs})
+
+
+def _search_blogs(ctx: Context) -> dict:
+    """제품별 블로그 검색(카카오). 검색어가 바뀌었거나 refresh_days 지난 것만 다시 호출. 원본 응답은 warehouse 에만"""
+    cfg = ctx.config.get("blog_search", {})
+    sool_src = ctx.raw_dir / "db_sool.parquet"
+    if not cfg.get("enabled", True) or not sool_src.exists():
+        return {"state": "skipped"}
+    api_key = os.environ.get("KAKAO_REST_API_KEY")
+    if not api_key:
+        ctx.warn("KAKAO_REST_API_KEY 없음 → 블로그 검색 건너뜀")
+        return {"state": "skipped"}
+
+    sool = pd.read_parquet(sool_src, columns=["id", "name", "producer"])
+    queries = {int(r.id): build_query(r.name, r.producer) for r in sool.itertuples() if (r.name or "").strip()}
+    with duckdb.connect(str(ctx.warehouse)) as con:
+        con.execute("""CREATE TABLE IF NOT EXISTS blog_cache (
+            sool_id INTEGER PRIMARY KEY, query VARCHAR, docs VARCHAR, fetched_at TIMESTAMP)""")
+        fresh = {(r[0], r[1]) for r in con.execute(
+            f"SELECT sool_id, query FROM blog_cache WHERE fetched_at > now() - INTERVAL {int(cfg.get('refresh_days', 7))} DAY"
+        ).fetchall()}
+        todo = [(sid, q) for sid, q in queries.items() if (sid, q) not in fresh][: int(cfg.get("max_calls", 1500))]
+
+        fetch = kakao_blog_fetcher(api_key, size=int(cfg.get("fetch_size", 15)))
+        done, error = 0, None
+        for sid, q in todo:
+            try:
+                docs = fetch(q)
+            except Exception as ex:          # 키 권한·한도 초과 등: 기록하고 이번 실행은 중단
+                error = f"{type(ex).__name__}: {ex}"
+                ctx.warn(f"블로그 검색 중단: {error}")
+                break
+            con.execute("INSERT OR REPLACE INTO blog_cache VALUES (?,?,?, now())",
+                        [sid, q, json.dumps(docs, ensure_ascii=False)])
+            done += 1
+        cached = con.execute("SELECT COUNT(*) FROM blog_cache").fetchone()[0]
+    ctx.metrics["blog_search"] = {"targets": len(queries), "new_calls": done, "cached": int(cached)}
+    return {"state": "error" if error else "ok", "new_calls": done, "cached": int(cached)}
 
 
 def _check_links(ctx: Context) -> dict:
@@ -247,6 +287,7 @@ def analyze(ctx: Context) -> StepResult:
     profiles = _build_profiles(ctx)
     places = _build_places(ctx)
     purchases = _build_purchases(ctx)
+    blogs = _build_blogs(ctx)
     _add_completeness(ctx)
     market = _build_market(ctx)
 
@@ -254,6 +295,7 @@ def analyze(ctx: Context) -> StepResult:
         "profiles": profiles,
         "places": places,
         "purchases": purchases,
+        "blog_reviews": blogs,
         "market_metrics": market,
         "card_full_pct": ctx.metrics["card_completeness"]["full_pct"],
         "total_items": int(len(sug)),
@@ -398,13 +440,22 @@ def publish(ctx: Context) -> StepResult:
             conn.execute(text("DELETE FROM analytics_purchase"))
             conn.execute(text(f"INSERT INTO analytics_purchase ({', '.join(_PURCHASE_COLS)}) "
                               f"VALUES ({', '.join(':' + c for c in _PURCHASE_COLS)})"), purchase_rows)
+        blog_rows = _mart_rows(ctx, "mart_blog", _BLOG_COLS)
+        if blog_rows:
+            conn.execute(text("DELETE FROM analytics_blog"))
+            conn.execute(text(f"INSERT INTO analytics_blog ({', '.join(f'`{c}`' for c in _BLOG_COLS)}) "
+                              f"VALUES ({', '.join(':' + c for c in _BLOG_COLS)})"), blog_rows)
         market_rows = _mart_rows(ctx, "mart_market", ["key", "run_date", "payload"])
         if market_rows:
             conn.execute(text("DELETE FROM analytics_market"))
             conn.execute(text("INSERT INTO analytics_market (`key`, run_date, payload) VALUES (:key, :run_date, :payload)"),
                          market_rows)
-    return StepResult(out=len(rows) + len(place_rows) + len(purchase_rows) + len(market_rows),
-                      message=f"술 카드 {len(rows)}, 장소 {len(place_rows)}, 구매 경로 {len(purchase_rows)}, 시장 지표 {len(market_rows)}행 교체")
+    return StepResult(out=len(rows) + len(place_rows) + len(purchase_rows) + len(blog_rows) + len(market_rows),
+                      message=f"술 카드 {len(rows)}, 장소 {len(place_rows)}, 구매 경로 {len(purchase_rows)}, "
+                              f"블로그 후기 {len(blog_rows)}, 시장 지표 {len(market_rows)}행 교체")
+
+
+_BLOG_COLS = ["sool_id", "seq", "title", "url", "blogname", "posted_at", "match", "run_date"]
 
 
 _PURCHASE_COLS = ["sool_id", "run_date", "url", "channel", "online_buy", "link_state", "http_code",
@@ -576,6 +627,34 @@ def _build_purchases(ctx: Context) -> int:
         "online_buy_reachable": int((out["online_buy"] & out["link_state"].isin(["alive", "login", "blocked"])).sum()),
     }
     return int(len(out))
+
+
+# 블로그 후기: blog_cache 원본 → 술 이름이 나오는 글만 제품당 최대 5개 → mart_blog (제목·블로그명·날짜·링크만)
+def _build_blogs(ctx: Context) -> int:
+    limit = int(ctx.config.get("blog_search", {}).get("per_product", 5))
+    with duckdb.connect(str(ctx.warehouse)) as con:
+        tables = {r[0] for r in con.execute("SHOW TABLES").fetchall()}
+        if "blog_cache" not in tables:
+            return 0
+        rows_in = con.execute("""
+            SELECT p.sool_id, p.name, p.producer, b.docs
+            FROM mart_sool_profile p JOIN blog_cache b ON b.sool_id = p.sool_id""").fetchall()
+
+    rows, by_match = [], Counter()
+    for sid, name, producer, docs in rows_in:
+        for seq, d in enumerate(pick_blogs(json.loads(docs or "[]"), name, producer, limit), start=1):
+            rows.append({"sool_id": int(sid), "seq": seq, **d, "run_date": ctx.run_date})
+            by_match[d["match"]] += 1
+    blogs = pd.DataFrame(rows, columns=["sool_id", "seq", "title", "url", "blogname", "posted_at", "match", "run_date"])
+    with duckdb.connect(str(ctx.warehouse)) as con:
+        con.register("blogs", blogs)
+        con.execute("CREATE OR REPLACE TABLE mart_blog AS SELECT * FROM blogs")
+    with_any = int(blogs["sool_id"].nunique())
+    ctx.metrics["blog_summary"] = {
+        "searched": len(rows_in), "with_reviews": with_any, "links": int(len(blogs)),
+        "by_match": dict(by_match), "none": len(rows_in) - with_any,
+    }
+    return int(len(blogs))
 
 
 # 술 카드 충실도 (U1): 장소(좌표)·구매 경로까지 만든 뒤 mart_sool_profile 에 card_score·card_missing 추가

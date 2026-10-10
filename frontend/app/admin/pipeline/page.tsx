@@ -265,6 +265,7 @@ export default function PipelinePage() {
               { t: "맛 추출", v: prof.with_taste, s: `페어링 ${prof.with_pairing ?? "-"}` },
               { t: "찾아가는 양조장", v: prof.visit_brewery, s: `식품명인 ${prof.food_master ?? "-"}` },
               { t: "수상 제품", v: prof.awarded, s: `감미료 ${prof.sweetener ?? "-"}` },
+              { t: "블로그 후기 있는 술", v: status.metrics?.blog_summary?.with_reviews, s: `후기 링크 ${status.metrics?.blog_summary?.links ?? "-"}` },
             ].map((c) => (
               <Col xs={12} md={8} xl={4} key={c.t}>
                 <Card className="bg-white/5 border-white/10 rounded-2xl h-full" styles={{ body: { padding: 20 } }}>

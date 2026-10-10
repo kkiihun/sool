@@ -29,3 +29,11 @@ link_check:
 # ② clean: 품질 검사 기준
 quality:
   abv_range: [0.5, 70]
+
+# ① collect: 제품별 블로그 후기 검색 (카카오 블로그 검색, 주 1회 갱신)
+blog_search:
+  enabled: true
+  refresh_days: 7
+  max_calls: 1500        # 한 번 실행에 최대 호출 수
+  fetch_size: 15         # 검색 결과를 이만큼 받아서
+  per_product: 5         # 술 이름이 나오는 글만 최대 이만큼 공개

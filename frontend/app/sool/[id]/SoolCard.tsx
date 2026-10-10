@@ -27,7 +27,8 @@ type Place = {
   products: { sool_id: number; name: string; category: string | null; abv: number | null }[];
 };
 type Purchase = { channel: string | null; online_buy: boolean; link_state: string | null; url: string | null };
-export type CardResp = { sool_id: number; profile: Profile | null; purchase: Purchase | null; place: Place | null };
+type Blog = { title: string; url: string; blogname: string | null; posted_at: string | null };
+export type CardResp = { sool_id: number; profile: Profile | null; purchase: Purchase | null; place: Place | null; blogs: Blog[] };
 
 const Section = ({ title, children }: { title: string; children: React.ReactNode }) => (
   <div className="flex flex-col gap-3">
@@ -220,6 +221,29 @@ export function WhereToTaste({ card, soolId }: { card: CardResp; soolId: number 
           </ul>
         </div>
       )}
+    </div>
+  );
+}
+
+/** 블로그 후기: 카카오 블로그 검색에서 술 이름이 나오는 글 (제목·링크만) */
+export function BlogReviews({ blogs }: { blogs: Blog[] }) {
+  if (!blogs?.length) return null;
+  return (
+    <div className="bg-white/[0.03] p-10 rounded-[3rem] border border-white/10 flex flex-col gap-4">
+      <div className="flex items-baseline justify-between">
+        <Text className="!text-white !text-base !font-black !opacity-60">블로그 후기</Text>
+        <Text className="!text-white/30 !text-xs">다음 블로그 검색 · 새 창으로 열림</Text>
+      </div>
+      <ul className="flex flex-col divide-y divide-white/5">
+        {blogs.map((b) => (
+          <li key={b.url} className="py-3">
+            <a href={b.url} target="_blank" rel="noreferrer noopener" className="group flex flex-col gap-1">
+              <span className="text-white/90 group-hover:text-amber-400 font-bold line-clamp-1">{b.title}</span>
+              <span className="text-white/35 text-xs">{[b.blogname, b.posted_at].filter(Boolean).join(" · ")}</span>
+            </a>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }
