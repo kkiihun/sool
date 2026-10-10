@@ -14,6 +14,7 @@ from collections import Counter
 
 from .categorize import standardize, suggest
 from .geo import clean_address, geocode, kakao_fetcher, short_sido
+from .links import check as check_link, classify as classify_link, interpret as interpret_link, normalize_url
 from .normalize import is_missing, normalize_name, normalize_producer
 from .profile import build_profile
 from .taste import taste_profile
@@ -53,7 +54,34 @@ def collect(ctx: Context) -> StepResult:
 
     ctx.metrics["snapshot"] = counts
     geo = _geocode_new(ctx)
-    return StepResult(out=sum(counts.values()), extra={"tables": counts, "geocode": geo})
+    links = _check_links(ctx)
+    return StepResult(out=sum(counts.values()), extra={"tables": counts, "geocode": geo, "links": links})
+
+
+def _check_links(ctx: Context) -> dict:
+    """시드 홈페이지 링크 생존 검사. 새 링크 + recheck_days 지난 링크만 (병렬)"""
+    from concurrent.futures import ThreadPoolExecutor
+
+    cfg = ctx.config.get("link_check", {})
+    seed_src = ctx.raw_dir / "seed_sool_basic.parquet"
+    if not cfg.get("enabled", True) or not seed_src.exists():
+        return {"state": "skipped"}
+    urls = sorted({u for u in map(normalize_url, pd.read_parquet(seed_src)["homepage"]) if u})
+
+    with duckdb.connect(str(ctx.warehouse)) as con:
+        con.execute("""CREATE TABLE IF NOT EXISTS link_cache (
+            url VARCHAR PRIMARY KEY, state VARCHAR, http_code INTEGER, final_url VARCHAR, checked_at TIMESTAMP)""")
+        fresh = {r[0] for r in con.execute(
+            f"SELECT url FROM link_cache WHERE checked_at > now() - INTERVAL {int(cfg.get('recheck_days', 7))} DAY").fetchall()}
+        todo = [u for u in urls if u not in fresh][: int(cfg.get("max_checks", 2000))]
+        with ThreadPoolExecutor(max_workers=int(cfg.get("workers", 8))) as pool:
+            results = list(pool.map(lambda u: (u, check_link(u, timeout=float(cfg.get("timeout", 8)))), todo))
+        for u, r in results:
+            con.execute("INSERT OR REPLACE INTO link_cache VALUES (?,?,?,?, now())",
+                        [u, r["state"], r.get("http_code"), r.get("final_url")])
+        by_state = dict(con.execute("SELECT state, COUNT(*) FROM link_cache GROUP BY 1").fetchall())
+    ctx.metrics["links"] = {"urls": len(urls), "checked": len(todo), "by_state": by_state}
+    return {"state": "ok", "checked": len(todo), "by_state": by_state}
 
 
 def _geo_key(address, producer) -> str:
@@ -216,10 +244,12 @@ def analyze(ctx: Context) -> StepResult:
 
     profiles = _build_profiles(ctx)
     places = _build_places(ctx)
+    purchases = _build_purchases(ctx)
 
     ctx.metrics.update({
         "profiles": profiles,
         "places": places,
+        "purchases": purchases,
         "total_items": int(len(sug)),
         "category_missing": int(len(missing)),
         "category_rule_resolved": resolved,
@@ -357,8 +387,25 @@ def publish(ctx: Context) -> StepResult:
         if place_rows:
             conn.execute(text("DELETE FROM analytics_place"))
             conn.execute(text(f"INSERT INTO analytics_place ({pcols}) VALUES ({pparams})"), place_rows)
-    return StepResult(out=len(rows) + len(place_rows),
-                      message=f"술 카드 {len(rows)}행, 장소 {len(place_rows)}행 교체")
+        purchase_rows = _mart_rows(ctx, "mart_purchase", _PURCHASE_COLS)
+        if purchase_rows:
+            conn.execute(text("DELETE FROM analytics_purchase"))
+            conn.execute(text(f"INSERT INTO analytics_purchase ({', '.join(_PURCHASE_COLS)}) "
+                              f"VALUES ({', '.join(':' + c for c in _PURCHASE_COLS)})"), purchase_rows)
+    return StepResult(out=len(rows) + len(place_rows) + len(purchase_rows),
+                      message=f"술 카드 {len(rows)}행, 장소 {len(place_rows)}행, 구매 경로 {len(purchase_rows)}행 교체")
+
+
+_PURCHASE_COLS = ["sool_id", "run_date", "url", "channel", "online_buy", "link_state", "http_code",
+                  "final_url", "checked_at"]
+
+
+def _mart_rows(ctx: Context, table: str, cols: list[str]) -> list[dict]:
+    with duckdb.connect(str(ctx.warehouse), read_only=True) as con:
+        if table not in {r[0] for r in con.execute("SHOW TABLES").fetchall()}:
+            return []
+        df = con.execute(f"SELECT * FROM {table}").df()
+    return [{c: _clean_value(r.get(c)) for c in cols} for r in df.to_dict("records")]
 
 
 _PLACE_COLS = ["place_id", "run_date", "name", "aliases", "address", "homepage", "lat", "lng", "sido", "sigungu",
@@ -367,15 +414,7 @@ _PLACE_COLS = ["place_id", "run_date", "name", "aliases", "address", "homepage",
 
 
 def _place_rows(ctx: Context) -> list[dict]:
-    with duckdb.connect(str(ctx.warehouse), read_only=True) as con:
-        if "mart_place" not in {r[0] for r in con.execute("SHOW TABLES").fetchall()}:
-            return []
-        df = con.execute("SELECT * FROM mart_place").df()
-    out = []
-    for r in df.to_dict("records"):
-        r = {k: _clean_value(v) for k, v in r.items()}
-        out.append({c: r.get(c) for c in _PLACE_COLS})
-    return out
+    return _mart_rows(ctx, "mart_place", _PLACE_COLS)
 
 
 def record_run(status: dict) -> None:
@@ -496,3 +535,33 @@ def _build_places(ctx: Context) -> int:
         "merged_rows": int(len(prof)),
     }
     return int(len(places))
+
+
+# 구매 경로: 제품 홈페이지 → 채널 분류 + 링크 상태 → mart_purchase (제품당 1행, 링크 있는 제품만)
+def _build_purchases(ctx: Context) -> int:
+    with duckdb.connect(str(ctx.warehouse)) as con:
+        tables = {r[0] for r in con.execute("SHOW TABLES").fetchall()}
+        prof = con.execute("SELECT sool_id, homepage FROM mart_sool_profile").df()
+        cache = (con.execute("SELECT url, state, http_code, final_url, checked_at FROM link_cache").df()
+                 if "link_cache" in tables else pd.DataFrame(columns=["url", "state", "http_code", "final_url", "checked_at"]))
+        prof["url"] = prof["homepage"].map(normalize_url)
+        prof = prof[prof["url"].notna()].copy()
+        cls = prof["url"].map(classify_link)
+        prof["channel"] = cls.map(lambda c: c[0])
+        prof["online_buy"] = cls.map(lambda c: c[1])
+        prof = prof.merge(cache.rename(columns={"state": "link_state"}), on="url", how="left")
+        prof["link_state"] = [interpret_link(c, st if isinstance(st, str) else None, f if isinstance(f, str) else None)
+                              for c, st, f in zip(prof["channel"], prof["link_state"], prof["final_url"])]
+        prof["http_code"] = prof["http_code"].astype("Int64")
+        prof["run_date"] = ctx.run_date
+        out = prof[["sool_id", "run_date", "url", "channel", "online_buy", "link_state", "http_code", "final_url", "checked_at"]]
+        con.register("out", out)
+        con.execute("CREATE OR REPLACE TABLE mart_purchase AS SELECT * FROM out")
+
+    ctx.metrics["purchase_summary"] = {
+        "with_link": int(len(out)),
+        "by_channel": out["channel"].value_counts().to_dict(),
+        "by_state": out["link_state"].value_counts().to_dict(),
+        "online_buy_reachable": int((out["online_buy"] & out["link_state"].isin(["alive", "login", "blocked"])).sum()),
+    }
+    return int(len(out))

@@ -25,6 +25,7 @@ type CategoryRow = {
 type Summary = {
   total: number; by_category: CategoryRow[]; pairings: [string, number][];
   taste: Record<string, { high: number; low: number; mixed: number }>; special_ingredients: [string, number][];
+  purchase_channels: { channel: string; n: number; alive: number; dead: number }[];
 };
 type Profile = Record<string, any>;
 
@@ -33,7 +34,17 @@ const TASTE_LABEL: Record<string, string> = {
   sweetness: "단맛", acidity: "산미", body: "바디", carbonation: "탄산", smoothness: "부드러움",
   aroma: "향", nutty: "고소함", bitterness: "쌉쌀함", clean: "깔끔함",
 };
+const CHANNEL_LABEL: Record<string, string> = {
+  smartstore: "스마트스토어", shop_mall: "판매몰", own_site: "자체 사이트", modoo: "모두홈페이지",
+  instagram: "인스타그램", facebook: "페이스북", blog: "블로그", kakao: "카카오",
+};
+const LINK_STATE: Record<string, { label: string; color: string }> = {
+  alive: { label: "접속됨", color: "green" }, login: { label: "스토어 있음 · 성인 인증 필요", color: "green" },
+  blocked: { label: "요청 제한(확인 불가)", color: "gold" }, ended: { label: "서비스 종료", color: "red" },
+  dead: { label: "없는 페이지", color: "red" }, error: { label: "접속 실패", color: "red" }, unchecked: { label: "미검사", color: "default" },
+};
 const FLAG_OPTIONS = [
+  { value: "online_buy", label: "온라인 구매 가능" },
   { value: "visit_brewery", label: "찾아가는 양조장" }, { value: "food_master", label: "식품명인" },
   { value: "intangible_heritage", label: "무형문화재" }, { value: "has_sweetener", label: "감미료 사용" },
   { value: "is_raw", label: "생(비살균)" }, { value: "is_sparkling", label: "탄산" },
@@ -155,6 +166,7 @@ export default function PipelinePage() {
           {r.is_raw && <Tag>생</Tag>}
           {r.is_sparkling && <Tag>탄산</Tag>}
           {r.has_sweetener && <Tag color="red">감미료</Tag>}
+          {r.online_buy && !["dead", "error", "ended"].includes(r.link_state) && <Tag color="green">온라인 구매</Tag>}
         </span>
       ),
     },
@@ -275,6 +287,17 @@ export default function PipelinePage() {
                     <Descriptions.Item label="특산 원료">
                       <span className="flex flex-wrap gap-1">{summary.special_ingredients.map(([k, n]) => <Tag key={k}>{k} {n}</Tag>)}</span>
                     </Descriptions.Item>
+                    <Descriptions.Item label="구매 경로">
+                      <span className="flex flex-wrap gap-1">
+                        {summary.purchase_channels.map((c) => (
+                          <Tooltip key={c.channel} title={`접속됨 ${c.alive} · 죽은 링크 ${c.dead}`}>
+                            <Tag color={c.channel === "smartstore" || c.channel === "shop_mall" ? "green" : undefined}>
+                              {CHANNEL_LABEL[c.channel] ?? c.channel} {c.n}{c.dead ? ` (✕${c.dead})` : ""}
+                            </Tag>
+                          </Tooltip>
+                        ))}
+                      </span>
+                    </Descriptions.Item>
                   </Descriptions>
                 </Card>
               </Col>
@@ -311,6 +334,14 @@ export default function PipelinePage() {
                 <Descriptions.Item label="수상">{r.award_count ? `${r.award_count}건 · 최고 ${r.best_award ?? "-"} · ${r.award_years?.join(", ")}` : "-"}</Descriptions.Item>
                 <Descriptions.Item label="주종 근거">{r.category_source === "current" ? "기존 값" : r.category_rule ? `${r.category_rule} (${r.category_confidence})` : "-"}</Descriptions.Item>
                 <Descriptions.Item label="양조장 주소" span={2}>{r.address || "-"}</Descriptions.Item>
+                <Descriptions.Item label="구매 경로" span={2}>
+                  {r.purchase_channel ? (
+                    <span className="flex flex-wrap items-center gap-2">
+                      <Tag color={r.online_buy ? "green" : undefined}>{CHANNEL_LABEL[r.purchase_channel] ?? r.purchase_channel}</Tag>
+                      <Tag color={LINK_STATE[r.link_state]?.color}>{LINK_STATE[r.link_state]?.label ?? r.link_state}</Tag>
+                    </span>
+                  ) : "-"}
+                </Descriptions.Item>
                 <Descriptions.Item label="홈페이지" span={2}>{r.homepage ? <a href={r.homepage.startsWith("http") ? r.homepage : `http://${r.homepage}`} target="_blank" rel="noreferrer">{r.homepage}</a> : "-"}</Descriptions.Item>
                 <Descriptions.Item label="맛·페어링 원문" span={2}>{r.features || "-"}</Descriptions.Item>
               </Descriptions>

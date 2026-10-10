@@ -25,7 +25,7 @@ from app.models.review import Review
 from app.models.sense import Sense
 from app.models.tasting import Tasting
 from app.models.tasting_note import TastingNote
-from app.models.analytics import AnalyticsPlace, AnalyticsSoolProfile, CategoryReview, PipelineRun
+from app.models.analytics import AnalyticsPlace, AnalyticsPurchase, AnalyticsSoolProfile, CategoryReview, PipelineRun
 
 # =====================#
 #   Router Import

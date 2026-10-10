@@ -101,3 +101,18 @@ class AnalyticsPlace(Base):
     food_master = Column(Boolean)
     intangible_heritage = Column(Boolean)
     awarded_products = Column(Integer)
+
+
+class AnalyticsPurchase(Base):
+    """구매 경로: 제품 홈페이지 링크의 채널(스마트스토어·자체 사이트…)과 생존 여부. 가격은 없음."""
+    __tablename__ = "analytics_purchase"
+
+    sool_id = Column(Integer, primary_key=True)
+    run_date = Column(Date, nullable=False)
+    url = Column(String(500))
+    channel = Column(String(20), index=True)         # smartstore / shop_mall / own_site / modoo / instagram / ...
+    online_buy = Column(Boolean, index=True)        # 온라인 구매 경로 (스마트스토어·판매몰)
+    link_state = Column(String(10))                 # alive / dead / blocked / error / unchecked
+    http_code = Column(Integer)
+    final_url = Column(String(500))
+    checked_at = Column(DateTime)

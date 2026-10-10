@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.core.deps import require_admin
-from app.models.analytics import AnalyticsPlace, AnalyticsSoolProfile, CategoryReview, PipelineRun
+from app.models.analytics import AnalyticsPlace, AnalyticsPurchase, AnalyticsSoolProfile, CategoryReview, PipelineRun
 from app.models.sool import Sool
 from app.models.user import User
 
@@ -59,9 +59,19 @@ def pipeline_summary(db: Session = Depends(get_db)):
         for s in sp or []:
             special[s] = special.get(s, 0) + 1
 
+    U = AnalyticsPurchase
+    channels = [
+        {"channel": ch, "n": n, "alive": int(alive or 0), "dead": int(dead or 0)}
+        for ch, n, alive, dead in db.query(
+            U.channel, func.count(),
+            func.sum(func.if_(U.link_state.in_(["alive", "login", "blocked"]), 1, 0)),
+            func.sum(func.if_(U.link_state.in_(["dead", "error", "ended"]), 1, 0)),
+        ).group_by(U.channel).order_by(func.count().desc()).all()
+    ]
     return {
         "total": sum(r.n for r in rows),
         "by_category": [dict(r._mapping) for r in rows],
+        "purchase_channels": channels,
         "pairings": sorted(pairing.items(), key=lambda x: -x[1]),
         "taste": taste,
         "special_ingredients": sorted(special.items(), key=lambda x: -x[1])[:20],
@@ -80,13 +90,17 @@ def pipeline_profiles(
     db: Session = Depends(get_db),
 ):
     """술 카드 목록 (sool 기본 정보와 합쳐서)"""
-    P = AnalyticsSoolProfile
-    qry = db.query(P, Sool.name, Sool.producer, Sool.region, Sool.abv).join(Sool, Sool.id == P.sool_id)
+    P, U = AnalyticsSoolProfile, AnalyticsPurchase
+    qry = (db.query(P, Sool.name, Sool.producer, Sool.region, Sool.abv, U.channel, U.online_buy, U.link_state, U.url)
+           .join(Sool, Sool.id == P.sool_id)
+           .outerjoin(U, U.sool_id == P.sool_id))
     if category:
         qry = qry.filter(P.category == category)
     if unclassified:
         qry = qry.filter(P.category.is_(None))
-    if flag:
+    if flag == "online_buy":       # 온라인 구매 경로가 있고 링크가 죽지 않은 제품
+        qry = qry.filter(U.online_buy.is_(True), U.link_state.notin_(["dead", "error", "ended"]))
+    elif flag:
         if flag not in FLAGS:
             raise HTTPException(400, f"flag 는 {sorted(FLAGS)} 중 하나")
         qry = qry.filter(getattr(P, flag).is_(True))
@@ -98,9 +112,11 @@ def pipeline_profiles(
 
     total = qry.count()
     items = []
-    for p, name, producer, region, abv in qry.order_by(P.sool_id).offset((page - 1) * size).limit(size).all():
+    rows = qry.order_by(P.sool_id).offset((page - 1) * size).limit(size).all()
+    for p, name, producer, region, abv, channel, online_buy, link_state, url in rows:
         d = {c.name: getattr(p, c.name) for c in P.__table__.columns}
-        d.update(name=name, producer=producer, region=region, abv=abv)
+        d.update(name=name, producer=producer, region=region, abv=abv,
+                 purchase_channel=channel, online_buy=online_buy, link_state=link_state, purchase_url=url)
         items.append(d)
     return {"total": total, "page": page, "size": size, "items": items}
 
