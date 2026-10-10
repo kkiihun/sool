@@ -196,7 +196,7 @@ export default function BreweryReport({ params }: { params: Promise<{ placeId: s
 
       <style jsx global>{`
         @media print {
-          header, .ant-layout-sider, .no-print { display: none !important; }
+          header, .ant-layout-sider, .app-tabbar, .no-print { display: none !important; }
           body, .report-root { background: #fff !important; }
           .report-root * { color: #111 !important; border-color: #ddd !important; }
           .report-card { background: #fff !important; break-inside: avoid; }

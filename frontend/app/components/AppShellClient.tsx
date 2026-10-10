@@ -21,6 +21,7 @@ import {
   ShopOutlined,
   MenuOutlined,
   ProfileOutlined,
+  FileTextOutlined,
 } from "@ant-design/icons";
 import { useAuth } from "./AuthProvider";
 import AppShellProvider, { useAppShell } from "./AppShellProvider";
@@ -44,6 +45,7 @@ function ShellLayout({ children }: { children: React.ReactNode }) {
     { key: "/", icon: <AppstoreOutlined style={{ fontSize: '18px' }} />, label: "술 탐색" },
     { key: "/breweries", icon: <EnvironmentOutlined style={{ fontSize: '18px' }} />, label: "양조장 지도" },
     { key: "/owners/restaurant", icon: <ShopOutlined style={{ fontSize: '18px' }} />, label: "식당 사장님" },
+    { key: "/owners/restaurant/report", icon: <FileTextOutlined style={{ fontSize: '18px' }} />, label: "식당 리포트" },
     { key: "/owners/menu-board", icon: <ProfileOutlined style={{ fontSize: '18px' }} />, label: "술 메뉴판" },
     { key: "/owners/brewery", icon: <FileSearchOutlined style={{ fontSize: '18px' }} />, label: "양조장 리포트" },
     { key: "/Tasting", icon: <StarOutlined style={{ fontSize: '18px' }} />, label: "시음 노트" },

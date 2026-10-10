@@ -1,0 +1,24 @@
+from app.services.brewery_report import build_issues, percentile_rank, summarize
+
+
+def test_percentile_rank():
+    assert percentile_rank(10, [10, 5, 1]) == 33
+    assert percentile_rank(1, [10, 5, 1]) == 100
+    assert percentile_rank(3, []) is None
+
+
+def test_issues_order_and_modoo():
+    products = [{"card_score": 5, "card_missing": ["taste", "pairing"], "channel": "modoo", "link_state": "ended",
+                 "online_buy": False, "blog_count": 0, "on_sale": False}]
+    s = summarize(products)
+    issues = build_issues(s, {"geo_method": "address"})
+    levels = [i["level"] for i in issues]
+    assert levels == sorted(levels, key=["high", "mid", "low", "ok"].index)
+    assert issues[0]["title"].startswith("홈페이지가 서비스 종료")
+
+
+def test_own_site_softens_online_issue():
+    products = [{"card_score": 7, "card_missing": [], "channel": "own_site", "link_state": "alive",
+                 "online_buy": False, "blog_count": 3, "on_sale": True}]
+    titles = [i["title"] for i in build_issues(summarize(products), {})]
+    assert "온라인 구매 경로 확인 필요" in titles and "온라인 구매 경로 없음" not in titles

@@ -138,6 +138,9 @@ export default function RestaurantOwners() {
           <Text className="!text-white/50 !text-base md:!text-lg block mt-3">
             우리 가게 메뉴와 어울리는 전통주를, 가게에서 가까운 양조장부터 찾아 드립니다. (서울·경기 우선)
           </Text>
+          <Link href="/owners/restaurant/report" className="inline-block mt-3 text-amber-400 font-bold">
+            메뉴판을 통째로 분석한 식당 리포트 받기 →
+          </Link>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-[1.3fr_1fr] gap-4">

@@ -3,6 +3,7 @@ import re
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
+from pydantic import BaseModel, Field
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
@@ -10,6 +11,7 @@ from app.core.database import get_db
 from app.models.analytics import AnalyticsBlog, AnalyticsPlace, AnalyticsPurchase, AnalyticsSoolProfile
 from app.models.sool import Sool
 from app.services.geo import geocode, haversine_km
+from app.services.menu_analysis import abv_band, classify_dish, parse_menu, pick_lineup, score_drink, store_profile
 
 router = APIRouter(prefix="/explore/restaurant", tags=["Restaurant"])
 
@@ -140,3 +142,116 @@ def recommend(
 
     return {"total": len(items), "items": items[:limit], "breweries": breweries[:30],
             "candidates": {"breweries": len(cand), "products": len(rows)}}
+
+
+
+# ---------------------------------------------------------------------------
+# 식당 리포트: 메뉴판 텍스트 → 메뉴 분석 + 메뉴별 추천 + 가게 라인업 + 공급처·우리 동네 술
+# ---------------------------------------------------------------------------
+class ReportIn(BaseModel):
+    menu_text: str = Field(..., min_length=2, max_length=5000)
+    store_name: Optional[str] = Field(None, max_length=60)
+    lat: Optional[float] = None
+    lng: Optional[float] = None
+    radius_km: float = Field(50, gt=0, le=200)
+    lineup_size: int = Field(4, ge=2, le=6)
+
+
+def _drinks(db: Session, here, radius_km: float) -> tuple[dict[int, dict], list]:
+    """후보 술: 위치가 있으면 반경 안 양조장, 없으면 서울·경기. 판매 중단 제외"""
+    cand = []
+    for pl in db.query(L).filter(L.lat.isnot(None)).all():
+        d = haversine_km(here[0], here[1], pl.lat, pl.lng) if here else None
+        if (here and d > radius_km) or (not here and pl.sido not in ("서울", "경기")):
+            continue
+        cand.append((pl, d))
+    place_of = {p["sool_id"]: (pl, d) for pl, d in cand for p in (pl.products or [])}
+    if not place_of:
+        return {}, cand
+    rows = (db.query(Sool.id, Sool.name, Sool.abv, P.category, P.pairings, P.taste, P.features, P.card_score,
+                     P.on_sale, P.is_raw, P.award_count, U.online_buy, U.link_state)
+            .join(P, P.sool_id == Sool.id).outerjoin(U, U.sool_id == Sool.id)
+            .filter(Sool.id.in_(list(place_of))).all())
+    blogs = dict(db.query(B.sool_id, func.count()).filter(B.sool_id.in_(list(place_of))).group_by(B.sool_id).all())
+    drinks = {}
+    for r in rows:
+        if r.on_sale is False:
+            continue
+        pl, dist = place_of[r.id]
+        drinks[r.id] = {
+            "sool_id": r.id, "name": r.name, "abv": r.abv, "category": r.category, "pairings": r.pairings or [],
+            "taste": r.taste or {}, "features": r.features, "is_raw": bool(r.is_raw), "award": bool(r.award_count),
+            "online_buy": bool(r.online_buy) and r.link_state not in DEAD, "blog_count": blogs.get(r.id, 0),
+            "quality": (r.card_score or 0) + min(blogs.get(r.id, 0), 5) * 0.4 + (1 if r.award_count else 0),
+            "place_id": pl.place_id, "brewery": pl.name, "sigungu": pl.sigungu, "sido": pl.sido,
+            "lat": pl.lat, "lng": pl.lng, "visit_brewery": bool(pl.visit_brewery),
+            "distance_km": None if dist is None else round(dist, 1),
+        }
+    return drinks, cand
+
+
+def _public(d: dict) -> dict:
+    keep = ("sool_id", "name", "abv", "category", "is_raw", "award", "online_buy", "blog_count", "place_id",
+            "brewery", "sigungu", "visit_brewery", "distance_km")
+    out = {k: d[k] for k in keep}
+    out["tastes"] = [k for k, v in d["taste"].items() if v and v > 0][:3]
+    out["abv_band"] = abv_band(d["abv"])
+    return out
+
+
+@router.post("/report")
+def restaurant_report(body: ReportIn, db: Session = Depends(get_db)):
+    names = parse_menu(body.menu_text)
+    if not names:
+        raise HTTPException(400, "메뉴를 찾지 못했습니다. 한 줄에 메뉴 하나씩 붙여 넣어 주세요")
+    dishes = [classify_dish(n) for n in names]
+    known = [d for d in dishes if d["groups"] or d["traits"]]
+    here = (body.lat, body.lng) if body.lat is not None and body.lng is not None else None
+    drinks, cand = _drinks(db, here, body.radius_km)
+    if not drinks:
+        raise HTTPException(404, "반경 안에 추천할 술이 없습니다. 반경을 넓혀 보세요")
+
+    def near_bonus(d):                       # 가까울수록 +1 (50km 넘으면 0)
+        return 0 if d["distance_km"] is None else max(0.0, 1 - d["distance_km"] / 50)
+
+    per_dish, dish_scores = [], {}
+    for dish in known:
+        scored = []
+        for sid, dk in drinks.items():
+            sc, why = score_drink(dish, dk)
+            if sc > 0:
+                scored.append((sc + 0.1 * dk["quality"] + near_bonus(dk), sid, why))
+        scored.sort(key=lambda x: -x[0])
+        dish_scores[dish["name"]] = {sid: sc for sc, sid, _ in scored[:30]}
+        # 메뉴별 추천 2개: 1위 + 주종이 다른 것 중 최고 (선택지를 넓게)
+        picks = scored[:1] + [x for x in scored[1:] if scored and drinks[x[1]]["category"] != drinks[scored[0][1]]["category"]][:1]
+        per_dish.append({**dish, "picks": [{**_public(drinks[sid]), "why": why[:2], "score": round(sc, 2)}
+                                           for sc, sid, why in picks]})
+
+    lineup_ids = pick_lineup(dish_scores, drinks, body.lineup_size)
+    lineup = []
+    for sid in lineup_ids:
+        covers = [d for d, s in dish_scores.items() if sid in s and s[sid] >= max(s.values()) * 0.7]
+        lineup.append({**_public(drinks[sid]), "covers": covers})
+
+    # 우리 동네 술: 같은 시군구(위치 있을 때) 양조장 제품 중 충실한 순
+    local = []
+    if here:
+        nearest = min(cand, key=lambda x: x[1])[0] if cand else None
+        local_ids = [sid for sid, d in drinks.items() if nearest and d["sigungu"] == nearest.sigungu and d["distance_km"] <= 15]
+        local = [_public(drinks[s]) for s in sorted(local_ids, key=lambda s: -drinks[s]["quality"])[:4]]
+
+    suppliers = sorted({d["place_id"]: d for d in drinks.values()}.values(),
+                       key=lambda d: (d["distance_km"] if d["distance_km"] is not None else 0))
+    return {
+        "store_name": body.store_name,
+        "profile": store_profile(known),
+        "parsed": len(names), "unrecognized": [d["name"] for d in dishes if d not in known],
+        "per_dish": per_dish,
+        "lineup": lineup,
+        "local": local,
+        "suppliers": [{"place_id": d["place_id"], "brewery": d["brewery"], "sigungu": d["sigungu"],
+                       "distance_km": d["distance_km"], "visit_brewery": d["visit_brewery"]} for d in suppliers[:6]] if here else [],
+        "raw_count": sum(1 for d in drinks.values() if d["is_raw"] and (d["distance_km"] or 999) <= 30),
+        "candidates": len(drinks),
+    }
