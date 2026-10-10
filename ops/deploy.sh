@@ -27,6 +27,7 @@ for i in $(seq 1 30); do
   if curl -sf "http://${HOST}:${FRONT_PORT:-3300}/api/proxy/ready" >/dev/null; then
     echo "✅ 배포 완료: ${GIT_BRANCH}@${GIT_SHA}"
     docker compose ps
+    ./ops/sync-docs.sh || echo "⚠️  문서 업로드 실패 (배포는 정상)"
     exit 0
   fi
   sleep 2
