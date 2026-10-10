@@ -119,7 +119,8 @@ def explore_sool(
     주종은 원래 값이 없으면 파이프라인 제안값으로 보여주고 거른다."""
     category_col = func.coalesce(func.nullif(Sool.category, ""), P.category)
     qry = (db.query(Sool, P.category, P.category_source, P.visit_brewery, P.is_raw, P.has_sweetener,
-                    P.main_ingredient, P.award_count, P.card_score, U.online_buy, U.link_state)
+                    P.main_ingredient, P.award_count, P.card_score, P.taste, P.pairings, P.best_award,
+                    U.online_buy, U.link_state)
            .outerjoin(P, P.sool_id == Sool.id)
            .outerjoin(U, U.sool_id == Sool.id))
 
@@ -150,7 +151,7 @@ def explore_sool(
     rows = qry.order_by(*order_by, Sool.id).offset((page - 1) * page_size).limit(page_size).all()
 
     items = []
-    for s, p_cat, p_src, visit, raw, sweet, main_ing, awards, score, online, state in rows:
+    for s, p_cat, p_src, visit, raw, sweet, main_ing, awards, score, taste, pairings, best_award, online, state in rows:
         own = s.category if s.category else None
         items.append({
             "id": s.id, "name": s.name, "abv": s.abv, "region": s.region, "producer": s.producer,
@@ -160,6 +161,11 @@ def explore_sool(
             "visit_brewery": bool(visit), "is_raw": bool(raw), "no_sweetener": sweet is False and main_ing is not None,
             "awarded": bool(awards), "online_buy": bool(online) and state not in DEAD_STATES,
             "card_score": score,
+            # 카드 요약: 원료 · 강하게 언급된 맛 3개 · 페어링 2개
+            "main_ingredient": main_ing,
+            "tastes": [k for k, v in (taste or {}).items() if v and v > 0][:3],
+            "pairings": (pairings or [])[:2],
+            "best_award": best_award,
         })
     return {"total": total, "items": items}
 

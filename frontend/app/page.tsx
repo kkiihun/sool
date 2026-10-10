@@ -1,46 +1,31 @@
 "use client";
 
+// 메인: 전통주 탐색. 목록·필터는 공개 API /explore/sool (파이프라인 술 카드 결과)
 import { API_BASE, assetUrl } from "@/lib/api";
-import { PAIRINGS } from "@/lib/soolLabels";
-
+import { CAT_COLOR, PAIRINGS, TASTE_LABEL } from "@/lib/soolLabels";
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import {
-  Input,
-  Select,
-  Card,
-  Typography,
-  Pagination,
-  Space,
-  Spin,
-  Badge,
-  Button,
-} from "antd";
-import {
-  SearchOutlined,
-  StarOutlined,
-  ReloadOutlined,
-  FilterOutlined,
-  ControlOutlined,
-} from "@ant-design/icons";
-import { useRouter } from "next/navigation";
-import { useAuth } from "./components/AuthProvider";
+import { Input, Select, Typography, Pagination, Spin, Empty } from "antd";
+import { SearchOutlined, ReloadOutlined, TrophyFilled } from "@ant-design/icons";
 import { useAppShell } from "./components/AppShellProvider";
 
 const { Title, Text } = Typography;
 
-const CATEGORIES = [
-  { label: "전체 카테고리", value: "" },
-  { label: "탁주", value: "탁주" },
-  { label: "약주", value: "약주" },
-  { label: "청주", value: "청주" },
-  { label: "증류주", value: "증류주" },
-  { label: "과실주", value: "과실주" },
-  { label: "리큐르", value: "리큐르" },
-  { label: "기타주류", value: "기타주류" },
-];
+type Item = {
+  id: number; name: string; abv: number | null; region: string | null; producer: string | null; image_url: string | null;
+  category: string | null; category_auto: boolean; visit_brewery: boolean; is_raw: boolean; no_sweetener: boolean;
+  awarded: boolean; online_buy: boolean; card_score: number | null;
+  main_ingredient: string | null; tastes: string[]; pairings: string[]; best_award: string | null;
+};
 
-// 술 카드(파이프라인 결과) 필터 — 백엔드 /explore/sool 의 flags 이름과 같다
+const CATEGORIES = ["탁주", "약주", "청주", "과실주", "증류주", "리큐르", "기타주류"];
+const SORT_OPTIONS = [
+  { label: "추천순", value: "recommended" },
+  { label: "이름순", value: "name" },
+  { label: "도수 낮은순", value: "abv_low" },
+  { label: "도수 높은순", value: "abv_high" },
+];
+// 술 카드 필터 — 백엔드 /explore/sool 의 flags 이름과 같다
 const FLAGS = [
   { value: "no_sweetener", label: "무감미료" },
   { value: "raw", label: "생(비살균)" },
@@ -48,408 +33,258 @@ const FLAGS = [
   { value: "online_buy", label: "온라인 구매" },
   { value: "awarded", label: "수상작" },
 ];
+const PAGE_SIZE = 24;
 
-const SORT_OPTIONS = [
-  { label: "추천순 (정보 충실)", value: "recommended" },
-  { label: "이름순 정렬", value: "name" },
-  { label: "도수 낮은순", value: "abv_low" },
-  { label: "도수 높은순", value: "abv_high" },
-];
+const catColor = (c: string | null) => CAT_COLOR[c ?? ""] ?? "#64748b";
 
-// 도수별 색상 반환 함수
-const getAbvColor = (abv: number) => {
-  if (abv < 10) return "#52c41a"; // 저도수: 그린
-  if (abv < 20) return "#f59e0b"; // 중도수: 앰버
-  return "#ff4d4f"; // 고도수: 레드
-};
+function Chip({ on, onClick, children, tone = "amber" }: { on: boolean; onClick: () => void; children: React.ReactNode; tone?: "amber" | "purple" }) {
+  const onCls = tone === "purple" ? "bg-purple-400 text-black border-purple-400" : "bg-amber-500 text-black border-amber-500";
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={[
+        "h-9 px-4 rounded-full text-sm font-bold border transition-colors whitespace-nowrap",
+        on ? onCls : "bg-white/[0.04] text-white/60 border-white/10 hover:border-white/30 hover:text-white",
+      ].join(" ")}
+    >
+      {children}
+    </button>
+  );
+}
 
-// 카테고리별 색상 맵
-const CATEGORY_COLORS: Record<string, string> = {
-  "탁주": "rgba(82, 196, 26, 0.15)",   // 그린 계열
-  "약주": "rgba(245, 158, 11, 0.15)",  // 앰버 계열
-  "청주": "rgba(24, 144, 255, 0.15)",  // 블루 계열
-  "증류주": "rgba(255, 77, 79, 0.15)", // 레드 계열
-  "과실주": "rgba(114, 46, 209, 0.15)", // 퍼플 계열
-};
+function SoolTile({ item }: { item: Item }) {
+  const color = catColor(item.category);
+  const img = assetUrl(item.image_url);
+  return (
+    <Link href={`/sool/${item.id}`} className="group block h-full">
+      <div className="h-full flex flex-col rounded-3xl overflow-hidden border border-white/10 bg-white/[0.03] hover:border-amber-500/50 hover:bg-white/[0.05] transition-colors">
+        {/* 위: 이미지 또는 주종 색 패널 */}
+        <div className="relative h-36 overflow-hidden" style={{ background: `linear-gradient(135deg, ${color}33, ${color}0d 70%)` }}>
+          {img ? (
+            <img src={img} alt={item.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
+          ) : (
+            <div className="absolute inset-0 flex items-end p-5">
+              <span className="text-4xl font-black tracking-tight" style={{ color: `${color}cc` }}>{item.category ?? "전통주"}</span>
+            </div>
+          )}
+          <div className="absolute top-0 left-0 right-0 h-1" style={{ background: color }} />
+          {item.abv != null && (
+            <span className="absolute top-4 right-4 px-2.5 py-1 rounded-lg bg-black/60 backdrop-blur text-white text-sm font-black">{item.abv}%</span>
+          )}
+          {item.awarded && (
+            <span className="absolute top-4 left-4 px-2 py-1 rounded-lg bg-black/60 backdrop-blur text-amber-400 text-xs font-bold">
+              <TrophyFilled /> {item.best_award ?? "수상"}
+            </span>
+          )}
+        </div>
 
-const CATEGORY_TEXT_COLORS: Record<string, string> = {
-  "탁주": "#b7eb8f",
-  "약주": "#ffe58f",
-  "청주": "#91d5ff",
-  "증류주": "#ffa39e",
-  "과실주": "#efdbff",
-};
+        {/* 아래: 술 카드 요약 */}
+        <div className="flex-1 flex flex-col gap-2.5 p-5">
+          <div>
+            <div className="text-white text-lg font-black leading-snug line-clamp-1 group-hover:text-amber-400 transition-colors">{item.name}</div>
+            <div className="text-white/40 text-xs mt-0.5 line-clamp-1">
+              {[item.producer, item.region].filter(Boolean).join(" · ") || "-"}
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 text-xs">
+            {item.category && (
+              <span className="px-2 py-0.5 rounded-md font-bold whitespace-nowrap" style={{ background: `${color}22`, color }}>
+                {item.category}{item.category_auto && <span className="opacity-60"> · 추정</span>}
+              </span>
+            )}
+            {item.main_ingredient && <span className="text-white/50 line-clamp-1">원료 {item.main_ingredient}</span>}
+          </div>
+
+          {(item.tastes.length > 0 || item.pairings.length > 0) && (
+            <div className="flex flex-wrap gap-1.5 text-xs">
+              {item.tastes.map((t) => (
+                <span key={t} className="px-2 py-0.5 rounded-md bg-orange-500/10 text-orange-300">{TASTE_LABEL[t] ?? t}</span>
+              ))}
+              {item.pairings.map((p) => (
+                <span key={p} className="px-2 py-0.5 rounded-md bg-purple-500/10 text-purple-300">🍽 {p}</span>
+              ))}
+            </div>
+          )}
+
+          <div className="mt-auto pt-3 flex flex-wrap gap-1.5 text-[11px] font-bold border-t border-white/5">
+            {item.visit_brewery && <span className="px-2 py-0.5 rounded-md bg-cyan-500/15 text-cyan-300">찾아가는 양조장</span>}
+            {item.is_raw && <span className="px-2 py-0.5 rounded-md bg-green-500/15 text-green-300">생</span>}
+            {item.no_sweetener && <span className="px-2 py-0.5 rounded-md bg-white/5 text-white/50">무감미료</span>}
+            {item.online_buy && <span className="px-2 py-0.5 rounded-md bg-amber-500/15 text-amber-300">온라인 구매</span>}
+          </div>
+        </div>
+      </div>
+    </Link>
+  );
+}
 
 export default function Home() {
-  const { user } = useAuth();
   const { search, setSearch } = useAppShell();
-  const [sool, setSool] = useState<any[]>([]);
+  const [items, setItems] = useState<Item[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [category, setCategory] = useState("");
-  const [region, setRegion] = useState("전체 지역");
-  const [sortOption, setSortOption] = useState("recommended");
-  const [regionOptions, setRegionOptions] = useState<string[]>(["전체 지역"]);
-  const [loading, setLoading] = useState(false);
-  const [showFilters, setShowFilters] = useState(false);
+  const [region, setRegion] = useState("");
+  const [sort, setSort] = useState("recommended");
   const [flags, setFlags] = useState<string[]>([]);
   const [pairing, setPairing] = useState("");
+  const [regions, setRegions] = useState<string[]>([]);
   const [flagCounts, setFlagCounts] = useState<Record<string, number>>({});
+  const [loading, setLoading] = useState(false);
 
-  // 상세 페이지의 페어링 태그(/?pairing=...)로 들어온 경우
   useEffect(() => {
+    // 상세 페이지의 페어링 태그(/?pairing=...)로 들어온 경우
     const p = new URLSearchParams(window.location.search).get("pairing");
-    if (p && PAIRINGS.includes(p)) { setPairing(p); setShowFilters(true); }
+    if (p && PAIRINGS.includes(p)) setPairing(p);
+    fetch(`${API_BASE}/sool/regions`).then((r) => (r.ok ? r.json() : [])).then((d) => setRegions(d ?? [])).catch(() => {});
     fetch(`${API_BASE}/explore/meta`).then((r) => (r.ok ? r.json() : null)).then((d) => d && setFlagCounts(d.flags ?? {})).catch(() => {});
   }, []);
-  
-
-  const pageSize = 12;
-
 
   useEffect(() => {
-    async function loadRegions() {
+    const t = setTimeout(async () => {
+      setLoading(true);
+      const qs = new URLSearchParams({ page: String(page), page_size: String(PAGE_SIZE), order: sort });
+      if (search && search.length >= 2) qs.set("q", search);
+      if (category) qs.set("category", category);
+      if (region) qs.set("region", region);
+      if (flags.length) qs.set("flags", flags.join(","));
+      if (pairing) qs.set("pairing", pairing);
       try {
-        const res = await fetch(`${API_BASE}/sool/regions`);
+        const res = await fetch(`${API_BASE}/explore/sool?${qs}`);
         if (res.ok) {
           const data = await res.json();
-          setRegionOptions(["전체 지역", ...(data ?? [])]);
+          setItems(data.items ?? []);
+          setTotal(data.total ?? 0);
         }
       } catch (err) {
-        console.error("Failed to load regions:", err);
+        console.error("목록 불러오기 실패:", err);
+      } finally {
+        setLoading(false);
       }
-    }
-    loadRegions();
-  }, []);
-
-  useEffect(() => {
-    const handler = setTimeout(() => {
-      async function fetchData() {
-        setLoading(true);
-        let url = `${API_BASE}/explore/sool?page=${page}&page_size=${pageSize}`;
-        if (search && search.length >= 2) url += `&q=${encodeURIComponent(search)}`;
-        if (category) url += `&category=${encodeURIComponent(category)}`;
-        if (region !== "전체 지역") url += `&region=${encodeURIComponent(region)}`;
-        if (sortOption) url += `&order=${sortOption}`;
-        if (flags.length) url += `&flags=${flags.join(",")}`;
-        if (pairing) url += `&pairing=${encodeURIComponent(pairing)}`;
-
-        try {
-          const res = await fetch(url);
-          if (res.ok) {
-            const data = await res.json();
-            setSool(data.items ?? []);
-            setTotal(data.total ?? 0);
-          }
-        } catch (err) {
-          console.error("Failed to fetch sool data:", err);
-        } finally {
-          setLoading(false);
-        }
-      }
-      fetchData();
     }, search ? 400 : 0);
-    return () => clearTimeout(handler);
-  }, [page, search, category, region, sortOption, flags, pairing]);
+    return () => clearTimeout(t);
+  }, [page, search, category, region, sort, flags, pairing]);
 
-  // 필터 변경 핸들러 - 페이지 1로 초기화 보장
-  const handleCategoryChange = (val: string) => { setCategory(val); setPage(1); };
-  const handleRegionChange = (val: string) => { setRegion(val); setPage(1); };
-  const handleSortChange = (val: string) => { setSortOption(val); setPage(1); };
+  // 필터를 바꾸면 항상 1쪽부터
+  const reset1 = <T,>(set: (v: T) => void) => (v: T) => { set(v); setPage(1); };
   const toggleFlag = (f: string) => { setFlags((cur) => (cur.includes(f) ? cur.filter((x) => x !== f) : [...cur, f])); setPage(1); };
-  const handlePairingChange = (val: string) => { setPairing(val); setPage(1); };
-
-  const resetFilters = () => {
-    setSearch("");
-    setCategory("");
-    setRegion("전체 지역");
-    setSortOption("recommended");
-    setFlags([]);
-    setPairing("");
-    setPage(1);
+  const togglePairing = (g: string) => { setPairing((cur) => (cur === g ? "" : g)); setPage(1); };
+  const filtered = !!(search || category || region || flags.length || pairing);
+  const resetAll = () => {
+    setSearch(""); setCategory(""); setRegion(""); setSort("recommended"); setFlags([]); setPairing(""); setPage(1);
+    window.history.replaceState(null, "", "/");
   };
 
   return (
     <div className="bg-[#050505] min-h-screen">
-      <div className="max-w-[1600px] mx-auto py-24 px-16">
-        {/* Hero Section */}
-        <div className="mb-24 text-center">
-          <Title className="!text-white !text-8xl !font-black !m-0 !tracking-tighter !leading-[1.1]">
-            Elevate Your <span className="text-amber-500">Sense</span>
+      <div className="max-w-[1500px] mx-auto py-12 md:py-16 px-4 md:px-10">
+        {/* 머리말 */}
+        <div className="mb-8">
+          <Title className="!text-white !text-4xl md:!text-5xl !font-black !m-0 !tracking-tight">
+            우리 술 <span className="text-amber-500">탐색</span>
           </Title>
-          <Text className="!text-white/60 !text-2xl !max-w-3xl !block !mx-auto !mt-8 !font-medium !leading-relaxed">
-            Curated collection of Korea's finest traditional spirits. <br/>
-            Discover <span className="text-white font-bold">{total}</span> unique flavors and their heritage.
+          <Text className="!text-white/50 !text-base md:!text-lg block mt-3">
+            원료 · 맛 · 어울리는 음식 · 양조장까지, 전통주 정보를 한 장의 술 카드로 정리했습니다.
           </Text>
         </div>
 
-        {/* Command Center (Unified Bar) */}
-        <div className="sticky top-20 z-40 mb-16">
-          <div className="flex items-center gap-2 p-3 bg-white/[0.03] border border-white/10 rounded-[2rem] backdrop-blur-2xl shadow-[0_30px_60px_rgba(0,0,0,0.8)]">
-            <div className="flex-1 flex items-center px-6 gap-4">
-              <SearchOutlined className="text-amber-500 text-2xl" />
+        {/* 검색 + 선택 필터 */}
+        <div className="sticky top-20 z-40 mb-4">
+          <div className="flex flex-col lg:flex-row gap-2 p-2 bg-[#0b0b0b]/90 border border-white/10 rounded-2xl backdrop-blur-xl">
+            <div className="flex-1 flex items-center px-3 gap-3">
+              <SearchOutlined className="text-amber-500 text-lg" />
               <Input
                 variant="borderless"
-                placeholder="Type to search spirits, brewers, or regions..."
+                placeholder="술 이름이나 양조장으로 검색 (2글자 이상)"
                 value={search}
                 onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-                className="text-white h-12 text-lg font-medium placeholder:text-white/10"
+                className="text-white h-11 text-base placeholder:text-white/25"
               />
             </div>
-            
-            <div className="h-10 w-[1px] bg-white/10 mx-4" />
-            
-            <Space size="middle" className="pr-3">
-              <Button 
-                type={showFilters ? "primary" : "text"}
-                icon={<ControlOutlined />} 
-                onClick={() => setShowFilters(!showFilters)}
-                className={[
-                  "h-12 px-8 rounded-2xl font-black uppercase tracking-widest text-xs flex items-center gap-2 transition-all",
-                  showFilters ? "bg-amber-500 text-black border-none" : "text-white/40 hover:text-white hover:bg-white/5"
-                ].join(" ")}
-              >
-                Filters
-              </Button>
-              <Button 
-                type="text"
-                icon={<ReloadOutlined />} 
-                onClick={resetFilters}
-                className="h-12 w-12 flex items-center justify-center text-white/20 hover:text-white transition-colors"
-              />
-            </Space>
+            <div className="flex gap-2 flex-wrap">
+              <Select className="dark-select" style={{ width: 120 }} value={category} onChange={reset1(setCategory)}
+                options={[{ label: "전체 주종", value: "" }, ...CATEGORIES.map((c) => ({ label: c, value: c }))]} />
+              <Select className="dark-select" style={{ width: 120 }} value={region} onChange={reset1(setRegion)}
+                options={[{ label: "전체 지역", value: "" }, ...regions.map((r) => ({ label: r, value: r }))]} />
+              <Select className="dark-select" style={{ width: 120 }} value={sort} onChange={reset1(setSort)} options={SORT_OPTIONS} />
+            </div>
           </div>
+        </div>
 
-          {/* Hidden Filters Panel */}
-          {showFilters && (
-            <div className="mt-4 p-8 bg-white/[0.04] border border-white/10 rounded-[2.5rem] backdrop-blur-xl grid grid-cols-1 md:grid-cols-3 gap-8 animate-in slide-in-from-top-2 duration-500 shadow-2xl">
-              <div className="flex flex-col gap-3">
-                <Text className="!text-amber-500 !text-[11px] !font-black !tracking-[0.3em] !uppercase !opacity-70 ml-1">Category</Text>
-                <Select
-                  className="w-full h-14 premium-select"
-                  value={category}
-                  onChange={handleCategoryChange}
-                  options={CATEGORIES}
-                  styles={{ popup: { root: { background: '#0a0a0a', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '18px' } } }}
-                />
-              </div>
-              
-              <div className="flex flex-col gap-3">
-                <Text className="!text-amber-500 !text-[11px] !font-black !tracking-[0.3em] !uppercase !opacity-70 ml-1">Origin Region</Text>
-                <Select
-                  className="w-full h-14 premium-select"
-                  value={region}
-                  onChange={handleRegionChange}
-                  options={regionOptions.map((r) => ({ label: r, value: r }))}
-                  styles={{ popup: { root: { background: '#0a0a0a', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '18px' } } }}
-                />
-              </div>
+        {/* 빠른 필터 칩 */}
+        <div className="flex flex-col gap-2 mb-8">
+          <div className="flex gap-2 overflow-x-auto pb-1">
+            {FLAGS.map((f) => (
+              <Chip key={f.value} on={flags.includes(f.value)} onClick={() => toggleFlag(f.value)}>
+                {f.label}{flagCounts[f.value] != null && <span className="ml-1 opacity-50">{flagCounts[f.value]}</span>}
+              </Chip>
+            ))}
+          </div>
+          <div className="flex gap-2 overflow-x-auto pb-1 items-center">
+            <span className="text-white/30 text-xs font-bold whitespace-nowrap mr-1">어울리는 음식</span>
+            {PAIRINGS.map((g) => (
+              <Chip key={g} tone="purple" on={pairing === g} onClick={() => togglePairing(g)}>{g}</Chip>
+            ))}
+          </div>
+        </div>
 
-              <div className="flex flex-col gap-3">
-                <Text className="!text-amber-500 !text-[11px] !font-black !tracking-[0.3em] !uppercase !opacity-70 ml-1">Sort By</Text>
-                <Select
-                  className="w-full h-14 premium-select"
-                  value={sortOption}
-                  onChange={handleSortChange}
-                  options={SORT_OPTIONS}
-                  styles={{ popup: { root: { background: '#0a0a0a', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '18px' } } }}
-                />
-              </div>
-
-              <div className="flex flex-col gap-3">
-                <Text className="!text-amber-500 !text-[11px] !font-black !tracking-[0.3em] !uppercase !opacity-70 ml-1">Pairing</Text>
-                <Select
-                  className="w-full h-14 premium-select"
-                  value={pairing}
-                  onChange={handlePairingChange}
-                  options={[{ label: "어울리는 음식 전체", value: "" }, ...PAIRINGS.map((g) => ({ label: g, value: g }))]}
-                  styles={{ popup: { root: { background: '#0a0a0a', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '18px' } } }}
-                />
-              </div>
-
-              <div className="flex flex-col gap-3 md:col-span-2">
-                <Text className="!text-amber-500 !text-[11px] !font-black !tracking-[0.3em] !uppercase !opacity-70 ml-1">Sool Card</Text>
-                <div className="flex flex-wrap gap-2">
-                  {FLAGS.map((f) => {
-                    const on = flags.includes(f.value);
-                    return (
-                      <button
-                        key={f.value}
-                        type="button"
-                        onClick={() => toggleFlag(f.value)}
-                        className={[
-                          "h-11 px-5 rounded-2xl text-sm font-bold border transition-colors",
-                          on ? "bg-amber-500 text-black border-amber-500" : "bg-white/5 text-white/60 border-white/10 hover:border-amber-500/50",
-                        ].join(" ")}
-                      >
-                        {f.label}{flagCounts[f.value] != null && <span className="ml-1 opacity-50">{flagCounts[f.value]}</span>}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
+        <div className="flex items-center justify-between mb-5">
+          <Text className="!text-white/60">
+            <span className="text-white font-black text-lg">{total.toLocaleString()}</span>종
+            {sort === "recommended" && <span className="text-white/30 text-sm ml-2">정보가 충실한 술부터</span>}
+          </Text>
+          {filtered && (
+            <button type="button" onClick={resetAll} className="text-white/40 hover:text-white text-sm flex items-center gap-1">
+              <ReloadOutlined /> 필터 초기화
+            </button>
           )}
         </div>
 
-        {/* Sool Grid */}
         {loading ? (
-          <div className="flex flex-col items-center justify-center py-40 gap-8">
-            <Spin size="large" />
-            <Text className="text-amber-500/40 font-black tracking-[0.3em] uppercase text-xs animate-pulse">Decrypting Vault Records</Text>
-          </div>
+          <div className="flex justify-center py-32"><Spin size="large" /></div>
+        ) : items.length === 0 ? (
+          <Empty className="py-24" description={<span className="text-white/40">조건에 맞는 술이 없습니다</span>} />
         ) : (
           <>
-            <div className="grid gap-12 grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
-              {sool.map((item) => {
-                const abvColor = getAbvColor(item.abv);
-                const catBg = CATEGORY_COLORS[item.category] || "rgba(255,255,255,0.05)";
-                const catText = CATEGORY_TEXT_COLORS[item.category] || "#888";
-
-                return (
-                  <Link href={`/sool/${item.id}`} key={item.id}>
-                    <Card
-                      hoverable
-                      className="!bg-white/[0.04] !border-white/10 !rounded-[2.5rem] overflow-hidden h-full hover:!border-amber-500/60 transition-all duration-500 group shadow-2xl"
-                      styles={{ body: { padding: 32 } }}
-                    >
-                      <div className="relative aspect-square bg-gradient-to-br from-neutral-900 to-black rounded-[2rem] mb-8 flex flex-col items-center justify-center overflow-hidden border border-white/10 group-hover:border-amber-500/30 transition-all shadow-inner">
-                        {item.image_url ? (
-                          <img 
-                            src={assetUrl(item.image_url) || ""} 
-                            alt={item.name} 
-                            className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-1000" 
-                          />
-                        ) : (
-                          <div className="text-8xl drop-shadow-[0_15px_15px_rgba(0,0,0,0.9)] group-hover:scale-125 transition-transform duration-700">
-                            {item.category === "탁주" ? "🍶" : "🥃"}
-                          </div>
-                        )}
-                        
-                        {/* Alcohol Strength Tag */}
-                        <div 
-                          className="absolute top-6 right-6 backdrop-blur-xl px-4 py-2 rounded-2xl border shadow-2xl"
-                          style={{ 
-                            backgroundColor: `${abvColor}22`,
-                            borderColor: `${abvColor}44`,
-                          }}
-                        >
-                          <Text style={{ color: abvColor }} className="font-black text-sm">{item.abv}%</Text>
-                        </div>
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-                      </div>
-                      
-                      <div className="space-y-4">
-                        <div>
-                          <Title level={3} className="!text-white !m-0 !text-2xl !font-black !tracking-tight group-hover:text-amber-500 transition-colors line-clamp-1">
-                            {item.name}
-                          </Title>
-                          <Text className="text-white/20 text-[10px] font-black uppercase tracking-widest mt-1 block">{item.producer || "Artisan Brewery"}</Text>
-                        </div>
-                        
-                        <div className="flex flex-wrap gap-2.5 mb-6">
-                          <Badge 
-                            count={item.category ? (item.category_auto ? `${item.category}·추정` : item.category) : null} 
-                            style={{ 
-                              backgroundColor: catBg, 
-                              color: catText, 
-                              borderColor: "transparent",
-                              fontSize: 10,
-                              fontWeight: 900,
-                              letterSpacing: 1.5,
-                              borderRadius: 8,
-                              padding: '0 12px',
-                              height: 24,
-                              lineHeight: '24px'
-                            }} 
-                          />
-                          <Badge 
-                            count={item.region ?? "Unknown"} 
-                            style={{ 
-                              backgroundColor: "rgba(255,255,255,0.05)", 
-                              color: "rgba(255,255,255,0.4)", 
-                              borderColor: "rgba(255,255,255,0.1)",
-                              fontSize: 10,
-                              fontWeight: 900,
-                              letterSpacing: 1.5,
-                              borderRadius: 8,
-                              padding: '0 12px',
-                              height: 24,
-                              lineHeight: '24px'
-                            }} 
-                          />
-                        </div>
-                        <div className="flex flex-wrap gap-1.5">
-                          {item.visit_brewery && <span className="text-[11px] font-bold px-2 py-0.5 rounded-md bg-cyan-500/15 text-cyan-300">찾아가는 양조장</span>}
-                          {item.is_raw && <span className="text-[11px] font-bold px-2 py-0.5 rounded-md bg-green-500/15 text-green-300">생</span>}
-                          {item.no_sweetener && <span className="text-[11px] font-bold px-2 py-0.5 rounded-md bg-white/5 text-white/50">무감미료</span>}
-                          {item.online_buy && <span className="text-[11px] font-bold px-2 py-0.5 rounded-md bg-amber-500/15 text-amber-300">온라인 구매</span>}
-                        </div>
-                      </div>
-                      
-                      <div className="flex items-center gap-3 mt-8 pt-6 border-t border-white/5">
-                        <StarOutlined className="text-amber-500/40 text-lg" />
-                        <Text className="text-white/40 text-[11px] font-black uppercase tracking-[0.2em]">Explore Profile</Text>
-                      </div>
-                    </Card>
-                  </Link>
-                );
-              })}
+            <div className="grid gap-5 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
+              {items.map((item) => <SoolTile key={item.id} item={item} />)}
             </div>
-
-            <div className="flex justify-center mt-24">
-              <Pagination
-                current={page}
-                total={total}
-                pageSize={pageSize}
-                onChange={setPage}
-                showSizeChanger={false}
-                className="custom-pagination"
-              />
+            <div className="flex justify-center mt-14">
+              <Pagination current={page} total={total} pageSize={PAGE_SIZE} onChange={(p) => { setPage(p); window.scrollTo({ top: 0 }); }}
+                showSizeChanger={false} className="custom-pagination" />
             </div>
           </>
         )}
 
-        <div className="text-white/10 text-center py-24 mt-24 border-t border-white/5 tracking-[0.8em] font-black uppercase text-[10px]">
-          SOOL — THE ESSENCE OF TRADITION
+        <div className="text-white/20 text-center text-xs py-12 mt-16 border-t border-white/5">
+          술 카드 정보는 공개 자료의 원료·설명 문구에서 자동 추출했습니다. 주종의 &apos;추정&apos; 표시는 자동 분류 결과입니다.
         </div>
       </div>
 
       <style jsx global>{`
-        .premium-select .ant-select-selector { 
-          background: rgba(255,255,255,0.05) !important; 
-          border-color: rgba(255,255,255,0.1) !important; 
-          border-radius: 14px !important;
-          color: white !important;
-          font-weight: 800 !important;
-          padding: 0 20px !important;
-          height: 56px !important;
-          display: flex !important;
+        .dark-select .ant-select-selector {
+          background: rgba(255,255,255,0.05) !important;
+          border-color: rgba(255,255,255,0.1) !important;
+          border-radius: 12px !important;
+          height: 44px !important;
           align-items: center !important;
         }
-        .premium-select .ant-select-selection-item { color: white !important; font-size: 15px !important; }
-        .premium-select .ant-select-arrow { color: #f59e0b !important; }
-
-        .custom-pagination .ant-pagination-item { 
-          background: rgba(255,255,255,0.03) !important; 
-          border-color: rgba(255,255,255,0.1) !important; 
-          height: 52px !important;
-          width: 52px !important;
-          line-height: 50px !important;
-          border-radius: 16px !important; 
+        .dark-select .ant-select-selection-item { color: white !important; font-weight: 700 !important; }
+        .dark-select .ant-select-arrow { color: #f59e0b !important; }
+        .custom-pagination .ant-pagination-item {
+          background: rgba(255,255,255,0.03) !important;
+          border-color: rgba(255,255,255,0.1) !important;
+          border-radius: 12px !important;
         }
-        .custom-pagination .ant-pagination-item a { color: rgba(255,255,255,0.3) !important; font-weight: 900 !important; }
-        .custom-pagination .ant-pagination-item-active { border-color: #f59e0b !important; background: rgba(245, 158, 11, 0.1) !important; }
+        .custom-pagination .ant-pagination-item a { color: rgba(255,255,255,0.4) !important; font-weight: 800 !important; }
+        .custom-pagination .ant-pagination-item-active { border-color: #f59e0b !important; background: rgba(245,158,11,0.1) !important; }
         .custom-pagination .ant-pagination-item-active a { color: #f59e0b !important; }
         .custom-pagination .ant-pagination-prev .ant-pagination-item-link,
-        .custom-pagination .ant-pagination-next .ant-pagination-item-link { 
-          background: transparent !important; 
-          color: rgba(255,255,255,0.2) !important; 
-          border-color: rgba(255,255,255,0.1) !important; 
-          border-radius: 16px !important; 
-          height: 52px !important;
-          width: 52px !important;
-        }
+        .custom-pagination .ant-pagination-next .ant-pagination-item-link { color: rgba(255,255,255,0.3) !important; }
+        .custom-pagination .ant-pagination-jump-next .ant-pagination-item-ellipsis,
+        .custom-pagination .ant-pagination-jump-prev .ant-pagination-item-ellipsis { color: rgba(255,255,255,0.3) !important; }
       `}</style>
     </div>
   );

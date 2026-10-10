@@ -122,7 +122,7 @@ export default function SoolDetail({
 
       } catch (e: any) {
         console.error("[Fatal Error]", e);
-        message.error(`Connection Failed: ${e.message}. URL: ${API_BASE}`);
+        message.error(`술 정보를 불러오지 못했습니다: ${e.message}`);
       } finally {
         setLoading(false);
       }
@@ -133,12 +133,12 @@ export default function SoolDetail({
 
   const handleSubmit = async () => {
     if (rating === 0) {
-      message.warning("Please provide a rating.");
+      message.warning("별점을 선택해 주세요.");
       return;
     }
 
     if (!user) {
-      message.error("Please sign in to record a tasting note.");
+      message.error("감상을 남기려면 로그인해 주세요.");
       return;
     }
 
@@ -164,7 +164,7 @@ export default function SoolDetail({
 
       if (!res.ok) throw new Error("Post failed");
 
-      message.success("Tasting note archived.");
+      message.success("감상을 저장했습니다.");
       setRating(0);
       setNotes("");
       
@@ -174,7 +174,7 @@ export default function SoolDetail({
         setSenses(Array.isArray(newData) ? newData : newData.items ?? []);
       }
     } catch (e) {
-      message.error("Failed to save note.");
+      message.error("저장에 실패했습니다.");
     } finally {
       setSubmitting(false);
     }
@@ -183,13 +183,13 @@ export default function SoolDetail({
   if (loading) return (
     <div className="h-screen flex flex-col items-center justify-center bg-[#0a0a0a] gap-5">
       <Spin size="large" />
-      <Text className="text-amber-500 font-black tracking-[0.3em] uppercase text-xs">ARCHIVE CONSULTATION IN PROGRESS...</Text>
+      <Text className="text-amber-500 font-bold text-sm">술 정보를 불러오는 중...</Text>
     </div>
   );
 
   if (!sool) return (
     <div className="h-screen flex flex-col items-center justify-center bg-[#0a0a0a] p-24 text-center">
-      <Empty description={<Text className="text-white/20">This particular spirit is currently not in our records.</Text>} />
+      <Empty description={<Text className="text-white/20">등록되지 않은 술입니다.</Text>} />
       <Button 
         type="primary" 
         ghost 
@@ -197,7 +197,7 @@ export default function SoolDetail({
         onClick={() => router.push('/')} 
         className="mt-8 border-amber-500 text-amber-500 hover:!border-amber-400 hover:!text-amber-400 font-bold"
       >
-        Return to Gallery
+        목록으로
       </Button>
     </div>
   );
@@ -212,19 +212,19 @@ export default function SoolDetail({
       <div className="absolute top-0 left-0 right-0 h-[50vh] bg-gradient-to-b from-[#1a1608] to-[#0a0a0a] z-0" />
 
       {/* Navigation */}
-      <div className="sticky top-0 z-50 px-10 py-6 flex items-center justify-between bg-[#0a0a0a]/70 backdrop-blur-2xl border-b border-white/5">
+      <div className="sticky top-0 z-50 px-4 md:px-10 py-4 flex items-center justify-between bg-[#0a0a0a]/70 backdrop-blur-2xl border-b border-white/5">
         <Space size="large">
           <Button type="text" icon={<ArrowLeftOutlined />} onClick={() => router.back()} className="text-amber-500 hover:text-amber-400" />
           <Breadcrumb 
-            items={[{ title: "GALLERY" }, { title: sool.name.toUpperCase() }]} 
+            items={[{ title: <Link href="/">전통주</Link> }, { title: sool.name }]} 
             className="text-[10px] font-black tracking-widest"
           />
         </Space>
-        <Text className="text-white/20 text-[10px] font-black tracking-[0.2em] uppercase">EST. 2026 / SPIRIT ARCHIVE</Text>
+        <span />
       </div>
 
-      <div className="max-w-[1400px] mx-auto py-20 px-10 relative z-1">
-        <Row gutter={[80, 80]}>
+      <div className="max-w-[1400px] mx-auto py-12 md:py-16 px-4 md:px-10 relative z-1">
+        <Row gutter={[48, 48]}>
           <Col span={24}>
             <div className="flex flex-col gap-6">
               <div className="flex items-center gap-3">
@@ -233,11 +233,11 @@ export default function SoolDetail({
                   className="custom-category-badge"
                 />
                 <Badge 
-                  count={sool.region || "South Korea"} 
+                  count={sool.region || "지역 미상"} 
                   className="custom-region-badge"
                 />
               </div>
-              <Title className="!text-white !text-8xl !font-black !m-0 !tracking-tight !leading-[0.9] uppercase">
+              <Title className="!text-white !text-4xl md:!text-6xl !font-black !m-0 !tracking-tight !leading-tight">
                 {sool.name}
               </Title>
               <div className="mt-8 flex items-center gap-10">
@@ -246,58 +246,55 @@ export default function SoolDetail({
                   <Text className="!text-amber-500 !text-3xl !font-black">{(avgRating/2).toFixed(1)}</Text>
                 </div>
                 <div className="w-px h-8 bg-white/10" />
-                <Text className="!text-white/30 !text-lg !font-bold !tracking-widest uppercase">
-                  {senses.length} Connoisseur Notes
+                <Text className="!text-white/30 !text-lg !font-bold  uppercase">
+                  감상 {senses.length}개
                 </Text>
               </div>
             </div>
           </Col>
 
           <Col xs={24} lg={14}>
-            <div className="bg-white/[0.03] p-12 rounded-[3rem] border border-white/10 shadow-2xl backdrop-blur-sm">
-              <Title level={4} className="!text-white !mb-12 !tracking-[0.3em] !text-sm !font-black !uppercase !opacity-40">
-                Sensory Analysis
-              </Title>
-              <SoolRadar tastings={senses} />
-              
-              <Row gutter={[40, 40]} className="mt-16 border-t border-white/10 pt-12">
-                {[
-                  { label: "STRENGTH", value: `${sool.abv}% ABV`, icon: <ExperimentOutlined /> },
-                  { label: "ORIGIN", value: sool.region || "South Korea", icon: <EnvironmentOutlined /> },
-                  { label: "PRODUCER", value: sool.producer || "Heritage Craft", icon: <ThunderboltOutlined /> },
-                ].map((stat, i) => (
-                  <Col span={8} key={i}>
-                    <div className="text-amber-500 text-2xl mb-4">{stat.icon}</div>
-                    <Text className="!text-white/20 !text-[10px] !font-black !tracking-[0.2em] !display-block !mb-2 !uppercase">
-                      {stat.label}
-                    </Text>
-                    <Text className="!text-white !text-xl !font-bold">
-                      {stat.value}
-                    </Text>
-                  </Col>
-                ))}
-              </Row>
+            {/* 기본 정보 */}
+            <div className="grid grid-cols-3 gap-4 bg-white/[0.03] p-6 md:p-8 rounded-[2rem] border border-white/10">
+              {[
+                { label: "도수", value: sool.abv != null ? `${sool.abv}%` : "-", icon: <ExperimentOutlined /> },
+                { label: "지역", value: sool.region || "-", icon: <EnvironmentOutlined /> },
+                { label: "양조장", value: sool.producer || "-", icon: <ThunderboltOutlined /> },
+              ].map((stat) => (
+                <div key={stat.label} className="flex flex-col gap-1 min-w-0">
+                  <span className="text-white/40 text-xs font-bold"><span className="text-amber-500 mr-1.5">{stat.icon}</span>{stat.label}</span>
+                  <span className="text-white text-lg md:text-xl font-bold truncate">{stat.value}</span>
+                </div>
+              ))}
             </div>
 
             {card?.profile && (
-              <div className="mt-12"><SoolProfileCard profile={card.profile} /></div>
+              <div className="mt-8"><SoolProfileCard profile={card.profile} /></div>
             )}
             {card && (
-              <div className="mt-12"><WhereToTaste card={card} soolId={Number(soolId)} /></div>
+              <div className="mt-8"><WhereToTaste card={card} soolId={Number(soolId)} /></div>
             )}
 
-            <div className="mt-20 px-4">
-              <Title level={3} className="!text-white !mb-8 !text-3xl !font-black !tracking-tight uppercase">
-                The Heritage
+            {/* 이용자 감상 평균: 감상이 있을 때만 */}
+            {senses.length > 0 && (
+              <div className="mt-8 bg-white/[0.03] p-10 rounded-[3rem] border border-white/10">
+                <Title level={4} className="!text-white !mb-8 !text-base !font-black !opacity-60">감상 평균</Title>
+                <SoolRadar tastings={senses} />
+              </div>
+            )}
+
+            <div className="mt-12 px-2">
+              <Title level={3} className="!text-white !mb-6 !text-2xl !font-black">
+                소개
               </Title>
-              <Paragraph className="!text-white/60 !text-xl !leading-relaxed !font-medium !mb-12">
-                {sool.description || "The detailed lineage and tasting profile of this spirit are being meticulously documented by our historians. Experience its depth through our sensory analysis."}
+              <Paragraph className="!text-white/60 !text-lg !leading-relaxed !font-medium !mb-8">
+                {sool.description || "아직 소개 글이 없습니다."}
               </Paragraph>
-              <Divider className="!border-white/10 !my-16" />
+              <Divider className="!border-white/10 !my-8" />
               <div className="flex flex-col gap-3">
-                <Text className="!text-white/20 !tracking-[0.3em] !text-[10px] !font-black !uppercase">Composition</Text>
+                <Text className="!text-white/40 !text-xs !font-bold">원재료</Text>
                 <Text className="!text-white/60 !text-lg !font-medium">
-                  {sool.ingredients || "Traditional selection of organic grains and artisanal yeast."}
+                  {sool.ingredients || "원재료 정보가 없습니다."}
                 </Text>
               </div>
             </div>
@@ -308,26 +305,26 @@ export default function SoolDetail({
               className="!bg-neutral-900/50 !border-white/10 !rounded-[2.5rem] !p-6 shadow-2xl backdrop-blur-md sticky top-32"
               styles={{ body: { padding: 32 } }}
             >
-              <Title level={4} className="!text-amber-500 !mb-10 !text-lg !font-black !tracking-widest uppercase">
-                Record Discovery
+              <Title level={4} className="!text-amber-500 !mb-10 !text-lg !font-black  uppercase">
+                감상 남기기
               </Title>
               <Space orientation="vertical" size={40} className="w-full">
                 <div>
-                  <Text className="!text-white/30 !text-[10px] !font-black !tracking-widest !block !mb-4 !uppercase">
-                    Overall Impression
+                  <Text className="!text-white/30 !text-xs !font-bold !block !mb-4">
+                    총평
                   </Text>
                   <Rate value={rating} onChange={setRating} className="!text-4xl !text-amber-500" />
                 </div>
                 
                 <div className="border-t border-white/5 pt-10 flex flex-col gap-8">
                   {[
-                    { label: "AROMA", val: aroma, set: setAroma },
-                    { label: "PALATE", val: sweetness, set: setSweetness },
-                    { label: "FINISH", val: aftertaste, set: setAftertaste },
+                    { label: "향", val: aroma, set: setAroma },
+                    { label: "단맛", val: sweetness, set: setSweetness },
+                    { label: "여운", val: aftertaste, set: setAftertaste },
                   ].map((m) => (
                     <div key={m.label} className="flex flex-col gap-2">
                       <div className="flex justify-between items-center mb-2">
-                        <Text className="!text-white/40 !font-bold !text-xs !tracking-widest">{m.label}</Text>
+                        <Text className="!text-white/40 !font-bold !text-xs ">{m.label}</Text>
                         <Text className="!text-amber-500 !font-black !text-lg">{m.val}</Text>
                       </div>
                       <Slider 
@@ -342,7 +339,7 @@ export default function SoolDetail({
 
                 <TextArea 
                   rows={4} 
-                  placeholder="Describe your sensory journey..." 
+                  placeholder="맛과 향, 어울린 음식 등을 자유롭게 적어 주세요" 
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
                   className="!bg-white/5 !border-white/10 !text-white !rounded-2xl !p-4 !text-[15px] focus:!border-amber-500/50 placeholder:!text-white/20"
@@ -354,19 +351,19 @@ export default function SoolDetail({
                   block 
                   loading={submitting} 
                   onClick={handleSubmit}
-                  className="!bg-amber-500 !text-black !border-none !h-16 !font-black !rounded-2xl !tracking-[0.2em] !text-sm active:!scale-[0.98] transition-transform"
+                  className="!bg-amber-500 !text-black !border-none !h-16 !font-black !rounded-2xl !text-sm active:!scale-[0.98] transition-transform"
                 >
-                  PRESERVE NOTE
+                  감상 저장
                 </Button>
               </Space>
             </Card>
 
             <div className="mt-20">
-              <Title level={4} className="!text-white/40 !mb-10 !text-sm !font-black !tracking-widest uppercase">
-                Connoisseur Observations
+              <Title level={4} className="!text-white/40 !mb-10 !text-sm !font-black  uppercase">
+                감상 기록
               </Title>
               {senses.length === 0 ? (
-                <Empty description={<Text className="!text-white/10">No records found.</Text>} />
+                <Empty description={<Text className="!text-white/10">아직 감상이 없습니다.</Text>} />
               ) : (
                 <div className="flex flex-col gap-8">
                   {senses.slice().reverse().map((s) => (
@@ -374,11 +371,11 @@ export default function SoolDetail({
                       <div className="flex justify-between items-center mb-4">
                         <Rate disabled value={s.rating / 2} className="!text-xs !text-amber-500/50" />
                         <Text className="!text-white/20 !text-xs !font-bold">
-                          {s.created_at ? new Date(s.created_at).toLocaleDateString() : "Just now"}
+                          {s.created_at ? new Date(s.created_at).toLocaleDateString() : "방금"}
                         </Text>
                       </div>
                       <Paragraph className="!text-white/70 !text-[17px] !italic !m-0 !leading-relaxed">
-                        "{s.notes || "A singular tasting experience."}"
+                        "{s.notes || "(내용 없음)"}"
                       </Paragraph>
                     </div>
                   ))}

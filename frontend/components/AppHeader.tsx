@@ -25,16 +25,16 @@ export default function AppHeader() {
     return (
       <div className="flex items-center gap-6">
         <Link 
-          className="text-xs font-black text-white/40 hover:text-white transition-all tracking-[0.2em] uppercase" 
+          className="text-xs font-bold text-white/50 hover:text-white transition-all" 
           href="/login"
         >
-          Login
+          로그인
         </Link>
         <Link 
-          className="px-6 py-2 rounded-xl bg-amber-500 text-black text-[11px] font-black tracking-widest uppercase hover:bg-amber-400 hover:scale-105 transition-all shadow-lg shadow-amber-500/10" 
+          className="px-6 py-2 rounded-xl bg-amber-500 text-black text-xs font-black hover:bg-amber-400 hover:scale-105 transition-all shadow-lg shadow-amber-500/10" 
           href="/signup"
         >
-          Join
+          회원가입
         </Link>
       </div>
     );
@@ -43,19 +43,19 @@ export default function AppHeader() {
   const menuItems = [
     {
       key: 'profile',
-      label: <span className="font-bold">My Profile</span>,
+      label: <span className="font-bold">내 프로필</span>,
       icon: <UserOutlined />,
       onClick: () => router.push('/profile'),
     },
     {
       key: 'dashboard',
-      label: <span className="font-bold">Analytics</span>,
+      label: <span className="font-bold">통계</span>,
       icon: <DashboardOutlined />,
       onClick: () => router.push('/dashboard'),
     },
     ...(user.is_admin ? [{
       key: 'admin',
-      label: <span className="font-bold">Admin Console</span>,
+      label: <span className="font-bold">관리자</span>,
       icon: <SafetyCertificateOutlined />,
       onClick: () => router.push('/admin'),
     }] : []),
@@ -64,7 +64,7 @@ export default function AppHeader() {
     },
     {
       key: 'logout',
-      label: <span className="font-bold text-red-500">Sign Out</span>,
+      label: <span className="font-bold text-red-500">로그아웃</span>,
       icon: <LogoutOutlined className="text-red-500" />,
       onClick: logout,
     },

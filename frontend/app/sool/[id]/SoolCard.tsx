@@ -31,7 +31,7 @@ export type CardResp = { sool_id: number; profile: Profile | null; purchase: Pur
 
 const Section = ({ title, children }: { title: string; children: React.ReactNode }) => (
   <div className="flex flex-col gap-3">
-    <Text className="!text-white/30 !tracking-[0.3em] !text-[10px] !font-black !uppercase">{title}</Text>
+    <Text className="!text-white/40 !text-xs !font-bold">{title}</Text>
     {children}
   </div>
 );
@@ -52,6 +52,7 @@ function MiniMap({ lat, lng, label }: { lat: number; lng: number; label: string 
       L.circleMarker([lat, lng], { radius: 9, color: "#000", weight: 1, fillColor: "#f59e0b", fillOpacity: 0.9 })
         .bindTooltip(label, { permanent: true, direction: "top", offset: [0, -8] })
         .addTo(map);
+      setTimeout(() => map?.invalidateSize(), 200);   // 레이아웃이 자리 잡은 뒤 크기 재계산 (회색 타일 방지)
     })();
     return () => { cancelled = true; map?.remove(); };
   }, [lat, lng, label]);
@@ -95,7 +96,7 @@ export function SoolProfileCard({ profile }: { profile: Profile }) {
   return (
     <div className="bg-white/[0.03] p-10 rounded-[3rem] border border-white/10 flex flex-col gap-8">
       <div className="flex items-center justify-between">
-        <Text className="!text-white !tracking-[0.3em] !text-sm !font-black !uppercase !opacity-40">Sool Card</Text>
+        <Text className="!text-white !text-base !font-black !opacity-60">술 카드</Text>
         {p.category && (
           <Tooltip title={p.category_auto ? "원본에 주종이 없어 원료·도수 규칙으로 자동 분류했습니다 (검증 중)" : undefined}>
             <Tag color="gold" className="!text-sm !px-3">{p.category}{p.category_auto && " · 자동 분류"}</Tag>
@@ -160,7 +161,7 @@ export function WhereToTaste({ card, soolId }: { card: CardResp; soolId: number 
 
   return (
     <div className="bg-white/[0.03] p-10 rounded-[3rem] border border-white/10 flex flex-col gap-6">
-      <Text className="!text-white !tracking-[0.3em] !text-sm !font-black !uppercase !opacity-40">Where to Taste</Text>
+      <Text className="!text-white !text-base !font-black !opacity-60">어디서 맛보나</Text>
 
       {place ? (
         <>
@@ -189,7 +190,7 @@ export function WhereToTaste({ card, soolId }: { card: CardResp; soolId: number 
       ) : null}
 
       <div className="flex flex-col gap-2 border-t border-white/10 pt-6">
-        <Text className="!text-white/30 !tracking-[0.3em] !text-[10px] !font-black !uppercase">구매 경로</Text>
+        <Text className="!text-white/40 !text-xs !font-bold">구매 경로</Text>
         {purchase?.url ? (
           <div className="flex items-center gap-2 flex-wrap">
             <ShoppingOutlined className="text-amber-500" />
@@ -208,7 +209,7 @@ export function WhereToTaste({ card, soolId }: { card: CardResp; soolId: number 
 
       {others.length > 0 && (
         <div className="flex flex-col gap-2 border-t border-white/10 pt-6">
-          <Text className="!text-white/30 !tracking-[0.3em] !text-[10px] !font-black !uppercase">같은 양조장의 술 {others.length}</Text>
+          <Text className="!text-white/40 !text-xs !font-bold">같은 양조장의 술 {others.length}</Text>
           <ul className="space-y-1">
             {others.slice(0, 8).map((o) => (
               <li key={o.sool_id} className="flex justify-between gap-2 text-sm">

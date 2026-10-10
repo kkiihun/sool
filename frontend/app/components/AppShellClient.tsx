@@ -36,12 +36,12 @@ function ShellLayout({ children }: { children: React.ReactNode }) {
   const collapsedWidth = 80;
 
   const menuItems = [
-    { key: "/", icon: <AppstoreOutlined style={{ fontSize: '18px' }} />, label: "Explore" },
-    { key: "/breweries", icon: <EnvironmentOutlined style={{ fontSize: '18px' }} />, label: "Breweries" },
-    { key: "/Tasting", icon: <StarOutlined style={{ fontSize: '18px' }} />, label: "Tasting Notes" },
-    { key: "/dashboard", icon: <BarChartOutlined style={{ fontSize: '18px' }} />, label: "Analytics" },
-    { key: "/updates", icon: <CompassOutlined style={{ fontSize: '18px' }} />, label: "Discovery" },
-    { key: "/community", icon: <HeartOutlined style={{ fontSize: '18px' }} />, label: "Community" },
+    { key: "/", icon: <AppstoreOutlined style={{ fontSize: '18px' }} />, label: "술 탐색" },
+    { key: "/breweries", icon: <EnvironmentOutlined style={{ fontSize: '18px' }} />, label: "양조장 지도" },
+    { key: "/Tasting", icon: <StarOutlined style={{ fontSize: '18px' }} />, label: "시음 노트" },
+    { key: "/dashboard", icon: <BarChartOutlined style={{ fontSize: '18px' }} />, label: "통계" },
+    { key: "/updates", icon: <CompassOutlined style={{ fontSize: '18px' }} />, label: "업데이트" },
+    { key: "/community", icon: <HeartOutlined style={{ fontSize: '18px' }} />, label: "커뮤니티" },
     ...(isAdmin ? [
       { key: "admin-divider", type: "divider" as const, style: { margin: "24px 0", borderColor: "rgba(255,255,255,0.05)" } },
       { key: "/admin", icon: <SafetyCertificateOutlined style={{ fontSize: '18px' }} />, label: "Admin Console" },
@@ -55,11 +55,11 @@ function ShellLayout({ children }: { children: React.ReactNode }) {
       <header
         className={[
           "fixed top-0 left-0 right-0 z-50 transition-all duration-500",
-          "backdrop-blur-3xl border-b h-20 flex items-center px-8 justify-between",
+          "backdrop-blur-3xl border-b h-20 flex items-center px-4 md:px-8 justify-between",
           isAdmin ? "border-amber-500/20 bg-amber-950/20" : "border-white/[0.03] bg-black/40",
         ].join(" ")}
       >
-        <div className="flex items-center gap-12 flex-1">
+        <div className="flex items-center gap-4 md:gap-12 flex-1 min-w-0">
           <Link 
             href="/" 
             className="flex items-center gap-3 transition-transform active:scale-95 group"
@@ -82,7 +82,7 @@ function ShellLayout({ children }: { children: React.ReactNode }) {
               </span>
               <input 
                 type="text"
-                placeholder="Search spirits, regions, or sensory notes..."
+                placeholder="술 이름, 양조장 검색"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 className="w-full bg-white/[0.03] border border-white/[0.08] rounded-xl py-3 pl-14 pr-4 text-[14px] font-medium text-white placeholder:text-white/20 focus:outline-none focus:border-amber-500/40 focus:bg-white/[0.05] transition-all group-hover:border-white/20"
@@ -91,7 +91,7 @@ function ShellLayout({ children }: { children: React.ReactNode }) {
           </div>
         </div>
 
-        <div className="flex items-center gap-6">
+        <div className="flex items-center gap-2 md:gap-6">
           {isAdmin && pathname.startsWith("/admin") && (
             <span className="hidden lg:inline-flex text-[10px] px-2.5 py-1 rounded-md border border-amber-500/30 text-amber-500 font-bold tracking-widest uppercase bg-amber-500/10">
               Admin System
@@ -113,6 +113,8 @@ function ShellLayout({ children }: { children: React.ReactNode }) {
           collapsible
           collapsed={collapsed}
           onCollapse={setCollapsed}
+          breakpoint="lg"
+          onBreakpoint={(broken) => setCollapsed(broken)}   // 좁은 화면(태블릿·모바일)에선 아이콘만
           trigger={null}
           theme="dark"
           width={sidebarWidth}
@@ -168,6 +170,7 @@ function ShellLayout({ children }: { children: React.ReactNode }) {
           style={{ 
             transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
             minHeight: "calc(100vh - 80px)",
+            minWidth: 0,   // 가로 스크롤 칩 줄이 본문 폭을 밀어내지 않게 (flex 기본 min-width:auto)
             padding: "0",
             background: "transparent"
           }}

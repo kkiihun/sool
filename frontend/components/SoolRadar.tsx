@@ -36,7 +36,7 @@ export default function SoolRadar({
   if (valid.length === 0) {
     return (
       <div style={{ height: 280, display: "flex", alignItems: "center", justifyContent: "center" }}>
-        <p style={{ color: "#444", fontStyle: "italic" }}>No sensory data available</p>
+        <p style={{ color: "#444", fontStyle: "italic" }}>아직 감상 데이터가 없습니다</p>
       </div>
     );
   }
