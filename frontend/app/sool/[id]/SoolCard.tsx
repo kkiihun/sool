@@ -96,7 +96,7 @@ export function SoolProfileCard({ profile }: { profile: Profile }) {
   const volumes = p.volumes_ml?.length ? p.volumes_ml : p.volume_ml ? [p.volume_ml] : [];
 
   return (
-    <div className="bg-white/[0.03] p-10 rounded-[3rem] border border-white/10 flex flex-col gap-8">
+    <div className="bg-white/[0.03] p-5 md:p-10 rounded-3xl md:rounded-[3rem] border border-white/10 flex flex-col gap-8">
       <div className="flex items-center justify-between">
         <Text className="!text-white !text-base !font-black !opacity-60">술 카드</Text>
         {p.on_sale === false && (
@@ -167,7 +167,7 @@ export function WhereToTaste({ card, soolId }: { card: CardResp; soolId: number 
   const blocked = purchase?.link_state === "login";
 
   return (
-    <div className="bg-white/[0.03] p-10 rounded-[3rem] border border-white/10 flex flex-col gap-6">
+    <div className="bg-white/[0.03] p-5 md:p-10 rounded-3xl md:rounded-[3rem] border border-white/10 flex flex-col gap-6">
       <Text className="!text-white !text-base !font-black !opacity-60">어디서 맛보나</Text>
 
       {place ? (
@@ -185,7 +185,7 @@ export function WhereToTaste({ card, soolId }: { card: CardResp; soolId: number 
             </div>
             <Text className="!text-white/50">{place.address}</Text>
             {place.geo_method !== "address" && <Text className="!text-white/30 !text-xs">지도 위치는 양조장 이름으로 찾은 추정 위치입니다</Text>}
-            <span className="flex gap-3 mt-1 text-sm">
+            <span className="flex flex-wrap gap-x-3 gap-y-1 mt-1 text-sm">
               <a className="text-amber-500" target="_blank" rel="noreferrer"
                 href={`https://map.kakao.com/link/search/${encodeURIComponent(place.address || place.name || "")}`}>카카오맵에서 보기</a>
               <Link className="text-white/40 hover:text-white" href="/breweries">전체 양조장 지도</Link>
@@ -236,7 +236,7 @@ export function WhereToTaste({ card, soolId }: { card: CardResp; soolId: number 
 export function BlogReviews({ blogs }: { blogs: Blog[] }) {
   if (!blogs?.length) return null;
   return (
-    <div className="bg-white/[0.03] p-10 rounded-[3rem] border border-white/10 flex flex-col gap-4">
+    <div className="bg-white/[0.03] p-5 md:p-10 rounded-3xl md:rounded-[3rem] border border-white/10 flex flex-col gap-4">
       <div className="flex items-baseline justify-between">
         <Text className="!text-white !text-base !font-black !opacity-60">블로그 후기</Text>
         <Text className="!text-white/30 !text-xs">다음 블로그 검색 · 새 창으로 열림</Text>

@@ -111,7 +111,7 @@ export default function PlaceMap({ endpoint = "/admin/pipeline/places", diagnost
               </span>
             </span>
           </div>
-          <div ref={mapEl} style={{ height: 620, borderRadius: 16, overflow: "hidden" }} />
+          <div ref={mapEl} className="h-[420px] md:h-[620px]" style={{ borderRadius: 16, overflow: "hidden" }} />
           <Text className="text-white/30 text-xs">색 = 대표 주종, 크기 = 제품 수.{diagnostics && ` 좌표 변환: ${Object.entries(data.by_method).map(([k, n]) => `${k} ${n}`).join(" · ")}`}</Text>
         </Card>
       </Col>

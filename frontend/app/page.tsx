@@ -64,11 +64,11 @@ function SoolTile({ item }: { item: Item }) {
       <div className="h-full flex flex-col rounded-3xl overflow-hidden border border-white/10 bg-white/[0.03] hover:border-amber-500/50 hover:bg-white/[0.05] transition-colors">
         {/* 위: 이미지 (없으면 주종 이모지) — 기존 디자인 유지 */}
         <div className="p-4 pb-0">
-          <div className="relative aspect-square bg-gradient-to-br from-neutral-900 to-black rounded-[2rem] flex flex-col items-center justify-center overflow-hidden border border-white/10 group-hover:border-amber-500/30 transition-all shadow-inner">
+          <div className="relative aspect-[16/10] sm:aspect-square bg-gradient-to-br from-neutral-900 to-black rounded-[2rem] flex flex-col items-center justify-center overflow-hidden border border-white/10 group-hover:border-amber-500/30 transition-all shadow-inner">
             {img ? (
               <img src={img} alt={item.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-1000" />
             ) : (
-              <div className="text-8xl drop-shadow-[0_15px_15px_rgba(0,0,0,0.9)] group-hover:scale-125 transition-transform duration-700">
+              <div className="text-7xl sm:text-8xl drop-shadow-[0_15px_15px_rgba(0,0,0,0.9)] group-hover:scale-125 transition-transform duration-700">
                 {item.category === "탁주" ? "🍶" : "🥃"}
               </div>
             )}
@@ -188,19 +188,19 @@ export default function Home() {
 
   return (
     <div className="bg-[#050505] min-h-screen">
-      <div className="max-w-[1500px] mx-auto py-12 md:py-16 px-4 md:px-10">
+      <div className="max-w-[1500px] mx-auto py-6 md:py-16 px-4 md:px-10">
         {/* 머리말 */}
-        <div className="mb-8">
-          <Title className="!text-white !text-4xl md:!text-5xl !font-black !m-0 !tracking-tight">
+        <div className="mb-5 md:mb-8">
+          <Title className="!text-white !text-3xl md:!text-5xl !font-black !m-0 !tracking-tight">
             우리 술 <span className="text-amber-500">탐색</span>
           </Title>
-          <Text className="!text-white/50 !text-base md:!text-lg block mt-3">
+          <Text className="!text-white/50 !text-sm md:!text-lg block mt-2 md:mt-3">
             원료 · 맛 · 어울리는 음식 · 양조장까지, 전통주 정보를 한 장의 술 카드로 정리했습니다.
           </Text>
         </div>
 
         {/* 검색 + 선택 필터 */}
-        <div className="sticky top-20 z-40 mb-4">
+        <div className="lg:sticky lg:top-20 z-40 mb-4">
           <div className="flex flex-col lg:flex-row gap-2 p-2 bg-[#0b0b0b]/90 border border-white/10 rounded-2xl backdrop-blur-xl">
             <div className="flex-1 flex items-center px-3 gap-3">
               <SearchOutlined className="text-amber-500 text-lg" />
@@ -212,26 +212,26 @@ export default function Home() {
                 className="text-white h-11 text-base placeholder:text-white/25"
               />
             </div>
-            <div className="flex gap-2 flex-wrap">
-              <Select className="dark-select" style={{ width: 120 }} value={category} onChange={reset1(setCategory)}
+            <div className="grid grid-cols-3 gap-2 lg:flex">
+              <Select className="dark-select w-full lg:!w-[120px]" value={category} onChange={reset1(setCategory)}
                 options={[{ label: "전체 주종", value: "" }, ...CATEGORIES.map((c) => ({ label: c, value: c }))]} />
-              <Select className="dark-select" style={{ width: 120 }} value={region} onChange={reset1(setRegion)}
+              <Select className="dark-select w-full lg:!w-[120px]" value={region} onChange={reset1(setRegion)}
                 options={[{ label: "전체 지역", value: "" }, ...regions.map((r) => ({ label: r, value: r }))]} />
-              <Select className="dark-select" style={{ width: 120 }} value={sort} onChange={reset1(setSort)} options={SORT_OPTIONS} />
+              <Select className="dark-select w-full lg:!w-[120px]" value={sort} onChange={reset1(setSort)} options={SORT_OPTIONS} />
             </div>
           </div>
         </div>
 
         {/* 빠른 필터 칩 */}
-        <div className="flex flex-col gap-2 mb-8">
-          <div className="flex gap-2 overflow-x-auto pb-1">
+        <div className="flex flex-col gap-2 mb-6 md:mb-8">
+          <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
             {FLAGS.map((f) => (
               <Chip key={f.value} on={flags.includes(f.value)} onClick={() => toggleFlag(f.value)}>
                 {f.label}{flagCounts[f.value] != null && <span className="ml-1 opacity-50">{flagCounts[f.value]}</span>}
               </Chip>
             ))}
           </div>
-          <div className="flex gap-2 overflow-x-auto pb-1 items-center">
+          <div className="flex gap-2 overflow-x-auto pb-1 items-center no-scrollbar">
             <span className="text-white/30 text-xs font-bold whitespace-nowrap mr-1">어울리는 음식</span>
             {PAIRINGS.map((g) => (
               <Chip key={g} tone="purple" on={pairing === g} onClick={() => togglePairing(g)}>{g}</Chip>
@@ -262,7 +262,7 @@ export default function Home() {
             </div>
             <div className="flex justify-center mt-14">
               <Pagination current={page} total={total} pageSize={PAGE_SIZE} onChange={(p) => { setPage(p); window.scrollTo({ top: 0 }); }}
-                showSizeChanger={false} className="custom-pagination" />
+                showSizeChanger={false} showLessItems responsive className="custom-pagination" />
             </div>
           </>
         )}
@@ -273,6 +273,8 @@ export default function Home() {
       </div>
 
       <style jsx global>{`
+        .no-scrollbar { scrollbar-width: none; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
         .dark-select .ant-select-selector {
           background: rgba(255,255,255,0.05) !important;
           border-color: rgba(255,255,255,0.1) !important;

@@ -15,7 +15,7 @@ export default function BuildBadge() {
   }, []);
 
   return (
-    <div style={{ position: "fixed", left: 12, bottom: 12, zIndex: 9999, pointerEvents: "none" }}>
+    <div className="build-badge" style={{ position: "fixed", left: 12, bottom: 12, zIndex: 9999, pointerEvents: "none" }}>
       <div style={{ 
         background: "rgba(11, 18, 32, 0.9)", 
         backdropFilter: "blur(8px)",

@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Layout, Menu, Button, Tooltip, ConfigProvider, theme, Input, App } from "antd";
+import { Layout, Menu, Button, Tooltip, ConfigProvider, theme, Input, App, Drawer } from "antd";
 import {
   AppstoreOutlined,
   StarOutlined,
@@ -19,6 +19,7 @@ import {
   EnvironmentOutlined,
   FileSearchOutlined,
   ShopOutlined,
+  MenuOutlined,
 } from "@ant-design/icons";
 import { useAuth } from "./AuthProvider";
 import AppShellProvider, { useAppShell } from "./AppShellProvider";
@@ -32,6 +33,7 @@ function ShellLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   
+  const [moreOpen, setMoreOpen] = useState(false);   // 모바일 '더보기' 서랍
   const isLogged = !!user;
   const isAdmin = !!user?.is_admin;
   const sidebarWidth = 260;
@@ -53,13 +55,24 @@ function ShellLayout({ children }: { children: React.ReactNode }) {
     ] : [])
   ];
 
+  // 메뉴 강조: 하위 페이지(/owners/brewery/123)도 상위 메뉴로
+  const activeKey = menuItems.map((m) => m.key).filter((k) => k !== "/" && !k.includes("divider") && pathname.startsWith(k))
+    .sort((a, b) => b.length - a.length)[0] ?? pathname;
+  // 모바일 하단 탭바 (768px 미만). 나머지 메뉴는 '더보기' 서랍
+  const tabs = [
+    { key: "/", icon: <AppstoreOutlined />, label: "탐색" },
+    { key: "/breweries", icon: <EnvironmentOutlined />, label: "지도" },
+    { key: "/owners/restaurant", icon: <ShopOutlined />, label: "식당" },
+    { key: "/owners/brewery", icon: <FileSearchOutlined />, label: "양조장" },
+  ];
+
   return (
     <Layout style={{ minHeight: "100vh", background: "#050505" }}>
       {/* Global Header - Premium Redesign Aesthetics + Unified Layout */}
       <header
         className={[
           "fixed top-0 left-0 right-0 z-50 transition-all duration-500",
-          "backdrop-blur-3xl border-b h-20 flex items-center px-4 md:px-8 justify-between",
+          "backdrop-blur-3xl border-b h-16 md:h-20 flex items-center px-4 md:px-8 justify-between",
           isAdmin ? "border-amber-500/20 bg-amber-950/20" : "border-white/[0.03] bg-black/40",
         ].join(" ")}
       >
@@ -74,8 +87,8 @@ function ShellLayout({ children }: { children: React.ReactNode }) {
               }
             }}
           >
-            <span className="text-3xl">🥃</span>
-            <span className="text-xl font-black tracking-[0.2em] text-white group-hover:text-amber-500 transition-colors">SOOL</span>
+            <span className="text-2xl md:text-3xl">🥃</span>
+            <span className="text-lg md:text-xl font-black tracking-[0.2em] text-white group-hover:text-amber-500 transition-colors">SOOL</span>
           </Link>
 
           {/* Local Premium: Command Center Search Bar */}
@@ -101,19 +114,20 @@ function ShellLayout({ children }: { children: React.ReactNode }) {
               Admin System
             </span>
           )}
-          <div className="flex items-center gap-2">
+          <div className="hidden md:flex items-center gap-2">
              <Tooltip title="Notifications">
                <Button type="text" icon={<BellOutlined />} className="text-white/30 hover:text-white" />
              </Tooltip>
           </div>
-          <div className="h-5 w-[1px] bg-white/10 mx-1" />
+          <div className="hidden md:block h-5 w-[1px] bg-white/10 mx-1" />
           <AppHeader />
         </div>
       </header>
 
-      <Layout style={{ marginTop: 80, background: "transparent", minHeight: "calc(100vh - 80px)" }}>
+      <Layout className="app-body" style={{ marginTop: 80, background: "transparent", minHeight: "calc(100vh - 80px)" }}>
         {/* Global Sidebar - Premium Styling + Unified Logic */}
         <Sider
+          className="app-sider"
           collapsible
           collapsed={collapsed}
           onCollapse={setCollapsed}
@@ -139,7 +153,7 @@ function ShellLayout({ children }: { children: React.ReactNode }) {
             <Menu
               theme="dark"
               mode="inline"
-              selectedKeys={[pathname.startsWith("/owners/brewery") ? "/owners/brewery" : pathname]}
+              selectedKeys={[activeKey]}
               onClick={({ key }) => {
                 if (!key.includes('divider')) router.push(key);
               }}
@@ -171,6 +185,7 @@ function ShellLayout({ children }: { children: React.ReactNode }) {
 
         {/* Main Content Area */}
         <Content 
+          className="app-content"
           style={{ 
             transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
             minHeight: "calc(100vh - 80px)",
@@ -184,7 +199,37 @@ function ShellLayout({ children }: { children: React.ReactNode }) {
         </Content>
       </Layout>
 
+      {/* 모바일 하단 탭바 */}
+      <nav className="app-tabbar md:hidden fixed bottom-0 left-0 right-0 z-50 bg-[#0a0a0a]/95 backdrop-blur-xl border-t border-white/10 flex">
+        {tabs.map((t) => {
+          const on = activeKey === t.key;
+          return (
+            <Link key={t.key} href={t.key} className={`flex-1 flex flex-col items-center justify-center gap-0.5 h-14 text-[11px] font-bold ${on ? "text-amber-500" : "text-white/45"}`}>
+              <span className="text-lg leading-none">{t.icon}</span>{t.label}
+            </Link>
+          );
+        })}
+        <button type="button" onClick={() => setMoreOpen(true)} className="flex-1 flex flex-col items-center justify-center gap-0.5 h-14 text-[11px] font-bold text-white/45">
+          <span className="text-lg leading-none"><MenuOutlined /></span>더보기
+        </button>
+      </nav>
+      <Drawer open={moreOpen} onClose={() => setMoreOpen(false)} placement="bottom" size={480} title="전체 메뉴"
+        styles={{ body: { padding: "8px 12px 24px" }, header: { borderBottom: "1px solid rgba(255,255,255,0.06)" } }}>
+        <Menu theme="dark" mode="inline" selectedKeys={[activeKey]} items={menuItems} className="premium-sidebar-menu"
+          style={{ background: "transparent", border: "none" }}
+          onClick={({ key }) => { if (!key.includes("divider")) { setMoreOpen(false); router.push(key); } }} />
+      </Drawer>
+
       <style jsx global>{`
+        /* 모바일(768px 미만): 사이드바 숨김 → 하단 탭바, 본문 아래 여백, iOS 입력 확대 방지(16px) */
+        @media (max-width: 767px) {
+          .app-sider { display: none !important; }
+          .app-body { margin-top: 64px !important; }
+          .app-content { padding-bottom: calc(56px + env(safe-area-inset-bottom)) !important; }
+          .app-tabbar { padding-bottom: env(safe-area-inset-bottom); }
+          .build-badge { display: none !important; }
+          input, textarea { font-size: 16px !important; }
+        }
         .premium-sidebar-menu .ant-menu-item { 
           height: 52px !important; 
           line-height: 52px !important; 

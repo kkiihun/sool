@@ -212,7 +212,7 @@ export default function SoolDetail({
       <div className="absolute top-0 left-0 right-0 h-[50vh] bg-gradient-to-b from-[#1a1608] to-[#0a0a0a] z-0" />
 
       {/* Navigation */}
-      <div className="sticky top-0 z-50 px-4 md:px-10 py-4 flex items-center justify-between bg-[#0a0a0a]/70 backdrop-blur-2xl border-b border-white/5">
+      <div className="sticky top-16 md:top-20 z-30 px-4 md:px-10 py-3 md:py-4 flex items-center justify-between bg-[#0a0a0a]/70 backdrop-blur-2xl border-b border-white/5">
         <Space size="large">
           <Button type="text" icon={<ArrowLeftOutlined />} onClick={() => router.back()} className="text-amber-500 hover:text-amber-400" />
           <Breadcrumb 
@@ -223,8 +223,8 @@ export default function SoolDetail({
         <span />
       </div>
 
-      <div className="max-w-[1400px] mx-auto py-12 md:py-16 px-4 md:px-10 relative z-1">
-        <Row gutter={[48, 48]}>
+      <div className="max-w-[1400px] mx-auto py-6 md:py-16 px-4 md:px-10 relative z-1">
+        <Row gutter={[{ xs: 0, md: 24, lg: 48 }, 32]}>
           <Col span={24}>
             <div className="flex flex-col gap-6">
               <div className="flex items-center gap-3">
@@ -240,13 +240,13 @@ export default function SoolDetail({
               <Title className="!text-white !text-4xl md:!text-6xl !font-black !m-0 !tracking-tight !leading-tight">
                 {sool.name}
               </Title>
-              <div className="mt-8 flex items-center gap-10">
+              <div className="mt-3 md:mt-8 flex flex-wrap items-center gap-3 md:gap-10">
                 <div className="flex items-center gap-4">
-                  <Rate disabled allowHalf value={avgRating / 2} className="!text-amber-500 !text-2xl" />
-                  <Text className="!text-amber-500 !text-3xl !font-black">{(avgRating/2).toFixed(1)}</Text>
+                  <Rate disabled allowHalf value={avgRating / 2} className="!text-amber-500 !text-base md:!text-2xl" />
+                  <Text className="!text-amber-500 !text-xl md:!text-3xl !font-black whitespace-nowrap">{(avgRating/2).toFixed(1)}</Text>
                 </div>
-                <div className="w-px h-8 bg-white/10" />
-                <Text className="!text-white/30 !text-lg !font-bold  uppercase">
+                <div className="hidden md:block w-px h-8 bg-white/10" />
+                <Text className="!text-white/30 !text-sm md:!text-lg !font-bold whitespace-nowrap">
                   감상 {senses.length}개
                 </Text>
               </div>
@@ -280,7 +280,7 @@ export default function SoolDetail({
 
             {/* 이용자 감상 평균: 감상이 있을 때만 */}
             {senses.length > 0 && (
-              <div className="mt-8 bg-white/[0.03] p-10 rounded-[3rem] border border-white/10">
+              <div className="mt-8 bg-white/[0.03] p-5 md:p-10 rounded-3xl md:rounded-[3rem] border border-white/10">
                 <Title level={4} className="!text-white !mb-8 !text-base !font-black !opacity-60">감상 평균</Title>
                 <SoolRadar tastings={senses} />
               </div>
@@ -305,8 +305,8 @@ export default function SoolDetail({
 
           <Col xs={24} lg={10}>
             <Card 
-              className="!bg-neutral-900/50 !border-white/10 !rounded-[2.5rem] !p-6 shadow-2xl backdrop-blur-md sticky top-32"
-              styles={{ body: { padding: 32 } }}
+              className="!bg-neutral-900/50 !border-white/10 !rounded-3xl md:!rounded-[2.5rem] md:!p-6 shadow-2xl backdrop-blur-md lg:sticky lg:top-32"
+              styles={{ body: { padding: 20 } }}
             >
               <Title level={4} className="!text-amber-500 !mb-10 !text-lg !font-black  uppercase">
                 감상 남기기

@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 
 import "./globals.css";
@@ -21,6 +21,14 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "SOOL — Premium Traditional Spirits",
   description: "Explore the rich heritage of Korean traditional spirits.",
+};
+
+// 아이폰 노치·홈 인디케이터 영역까지 쓰고(safe-area 로 여백 처리), 주소창 색을 배경과 맞춤
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+  themeColor: "#050505",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

@@ -23,15 +23,15 @@ export default function AppHeader() {
 
   if (!user) {
     return (
-      <div className="flex items-center gap-6">
+      <div className="flex items-center gap-3 md:gap-6">
         <Link 
-          className="text-xs font-bold text-white/50 hover:text-white transition-all" 
+          className="whitespace-nowrap text-xs font-bold text-white/50 hover:text-white transition-all" 
           href="/login"
         >
           로그인
         </Link>
         <Link 
-          className="px-6 py-2 rounded-xl bg-amber-500 text-black text-xs font-black hover:bg-amber-400 hover:scale-105 transition-all shadow-lg shadow-amber-500/10" 
+          className="whitespace-nowrap px-3 md:px-6 py-2 rounded-xl bg-amber-500 text-black text-xs font-black hover:bg-amber-400 hover:scale-105 transition-all shadow-lg shadow-amber-500/10" 
           href="/signup"
         >
           회원가입
