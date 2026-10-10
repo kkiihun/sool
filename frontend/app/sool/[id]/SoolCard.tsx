@@ -23,7 +23,7 @@ type Profile = {
   on_sale: boolean | null;
 };
 type Place = {
-  name: string | null; address: string | null; homepage: string | null; lat: number; lng: number;
+  place_id: string; name: string | null; address: string | null; homepage: string | null; lat: number; lng: number;
   geo_method: string; product_count: number; visit_brewery: boolean;
   products: { sool_id: number; name: string; category: string | null; abv: number | null }[];
 };
@@ -189,6 +189,7 @@ export function WhereToTaste({ card, soolId }: { card: CardResp; soolId: number 
               <a className="text-amber-500" target="_blank" rel="noreferrer"
                 href={`https://map.kakao.com/link/search/${encodeURIComponent(place.address || place.name || "")}`}>카카오맵에서 보기</a>
               <Link className="text-white/40 hover:text-white" href="/breweries">전체 양조장 지도</Link>
+              <Link className="text-white/40 hover:text-white" href={`/owners/brewery/${place.place_id}`}>양조장 진단 리포트</Link>
             </span>
           </div>
         </>

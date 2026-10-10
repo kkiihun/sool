@@ -127,6 +127,7 @@ export default function PlaceMap({ endpoint = "/admin/pipeline/places", diagnost
                 <Tag>{selected.geo_method === "address" ? "주소 일치" : "위치 추정(이름 검색)"}</Tag>
               </div>
               <div className="text-white/60 text-sm">{selected.address || "-"}</div>
+              <a className="text-amber-500 text-sm" href={`/owners/brewery/${selected.place_id}`}>진단 리포트 보기 →</a>
               {selected.homepage && (
                 <a className="text-amber-500 text-sm break-all" target="_blank" rel="noreferrer"
                   href={selected.homepage.startsWith("http") ? selected.homepage : `http://${selected.homepage}`}>{selected.homepage}</a>

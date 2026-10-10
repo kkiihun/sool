@@ -17,6 +17,7 @@ import {
   BellOutlined,
   SearchOutlined,
   EnvironmentOutlined,
+  FileSearchOutlined,
 } from "@ant-design/icons";
 import { useAuth } from "./AuthProvider";
 import AppShellProvider, { useAppShell } from "./AppShellProvider";
@@ -38,6 +39,7 @@ function ShellLayout({ children }: { children: React.ReactNode }) {
   const menuItems = [
     { key: "/", icon: <AppstoreOutlined style={{ fontSize: '18px' }} />, label: "술 탐색" },
     { key: "/breweries", icon: <EnvironmentOutlined style={{ fontSize: '18px' }} />, label: "양조장 지도" },
+    { key: "/owners/brewery", icon: <FileSearchOutlined style={{ fontSize: '18px' }} />, label: "양조장 리포트" },
     { key: "/Tasting", icon: <StarOutlined style={{ fontSize: '18px' }} />, label: "시음 노트" },
     { key: "/dashboard", icon: <BarChartOutlined style={{ fontSize: '18px' }} />, label: "통계" },
     { key: "/updates", icon: <CompassOutlined style={{ fontSize: '18px' }} />, label: "업데이트" },
@@ -135,7 +137,7 @@ function ShellLayout({ children }: { children: React.ReactNode }) {
             <Menu
               theme="dark"
               mode="inline"
-              selectedKeys={[pathname]}
+              selectedKeys={[pathname.startsWith("/owners/brewery") ? "/owners/brewery" : pathname]}
               onClick={({ key }) => {
                 if (!key.includes('divider')) router.push(key);
               }}
