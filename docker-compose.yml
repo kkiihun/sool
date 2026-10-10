@@ -44,6 +44,7 @@ services:
       DB_NAME: ${DB_NAME:-sool}
       SECRET_KEY: ${SECRET_KEY:?set SECRET_KEY in .env}
       COOKIE_SECURE: ${COOKIE_SECURE:-false}
+      KAKAO_REST_API_KEY: ${KAKAO_REST_API_KEY:-}   # 식당 주소 → 좌표 (R2)
     depends_on:
       db:
         condition: service_healthy
