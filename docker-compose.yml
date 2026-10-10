@@ -66,5 +66,26 @@ services:
     depends_on:
       - backend
 
+  # 데이터 파이프라인 (상시 실행 아님): docker compose --profile pipeline run --rm pipeline
+  #   계정: 서비스 테이블 SELECT 전용 (ops/create-pipeline-user.sh)
+  pipeline:
+    build: ./pipelines
+    container_name: sool-pipeline
+    profiles: ["pipeline"]
+    logging: *logging
+    mem_limit: 1g
+    environment:
+      DB_HOST: db
+      DB_PORT: "3306"
+      DB_USER: sool_pipeline
+      DB_PASSWORD: ${PIPELINE_DB_PASSWORD:-}
+      DB_NAME: ${DB_NAME:-sool}
+    volumes:
+      - ./data/pipeline:/data
+      - ./backend/data:/seed:ro
+    depends_on:
+      db:
+        condition: service_healthy
+
 volumes:
   sool_mariadb_data:
