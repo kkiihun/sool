@@ -1,5 +1,6 @@
 # 공개 탐색 API (P7): 파이프라인 결과(analytics_*)를 읽기만 해서 서비스 화면에 보여준다.
 # 관리자 전용 정보(규칙 이름·신뢰도·HTTP 코드·시드 매칭 키 등)는 내보내지 않는다.
+import re
 from typing import Literal, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -187,3 +188,32 @@ def explore_meta(db: Session = Depends(get_db)):
             if g in pairing:
                 pairing[g] += 1
     return {"flags": counts, "pairings": pairing}
+
+
+def _first_sentence(text: str | None, limit: int = 70) -> str | None:
+    """메뉴판 기본 소개: 설명의 첫 문장 (길면 자름)"""
+    if not text:
+        return None
+    s = re.split(r"(?<=[.!?。])\s+", text.strip())[0]
+    return s if len(s) <= limit else s[: limit - 1].rstrip() + "…"
+
+
+@router.get("/cards")
+def sool_cards(ids: str = Query(..., description="쉼표 구분 sool_id, 최대 40개"), db: Session = Depends(get_db)):
+    """메뉴판(R3)용: 고른 술들의 요약을 한 번에. 요청한 순서대로 돌려줌"""
+    try:
+        want = [int(x) for x in ids.split(",") if x.strip()][:40]
+    except ValueError:
+        raise HTTPException(400, "ids 는 숫자")
+    rows = (db.query(Sool, P.category, P.main_ingredient, P.taste, P.pairings, P.on_sale)
+            .outerjoin(P, P.sool_id == Sool.id).filter(Sool.id.in_(want)).all())
+    by_id = {}
+    for s, cat, ing, taste, pairings, on_sale in rows:
+        place = _place_of(db, s.id)
+        by_id[s.id] = {
+            "sool_id": s.id, "name": s.name, "abv": s.abv, "category": s.category or cat,
+            "producer": place.name if place else s.producer, "region": (place.sigungu if place else None) or s.region,
+            "main_ingredient": ing, "tastes": [k for k, v in (taste or {}).items() if v and v > 0][:3],
+            "pairings": pairings or [], "intro": _first_sentence(s.description), "on_sale": on_sale,
+        }
+    return {"items": [by_id[i] for i in want if i in by_id]}

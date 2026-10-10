@@ -7,8 +7,9 @@ import Link from "next/link";
 import dynamic from "next/dynamic";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Button, Empty, Input, Segmented, Select, Spin, Tooltip, Typography, message } from "antd";
-import { AimOutlined, EnvironmentOutlined, ShopOutlined, TrophyFilled } from "@ant-design/icons";
+import { AimOutlined, CheckOutlined, EnvironmentOutlined, PlusOutlined, ProfileOutlined, ShopOutlined, TrophyFilled } from "@ant-design/icons";
 import type { MapPoint } from "./RestaurantMap";
+import { loadBoard, onBoardChange, toggleBoard } from "@/lib/menuBoard";
 
 const RestaurantMap = dynamic(() => import("./RestaurantMap"), { ssr: false });
 const { Title, Text } = Typography;
@@ -73,6 +74,12 @@ export default function RestaurantOwners() {
   const [loading, setLoading] = useState(false);
   const [locating, setLocating] = useState(false);
   const [focus, setFocus] = useState<string | null>(null);
+  const [board, setBoard] = useState<number[]>([]);   // 메뉴판에 담은 술
+  useEffect(() => {
+    const sync = () => setBoard(loadBoard().map((e) => e.sool_id));
+    sync();
+    return onBoardChange(sync);
+  }, []);
 
   // 지난번 입력 복원 (이 브라우저에만 저장)
   useEffect(() => {
@@ -206,11 +213,17 @@ export default function RestaurantOwners() {
                   {it.award && <span className="px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-300"><TrophyFilled /> {it.award}</span>}
                   {it.blog_count > 0 && <span className="px-2 py-0.5 rounded-md bg-white/5 text-white/50">블로그 후기 {it.blog_count}</span>}
                 </div>
-                {it.purchase_url && (
-                  <a href={httpUrl(it.purchase_url)} target="_blank" rel="noreferrer" className="inline-block mt-3 text-amber-400 text-sm font-bold">
-                    {CHANNEL_LABEL[it.channel ?? ""] ?? "홈페이지"}에서 보기 →{it.online_buy && <span className="text-green-300 font-normal"> (온라인 주문 가능)</span>}
-                  </a>
-                )}
+                <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2">
+                  <button type="button" onClick={() => toggleBoard(it.sool_id)}
+                    className={`h-8 px-3 rounded-lg text-sm font-bold border ${board.includes(it.sool_id) ? "bg-amber-500 text-black border-amber-500" : "border-white/20 text-white/70 hover:border-amber-500/60"}`}>
+                    {board.includes(it.sool_id) ? <><CheckOutlined /> 메뉴판에 담음</> : <><PlusOutlined /> 메뉴판에 담기</>}
+                  </button>
+                  {it.purchase_url && (
+                    <a href={httpUrl(it.purchase_url)} target="_blank" rel="noreferrer" className="text-amber-400 text-sm font-bold">
+                      {CHANNEL_LABEL[it.channel ?? ""] ?? "홈페이지"}에서 보기 →{it.online_buy && <span className="text-green-300 font-normal"> (온라인 주문 가능)</span>}
+                    </a>
+                  )}
+                </div>
               </div>
             ))}
           </div>
@@ -236,6 +249,13 @@ export default function RestaurantOwners() {
             </Box>
           </div>
         </div>
+
+        {board.length > 0 && (
+          <Link href="/owners/menu-board"
+            className="fixed z-40 right-4 bottom-20 md:bottom-8 md:right-8 flex items-center gap-2 px-5 h-12 rounded-full bg-amber-500 text-black font-black shadow-2xl shadow-amber-500/20">
+            <ProfileOutlined /> 메뉴판 만들기 · {board.length}
+          </Link>
+        )}
 
         <Text className="!text-white/25 !text-xs">
           추천은 제품 설명에 나온 어울리는 음식·맛 표현과 정보 충실도·수상·후기·거리로 정합니다. 판매 중단 제품은 제외했습니다.
