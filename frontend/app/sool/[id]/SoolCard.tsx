@@ -20,6 +20,7 @@ type Profile = {
   visit_brewery: boolean | null; food_master: boolean | null; intangible_heritage: boolean | null;
   award_count: number | null; best_award: string | null; award_years: number[] | null;
   taste: Record<string, number | null> | null; pairings: string[] | null; address: string | null;
+  on_sale: boolean | null;
 };
 type Place = {
   name: string | null; address: string | null; homepage: string | null; lat: number; lng: number;
@@ -98,6 +99,11 @@ export function SoolProfileCard({ profile }: { profile: Profile }) {
     <div className="bg-white/[0.03] p-10 rounded-[3rem] border border-white/10 flex flex-col gap-8">
       <div className="flex items-center justify-between">
         <Text className="!text-white !text-base !font-black !opacity-60">술 카드</Text>
+        {p.on_sale === false && (
+          <Tooltip title="aT 전통주정보(더술닷컴)에 판매 중단으로 표시된 제품입니다">
+            <Tag color="red" className="!text-sm !px-3 ml-auto mr-2">판매 중단</Tag>
+          </Tooltip>
+        )}
         {p.category && (
           <Tooltip title={p.category_auto ? "원본에 주종이 없어 원료·도수 규칙으로 자동 분류했습니다 (검증 중)" : undefined}>
             <Tag color="gold" className="!text-sm !px-3">{p.category}{p.category_auto && " · 자동 분류"}</Tag>

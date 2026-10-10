@@ -8,7 +8,10 @@ DUPLICATE_COLUMN = 1060   # MariaDB: 다른 워커가 먼저 추가함 (uvicorn 
 
 ADDED_COLUMNS: dict[str, dict[str, str]] = {
     # U1 술 카드 충실도 (2026-10-10)
-    "analytics_sool_profile": {"card_score": "INT NULL", "card_missing": "JSON NULL"},
+    "analytics_sool_profile": {
+        "card_score": "INT NULL", "card_missing": "JSON NULL",
+        "on_sale": "TINYINT(1) NULL",            # aT 판매여부 (2026-10-10)
+    },
 }
 
 

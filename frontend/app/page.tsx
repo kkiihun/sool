@@ -16,6 +16,7 @@ type Item = {
   category: string | null; category_auto: boolean; visit_brewery: boolean; is_raw: boolean; no_sweetener: boolean;
   awarded: boolean; online_buy: boolean; card_score: number | null;
   main_ingredient: string | null; tastes: string[]; pairings: string[]; best_award: string | null;
+  on_sale: boolean | null;   // aT 판매여부. false = 판매 중단
 };
 
 const CATEGORIES = ["탁주", "약주", "청주", "과실주", "증류주", "리큐르", "기타주류"];
@@ -116,6 +117,7 @@ function SoolTile({ item }: { item: Item }) {
           )}
 
           <div className="mt-auto pt-3 flex flex-wrap gap-1.5 text-[11px] font-bold border-t border-white/5">
+            {item.on_sale === false && <span className="px-2 py-0.5 rounded-md bg-red-500/15 text-red-300">판매 중단</span>}
             {item.visit_brewery && <span className="px-2 py-0.5 rounded-md bg-cyan-500/15 text-cyan-300">찾아가는 양조장</span>}
             {item.is_raw && <span className="px-2 py-0.5 rounded-md bg-green-500/15 text-green-300">생</span>}
             {item.no_sweetener && <span className="px-2 py-0.5 rounded-md bg-white/5 text-white/50">무감미료</span>}

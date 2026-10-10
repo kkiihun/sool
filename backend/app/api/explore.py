@@ -29,7 +29,7 @@ PROFILE_PUBLIC = [
     "category", "main_ingredient", "special_ingredients", "has_sweetener", "has_preservative", "has_spirit_added",
     "is_raw", "is_pasteurized", "is_sparkling", "aged_years", "volume_ml", "volumes_ml",
     "visit_brewery", "food_master", "intangible_heritage", "award_count", "best_award", "award_years",
-    "taste", "pairings", "address", "card_score", "card_missing",
+    "taste", "pairings", "address", "card_score", "card_missing", "on_sale",
 ]
 PLACE_PUBLIC = [
     "place_id", "name", "address", "homepage", "lat", "lng", "sido", "sigungu", "geo_method",
@@ -121,7 +121,7 @@ def explore_sool(
     주종은 원래 값이 없으면 파이프라인 제안값으로 보여주고 거른다."""
     category_col = func.coalesce(func.nullif(Sool.category, ""), P.category)
     qry = (db.query(Sool, P.category, P.category_source, P.visit_brewery, P.is_raw, P.has_sweetener,
-                    P.main_ingredient, P.award_count, P.card_score, P.taste, P.pairings, P.best_award,
+                    P.main_ingredient, P.award_count, P.card_score, P.taste, P.pairings, P.best_award, P.on_sale,
                     U.online_buy, U.link_state)
            .outerjoin(P, P.sool_id == Sool.id)
            .outerjoin(U, U.sool_id == Sool.id))
@@ -143,9 +143,9 @@ def explore_sool(
             raise HTTPException(400, f"pairing 은 {PAIRINGS} 중 하나")
         qry = qry.filter(func.json_contains(P.pairings, f'"{pairing}"'))
 
-    # 추천순: 술 카드가 충실한 술 → 수상 → 찾아가는 양조장 → 이름
+    # 추천순: 판매 중단(aT) 은 뒤로 → 술 카드가 충실한 술 → 수상 → 찾아가는 양조장 → 이름
     order_by = {
-        "recommended": [func.coalesce(P.card_score, 0).desc(), func.coalesce(P.award_count, 0).desc(),
+        "recommended": [func.coalesce(P.on_sale, True).desc(), func.coalesce(P.card_score, 0).desc(), func.coalesce(P.award_count, 0).desc(),
                         func.coalesce(P.visit_brewery, False).desc(), Sool.name.asc()],
         "abv_low": [Sool.abv.asc()], "abv_high": [Sool.abv.desc()],
     }.get(order, [Sool.name.asc()])
@@ -153,7 +153,7 @@ def explore_sool(
     rows = qry.order_by(*order_by, Sool.id).offset((page - 1) * page_size).limit(page_size).all()
 
     items = []
-    for s, p_cat, p_src, visit, raw, sweet, main_ing, awards, score, taste, pairings, best_award, online, state in rows:
+    for s, p_cat, p_src, visit, raw, sweet, main_ing, awards, score, taste, pairings, best_award, on_sale, online, state in rows:
         own = s.category if s.category else None
         items.append({
             "id": s.id, "name": s.name, "abv": s.abv, "region": s.region, "producer": s.producer,
@@ -168,6 +168,7 @@ def explore_sool(
             "tastes": [k for k, v in (taste or {}).items() if v and v > 0][:3],
             "pairings": (pairings or [])[:2],
             "best_award": best_award,
+            "on_sale": on_sale,
         })
     return {"total": total, "items": items}
 

@@ -55,6 +55,8 @@ class AnalyticsSoolProfile(Base):
     # 기존 DB 에는 app/core/migrate.py 가 컬럼을 추가한다
     card_score = Column(Integer)
     card_missing = Column(JSON)
+    # aT 전통주정보 판매여부 (False = 판매 중단, NULL = aT 데이터와 연결 안 됨)
+    on_sale = Column(Boolean)
 
 
 class PipelineRun(Base):

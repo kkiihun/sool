@@ -14,6 +14,7 @@ from collections import Counter
 
 from .blogs import build_query, kakao_blog_fetcher, pick as pick_blogs
 from .categorize import standardize, suggest
+from . import source_at
 from .completeness import card_completeness, summarize
 from .geo import clean_address, geocode, kakao_fetcher, short_sido
 from .links import check as check_link, classify as classify_link, interpret as interpret_link, normalize_url
@@ -44,22 +45,101 @@ def collect(ctx: Context) -> StepResult:
             df.to_parquet(ctx.raw_dir / f"db_{t}.parquet", index=False)
             counts[t] = len(df)
 
-    # 원본 CSV 시드: DB 에 없는 특징·주소·인증·수상·용량
-    seed_path = ctx.config.get("seed_csv")
-    if seed_path and os.path.exists(seed_path):
-        seed = pd.read_csv(seed_path, encoding="utf-8-sig", dtype=str, keep_default_na=False)
-        seed.columns = ctx.config["seed_columns"]
-        seed["abv"] = pd.to_numeric(seed["abv"], errors="coerce")
+    # 시드(DB 에 없는 특징·주소·인증·수상·용량·판매여부): aT 최신판, 없으면 repo 에 든 CSV
+    seed = _load_seed(ctx)
+    if seed is not None:
         seed.to_parquet(ctx.raw_dir / "seed_sool_basic.parquet", index=False)
         counts["seed_csv"] = len(seed)
-    else:
-        ctx.warn(f"시드 CSV 없음: {seed_path}")
 
     ctx.metrics["snapshot"] = counts
     geo = _geocode_new(ctx)
     links = _check_links(ctx)
     blogs = _search_blogs(ctx)
     return StepResult(out=sum(counts.values()), extra={"tables": counts, "geocode": geo, "links": links, "blogs": blogs})
+
+
+def _bundled_seed(ctx: Context) -> pd.DataFrame | None:
+    """repo 에 든 시드 CSV (backend/data/sool_basic_clean.csv, 열은 위치로 매핑)"""
+    path = ctx.config.get("seed_csv")
+    if not path or not os.path.exists(path):
+        return None
+    seed = pd.read_csv(path, encoding="utf-8-sig", dtype=str, keep_default_na=False)
+    seed.columns = ctx.config["seed_columns"]
+    seed["abv"] = pd.to_numeric(seed["abv"], errors="coerce")
+    seed["available"] = seed["available"].str.strip().str.upper().isin(["Y", "TRUE"])
+    return seed
+
+
+def _load_seed(ctx: Context) -> pd.DataFrame | None:
+    latest = _refresh_at_source(ctx)
+    if latest is not None:
+        return source_at.read_csv(latest.read_bytes())
+    seed = _bundled_seed(ctx)
+    if seed is None:
+        ctx.warn(f"시드 CSV 없음: {ctx.config.get('seed_csv')}")
+    return seed
+
+
+def _refresh_at_source(ctx: Context):
+    """aT 전통주정보 새 판 확인 (check_days 마다). 내용이 바뀌었으면 저장하고 이전 판과 비교.
+    반환: 최신판 CSV 경로 (없으면 None)"""
+    cfg = ctx.config.get("at_source", {})
+    base = ctx.data_dir / "sources" / "at"
+    base.mkdir(parents=True, exist_ok=True)
+    state_path = base / "versions.json"
+    state = json.loads(state_path.read_text()) if state_path.exists() else {"checked_at": None, "versions": []}
+    versions = state["versions"]
+    latest = base / versions[-1]["file"] if versions else None
+
+    def report(checked: bool, error: str | None = None):
+        v = versions[-1] if versions else {}
+        ctx.metrics["at_source"] = {
+            "file_name": v.get("file_name"), "rows": v.get("rows"), "versions": len(versions),
+            "fetched_at": v.get("fetched_at"), "checked_at": state["checked_at"], "checked_now": checked,
+            "last_diff": v.get("diff"), "error": error,
+        }
+
+    if not cfg.get("enabled", True):
+        report(False)
+        return latest
+    last = state.get("checked_at")
+    if latest is not None and last and (pd.Timestamp.now(tz="UTC") - pd.Timestamp(last)).days < int(cfg.get("check_days", 7)):
+        report(False)
+        return latest
+
+    try:
+        got = source_at.download_latest(cfg.get("page_url", source_at.PAGE_URL))
+        new = source_at.read_csv(got["content"])
+    except Exception as ex:                      # 네트워크·화면 변경·열 변경: 경고만, 마지막 판 계속 사용
+        err = f"{type(ex).__name__}: {ex}"
+        ctx.warn(f"aT 전통주정보 확인 실패 → {'마지막 판' if latest else 'repo 시드'} 사용 ({err})")
+        report(True, err)
+        return latest
+
+    now = pd.Timestamp.now(tz="UTC").isoformat(timespec="seconds")
+    state["checked_at"] = now
+    if versions and versions[-1]["sha256"] == got["sha256"]:
+        state_path.write_text(json.dumps(state, ensure_ascii=False, indent=1))
+        report(True)
+        return latest
+
+    # 새 판: 이전 판(처음이면 repo 시드)과 비교해 변경 기록
+    prev = source_at.read_csv(latest.read_bytes()) if latest is not None else _bundled_seed(ctx)
+    d = source_at.diff(prev, new) if prev is not None else None
+    fname = f"at_{ctx.run_date.isoformat()}_{got['sha256'][:8]}.csv"
+    (base / fname).write_bytes(got["content"])
+    if d is not None:
+        (ctx.output_dir / f"at_changes-{ctx.run_date}.json").write_text(json.dumps(d, ensure_ascii=False, indent=1, default=str))
+        s_ = d["summary"]
+        if s_["added"] or s_["removed"] or s_["changed"]:
+            ctx.warn(f"aT 전통주정보 새 판: 추가 {s_['added']} · 삭제 {s_['removed']} · 변경 {s_['changed']} "
+                     f"(판매 중단 {s_['stopped_selling']}) → output/at_changes-{ctx.run_date}.json")
+    versions.append({"file": fname, "sha256": got["sha256"], "file_name": got["file_name"],
+                     "atch_file_id": got["atch_file_id"], "rows": int(len(new)), "fetched_at": now,
+                     "diff": d["summary"] if d else None, "baseline": "previous" if latest is not None else "repo_seed"})
+    state_path.write_text(json.dumps(state, ensure_ascii=False, indent=1))
+    report(True)
+    return base / fname
 
 
 def _search_blogs(ctx: Context) -> dict:
@@ -316,10 +396,10 @@ def _build_profiles(ctx: Context) -> int:
         tables = {r[0] for r in con.execute("SHOW TABLES").fetchall()}
         if "staged_seed_link" not in tables:
             ctx.warn("시드 연결 없음 → 술 카드는 DB 컬럼만으로 생성")
-            seed_join = "NULL::VARCHAR AS volume, NULL AS special_notes, NULL AS features, NULL AS address, NULL AS homepage, NULL AS awards, NULL AS match_key"
+            seed_join = "NULL::VARCHAR AS volume, NULL AS special_notes, NULL AS features, NULL AS address, NULL AS homepage, NULL AS awards, NULL AS match_key, NULL::BOOLEAN AS on_sale"
             join = ""
         else:
-            seed_join = "e.volume, e.special_notes, e.features, e.address, e.homepage, e.awards, l.match_key"
+            seed_join = "e.volume, e.special_notes, e.features, e.address, e.homepage, e.awards, l.match_key, e.available AS on_sale"
             join = "LEFT JOIN staged_seed_link l ON l.sool_id = s.id LEFT JOIN staged_seed e ON e.seed_idx = l.seed_idx"
         base = con.execute(f"""
             SELECT s.id AS sool_id, s.name, s.producer, s.region, s.abv, s.ingredients, s.description,
@@ -355,6 +435,7 @@ def _build_profiles(ctx: Context) -> int:
         "sparkling": int(out["is_sparkling"].sum()),
         "with_taste": int((out["taste_axes_mentioned"] > 0).sum()),
         "with_pairing": int(out["pairings"].map(len).gt(0).sum()),
+        "not_on_sale": int((out["on_sale"] == False).sum()),   # noqa: E712 — NULL(시드 미연결)은 제외
     }
     ctx.metrics["profile_summary"] = summary
     out.drop(columns=["description", "features"]).to_csv(
@@ -391,7 +472,7 @@ _PROFILE_COLS = [
     "main_ingredient", "special_ingredients", "has_sweetener", "has_preservative", "has_spirit_added",
     "is_raw", "is_pasteurized", "is_sparkling", "aged_years", "volume_ml", "volumes_ml",
     "visit_brewery", "food_master", "intangible_heritage", "award_count", "best_award", "award_years",
-    "taste", "pairings", "address", "homepage", "features", "seed_match_key", "card_score", "card_missing",
+    "taste", "pairings", "address", "homepage", "features", "seed_match_key", "card_score", "card_missing", "on_sale",
 ]
 _JSON_COLS = {"special_ingredients", "volumes_ml", "award_years", "taste", "pairings"}
 

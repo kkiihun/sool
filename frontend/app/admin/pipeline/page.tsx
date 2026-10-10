@@ -256,6 +256,37 @@ export default function PipelinePage() {
             );
           })()}
 
+          {/* 1-2. 원천 데이터: aT 전통주정보 판 관리 */}
+          {status.metrics?.at_source && (() => {
+            const a = status.metrics.at_source as {
+              file_name: string | null; rows: number | null; versions: number; fetched_at: string | null;
+              checked_at: string | null; error: string | null;
+              last_diff: { added: number; removed: number; changed: number; stopped_selling: number } | null;
+            };
+            return (
+              <Card className="bg-white/5 border-white/10 rounded-3xl mb-6" styles={{ body: { padding: 24 } }}>
+                <div className="flex flex-wrap items-start justify-between gap-4">
+                  <div>
+                    <div className="text-white/30 text-[11px] font-bold tracking-widest mb-1">원천 데이터 · aT 전통주정보 (연 1회 갱신, 주 1회 확인)</div>
+                    <div className="text-white font-bold">{a.file_name ?? "아직 받지 않음 (repo 시드 사용 중)"}</div>
+                    <div className="text-white/40 text-xs mt-1">
+                      {a.rows?.toLocaleString() ?? "-"}행 · 보관 판 {a.versions}개 · 받은 때 {a.fetched_at?.slice(0, 10) ?? "-"} · 마지막 확인 {a.checked_at?.slice(0, 10) ?? "-"}
+                    </div>
+                    {a.error && <div className="text-amber-400 text-xs mt-1"><WarningOutlined /> {a.error}</div>}
+                  </div>
+                  {a.last_diff && (
+                    <div className="flex flex-wrap gap-1">
+                      <Tag color="green">추가 {a.last_diff.added}</Tag>
+                      <Tag color="red">삭제 {a.last_diff.removed}</Tag>
+                      <Tag color="gold">변경 {a.last_diff.changed}</Tag>
+                      <Tag color="volcano">판매 중단 {a.last_diff.stopped_selling}</Tag>
+                    </div>
+                  )}
+                </div>
+              </Card>
+            );
+          })()}
+
           {/* 2. 핵심 지표 */}
           <Row gutter={[16, 16]} className="mb-6">
             {[
