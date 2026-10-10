@@ -6,7 +6,7 @@ import { CAT_COLOR, PAIRINGS, TASTE_LABEL } from "@/lib/soolLabels";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Input, Select, Typography, Pagination, Spin, Empty } from "antd";
-import { SearchOutlined, ReloadOutlined, TrophyFilled } from "@ant-design/icons";
+import { SearchOutlined, ReloadOutlined, TrophyFilled, ShopOutlined, ExperimentOutlined, ArrowRightOutlined } from "@ant-design/icons";
 import { useAppShell } from "./components/AppShellProvider";
 
 const { Title, Text } = Typography;
@@ -35,6 +35,28 @@ const FLAGS = [
   { value: "awarded", label: "수상작" },
 ];
 const PAGE_SIZE = 24;
+
+// 첫 화면 두 입구: 식당 사장님 / 양조장 대표님
+const ENTRANCES = [
+  {
+    key: "restaurant", icon: <ShopOutlined />, title: "식당 사장님", lead: "우리 가게 메뉴에 맞는 전통주를 가까운 양조장에서",
+    href: "/owners/restaurant",
+    links: [
+      { label: "메뉴에 맞는 술 고르기", href: "/owners/restaurant" },
+      { label: "식당 리포트 — 메뉴판 통째로 분석", href: "/owners/restaurant/report" },
+      { label: "술 메뉴판·테이블 POP 만들기", href: "/owners/menu-board" },
+    ],
+  },
+  {
+    key: "brewery", icon: <ExperimentOutlined />, title: "양조장 대표님", lead: "내 술이 온라인에서 어떻게 보이는지, 무엇을 고치면 좋은지",
+    href: "/owners/brewery",
+    links: [
+      { label: "양조장 진단 리포트", href: "/owners/brewery" },
+      { label: "양조 원료 시세 (쌀·과일 도매가)", href: "/owners/ingredients" },
+      { label: "양조장 지도", href: "/breweries" },
+    ],
+  },
+];
 
 const catColor = (c: string | null) => CAT_COLOR[c ?? ""] ?? "#64748b";
 // 도수별 색상 (기존 카드와 같음)
@@ -189,9 +211,37 @@ export default function Home() {
   return (
     <div className="bg-[#050505] min-h-screen">
       <div className="max-w-[1500px] mx-auto py-6 md:py-16 px-4 md:px-10">
+        {/* 두 입구 */}
+        <div className="mb-10 md:mb-14">
+          <div className="text-amber-500 text-sm font-bold mb-2">서울·경기 양조장 101곳 · 전통주 1,250종</div>
+          <Title className="!text-white !text-3xl md:!text-5xl !font-black !m-0 !tracking-tight !leading-tight">
+            전통주로 잇는 <span className="text-amber-500">양조장</span>과 <span className="text-amber-500">식당</span>
+          </Title>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
+            {ENTRANCES.map((e) => (
+              <div key={e.key} className="rounded-3xl border border-white/10 bg-gradient-to-br from-white/[0.06] to-white/[0.02] p-5 md:p-7 flex flex-col gap-4 hover:border-amber-500/40 transition-colors">
+                <Link href={e.href} className="flex items-start justify-between gap-3 group">
+                  <div>
+                    <div className="text-white text-xl md:text-2xl font-black flex items-center gap-2"><span className="text-amber-500">{e.icon}</span>{e.title}</div>
+                    <div className="text-white/50 text-sm mt-1">{e.lead}</div>
+                  </div>
+                  <ArrowRightOutlined className="text-white/30 group-hover:text-amber-400 text-lg mt-1" />
+                </Link>
+                <div className="flex flex-col gap-1.5">
+                  {e.links.map((l) => (
+                    <Link key={l.href} href={l.href} className="flex items-center justify-between rounded-xl bg-white/[0.03] hover:bg-white/[0.07] px-4 py-2.5 text-sm text-white/80 hover:text-white">
+                      {l.label}<span className="text-white/25">→</span>
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
         {/* 머리말 */}
         <div className="mb-5 md:mb-8">
-          <Title className="!text-white !text-3xl md:!text-5xl !font-black !m-0 !tracking-tight">
+          <Title level={2} className="!text-white !text-2xl md:!text-4xl !font-black !m-0 !tracking-tight">
             우리 술 <span className="text-amber-500">탐색</span>
           </Title>
           <Text className="!text-white/50 !text-sm md:!text-lg block mt-2 md:mt-3">

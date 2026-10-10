@@ -21,6 +21,7 @@ import {
   ShopOutlined,
   MenuOutlined,
   ProfileOutlined,
+  EllipsisOutlined,
   FileTextOutlined,
   RiseOutlined,
 } from "@ant-design/icons";
@@ -42,34 +43,47 @@ function ShellLayout({ children }: { children: React.ReactNode }) {
   const sidebarWidth = 260;
   const collapsedWidth = 80;
 
+  const ic = (I: React.ComponentType<{ style?: React.CSSProperties }>) => <I style={{ fontSize: "18px" }} />;
+  // 사이드 메뉴: 역할별 묶음. 소비자 기능(시음 노트·통계·업데이트·커뮤니티)은 '더보기' 안으로 (2026-10-10 결정)
+  const CONSUMER_KEYS = ["/Tasting", "/dashboard", "/updates", "/community"];
   const menuItems = [
-    { key: "/", icon: <AppstoreOutlined style={{ fontSize: '18px' }} />, label: "술 탐색" },
-    { key: "/breweries", icon: <EnvironmentOutlined style={{ fontSize: '18px' }} />, label: "양조장 지도" },
-    { key: "/owners/restaurant", icon: <ShopOutlined style={{ fontSize: '18px' }} />, label: "식당 사장님" },
-    { key: "/owners/restaurant/report", icon: <FileTextOutlined style={{ fontSize: '18px' }} />, label: "식당 리포트" },
-    { key: "/owners/menu-board", icon: <ProfileOutlined style={{ fontSize: '18px' }} />, label: "술 메뉴판" },
-    { key: "/owners/brewery", icon: <FileSearchOutlined style={{ fontSize: '18px' }} />, label: "양조장 리포트" },
-    { key: "/owners/ingredients", icon: <RiseOutlined style={{ fontSize: '18px' }} />, label: "원료 시세" },
-    { key: "/Tasting", icon: <StarOutlined style={{ fontSize: '18px' }} />, label: "시음 노트" },
-    { key: "/dashboard", icon: <BarChartOutlined style={{ fontSize: '18px' }} />, label: "통계" },
-    { key: "/updates", icon: <CompassOutlined style={{ fontSize: '18px' }} />, label: "업데이트" },
-    { key: "/community", icon: <HeartOutlined style={{ fontSize: '18px' }} />, label: "커뮤니티" },
+    { type: "group" as const, key: "g-explore", label: "탐색", children: [
+      { key: "/", icon: ic(AppstoreOutlined), label: "술 탐색" },
+      { key: "/breweries", icon: ic(EnvironmentOutlined), label: "양조장 지도" },
+    ] },
+    { type: "group" as const, key: "g-restaurant", label: "식당 사장님", children: [
+      { key: "/owners/restaurant", icon: ic(ShopOutlined), label: "메뉴에 맞는 술" },
+      { key: "/owners/restaurant/report", icon: ic(FileTextOutlined), label: "식당 리포트" },
+      { key: "/owners/menu-board", icon: ic(ProfileOutlined), label: "술 메뉴판" },
+    ] },
+    { type: "group" as const, key: "g-brewery", label: "양조장 대표님", children: [
+      { key: "/owners/brewery", icon: ic(FileSearchOutlined), label: "진단 리포트" },
+      { key: "/owners/ingredients", icon: ic(RiseOutlined), label: "원료 시세" },
+    ] },
+    { key: "g-more", icon: ic(EllipsisOutlined), label: "더보기", children: [
+      { key: "/Tasting", icon: ic(StarOutlined), label: "시음 노트" },
+      { key: "/dashboard", icon: ic(BarChartOutlined), label: "통계" },
+      { key: "/updates", icon: ic(CompassOutlined), label: "업데이트" },
+      { key: "/community", icon: ic(HeartOutlined), label: "커뮤니티" },
+    ] },
     ...(isAdmin ? [
-      { key: "admin-divider", type: "divider" as const, style: { margin: "24px 0", borderColor: "rgba(255,255,255,0.05)" } },
-      { key: "/admin", icon: <SafetyCertificateOutlined style={{ fontSize: '18px' }} />, label: "Admin Console" },
-      { key: "/admin/pipeline", icon: <DeploymentUnitOutlined style={{ fontSize: '18px' }} />, label: "Data Pipeline" }
-    ] : [])
+      { type: "group" as const, key: "g-admin", label: "관리자", children: [
+        { key: "/admin", icon: ic(SafetyCertificateOutlined), label: "Admin Console" },
+        { key: "/admin/pipeline", icon: ic(DeploymentUnitOutlined), label: "Data Pipeline" },
+      ] },
+    ] : []),
   ];
+  const routeKeys = menuItems.flatMap((m) => m.children.map((c) => c.key));   // 모든 묶음에 하위 메뉴가 있음
 
   // 메뉴 강조: 하위 페이지(/owners/brewery/123)도 상위 메뉴로
-  const activeKey = menuItems.map((m) => m.key).filter((k) => k !== "/" && !k.includes("divider") && pathname.startsWith(k))
+  const activeKey = routeKeys.filter((k) => k !== "/" && pathname.startsWith(k))
     .sort((a, b) => b.length - a.length)[0] ?? pathname;
   // 모바일 하단 탭바 (768px 미만). 나머지 메뉴는 '더보기' 서랍
   const tabs = [
     { key: "/", icon: <AppstoreOutlined />, label: "탐색" },
-    { key: "/breweries", icon: <EnvironmentOutlined />, label: "지도" },
     { key: "/owners/restaurant", icon: <ShopOutlined />, label: "식당" },
     { key: "/owners/brewery", icon: <FileSearchOutlined />, label: "양조장" },
+    { key: "/breweries", icon: <EnvironmentOutlined />, label: "지도" },
   ];
 
   return (
@@ -160,8 +174,9 @@ function ShellLayout({ children }: { children: React.ReactNode }) {
               theme="dark"
               mode="inline"
               selectedKeys={[activeKey]}
+              defaultOpenKeys={CONSUMER_KEYS.includes(activeKey) ? ["g-more"] : []}
               onClick={({ key }) => {
-                if (!key.includes('divider')) router.push(key);
+                if (key.startsWith("/")) router.push(key);
               }}
               items={menuItems}
               style={{ background: "transparent", border: "none" }}
@@ -219,11 +234,11 @@ function ShellLayout({ children }: { children: React.ReactNode }) {
           <span className="text-lg leading-none"><MenuOutlined /></span>더보기
         </button>
       </nav>
-      <Drawer open={moreOpen} onClose={() => setMoreOpen(false)} placement="bottom" size={480} title="전체 메뉴"
+      <Drawer open={moreOpen} onClose={() => setMoreOpen(false)} placement="bottom" size={600} title="전체 메뉴"
         styles={{ body: { padding: "8px 12px 24px" }, header: { borderBottom: "1px solid rgba(255,255,255,0.06)" } }}>
         <Menu theme="dark" mode="inline" selectedKeys={[activeKey]} items={menuItems} className="premium-sidebar-menu"
           style={{ background: "transparent", border: "none" }}
-          onClick={({ key }) => { if (!key.includes("divider")) { setMoreOpen(false); router.push(key); } }} />
+          onClick={({ key }) => { if (key.startsWith("/")) { setMoreOpen(false); router.push(key); } }} />
       </Drawer>
 
       <style jsx global>{`
@@ -236,6 +251,9 @@ function ShellLayout({ children }: { children: React.ReactNode }) {
           .build-badge { display: none !important; }
           input, textarea { font-size: 16px !important; }
         }
+        .premium-sidebar-menu .ant-menu-item-group-title { color: rgba(255,255,255,0.28) !important; font-size: 11px !important; font-weight: 800 !important; padding: 14px 16px 6px !important; }
+        .ant-menu-inline-collapsed .ant-menu-item-group-title { display: none !important; }
+        .premium-sidebar-menu .ant-menu-submenu-title { color: rgba(255,255,255,0.4) !important; font-weight: 600 !important; border-radius: 12px !important; }
         .premium-sidebar-menu .ant-menu-item { 
           height: 52px !important; 
           line-height: 52px !important; 
