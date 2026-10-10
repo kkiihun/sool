@@ -20,6 +20,8 @@ export GIT_BRANCH="$BRANCH"
 export GIT_SHA="$(git rev-parse --short HEAD)"
 
 docker compose up -d --build --remove-orphans
+# 파이프라인은 profile 서비스라 위 명령에서 빠짐 → cron(03:30)이 새 코드로 돌도록 이미지도 다시 빌드
+docker compose --profile pipeline build -q pipeline
 docker image prune -f >/dev/null
 
 echo "⏳ 기동 확인 중..."

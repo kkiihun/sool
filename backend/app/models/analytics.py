@@ -51,6 +51,11 @@ class AnalyticsSoolProfile(Base):
     features = Column(Text)                         # 맛·페어링 원문 (근거 표시용)
     seed_match_key = Column(String(30))
 
+    # 충실도: 주종·원료·맛·페어링·설명·지도 위치·구매 링크 중 채워진 수 (0~7) + 빠진 항목
+    # 기존 DB 에는 app/core/migrate.py 가 컬럼을 추가한다
+    card_score = Column(Integer)
+    card_missing = Column(JSON)
+
 
 class PipelineRun(Base):
     """파이프라인 실행 기록 (status.json 과 같은 내용)"""

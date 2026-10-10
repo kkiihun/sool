@@ -39,6 +39,9 @@ const FLAG_OPTIONS = [
   { value: "is_raw", label: "생(비살균)" }, { value: "is_sparkling", label: "탄산" },
   { value: "has_spirit_added", label: "주정 첨가" },
 ];
+const CARD_ITEM_LABEL: Record<string, string> = {
+  category: "주종", ingredient: "원료", taste: "맛", pairing: "페어링", description: "설명", location: "지도 위치", purchase: "구매 링크",
+};
 const CATEGORIES = ["탁주", "약주", "청주", "과실주", "증류주", "리큐르", "기타주류"];
 
 const stateColor = (s?: string) => (s === "ok" ? "green" : s === "warn" ? "gold" : s === "error" ? "red" : "default");
@@ -218,6 +221,40 @@ export default function PipelinePage() {
               <div className="mt-3 text-amber-400 text-sm"><WarningOutlined /> {status.warnings.join(" / ")}</div>
             )}
           </Card>
+
+          {/* 1-1. 술 카드 충실도 (U1): 핵심 7항목 중 채워진 수 */}
+          {status.metrics?.card_completeness && (() => {
+            const cc = status.metrics.card_completeness as {
+              max: number; full: number; full_pct: number; ge6_pct: number; avg: number;
+              distribution: Record<string, number>; missing: Record<string, number>;
+            };
+            const total = Object.values(cc.distribution).reduce((a, b) => a + b, 0) || 1;
+            return (
+              <Card className="bg-white/5 border-white/10 rounded-3xl mb-6" styles={{ body: { padding: 24 } }}>
+                <div className="flex flex-wrap items-end gap-6 mb-4">
+                  <div>
+                    <div className="text-white/30 text-[11px] font-bold tracking-widest mb-1">술 카드 충실도 (완벽 = {cc.max}/{cc.max})</div>
+                    <div className="text-3xl font-black text-white">{cc.full_pct}% <span className="text-base text-white/40">완벽 {cc.full.toLocaleString()}</span></div>
+                  </div>
+                  <div className="text-white/50 text-sm">6개 이상 {cc.ge6_pct}% · 평균 {cc.avg}</div>
+                </div>
+                <div className="flex h-6 rounded-lg overflow-hidden mb-2">
+                  {Object.entries(cc.distribution).map(([score, n]) => n > 0 && (
+                    <Tooltip key={score} title={`${score}개 채움: ${n}`}>
+                      <div style={{ width: `${(100 * n) / total}%`, background: `hsl(38 92% ${18 + (Number(score) / cc.max) * 42}%)` }}
+                        className="text-[10px] text-black/70 font-bold flex items-center justify-center">{n / total > 0.06 ? score : ""}</div>
+                    </Tooltip>
+                  ))}
+                </div>
+                <div className="flex flex-wrap gap-1 items-center">
+                  <span className="text-white/40 text-xs mr-1">빈칸</span>
+                  {Object.entries(cc.missing).sort((a, b) => b[1] - a[1]).map(([k, n]) => (
+                    <Tag key={k}>{CARD_ITEM_LABEL[k] ?? k} {n.toLocaleString()}</Tag>
+                  ))}
+                </div>
+              </Card>
+            );
+          })()}
 
           {/* 2. 핵심 지표 */}
           <Row gutter={[16, 16]} className="mb-6">

@@ -50,6 +50,7 @@ const FLAGS = [
 ];
 
 const SORT_OPTIONS = [
+  { label: "추천순 (정보 충실)", value: "recommended" },
   { label: "이름순 정렬", value: "name" },
   { label: "도수 낮은순", value: "abv_low" },
   { label: "도수 높은순", value: "abv_high" },
@@ -87,7 +88,7 @@ export default function Home() {
   const [page, setPage] = useState(1);
   const [category, setCategory] = useState("");
   const [region, setRegion] = useState("전체 지역");
-  const [sortOption, setSortOption] = useState("name");
+  const [sortOption, setSortOption] = useState("recommended");
   const [regionOptions, setRegionOptions] = useState<string[]>(["전체 지역"]);
   const [loading, setLoading] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
@@ -162,7 +163,7 @@ export default function Home() {
     setSearch("");
     setCategory("");
     setRegion("전체 지역");
-    setSortOption("name");
+    setSortOption("recommended");
     setFlags([]);
     setPairing("");
     setPage(1);

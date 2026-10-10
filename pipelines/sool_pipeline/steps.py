@@ -13,6 +13,7 @@ import hashlib
 from collections import Counter
 
 from .categorize import standardize, suggest
+from .completeness import card_completeness, summarize
 from .geo import clean_address, geocode, kakao_fetcher, short_sido
 from .links import check as check_link, classify as classify_link, interpret as interpret_link, normalize_url
 from .normalize import is_missing, normalize_name, normalize_producer
@@ -246,6 +247,7 @@ def analyze(ctx: Context) -> StepResult:
     profiles = _build_profiles(ctx)
     places = _build_places(ctx)
     purchases = _build_purchases(ctx)
+    _add_completeness(ctx)
     market = _build_market(ctx)
 
     ctx.metrics.update({
@@ -253,6 +255,7 @@ def analyze(ctx: Context) -> StepResult:
         "places": places,
         "purchases": purchases,
         "market_metrics": market,
+        "card_full_pct": ctx.metrics["card_completeness"]["full_pct"],
         "total_items": int(len(sug)),
         "category_missing": int(len(missing)),
         "category_rule_resolved": resolved,
@@ -346,7 +349,7 @@ _PROFILE_COLS = [
     "main_ingredient", "special_ingredients", "has_sweetener", "has_preservative", "has_spirit_added",
     "is_raw", "is_pasteurized", "is_sparkling", "aged_years", "volume_ml", "volumes_ml",
     "visit_brewery", "food_master", "intangible_heritage", "award_count", "best_award", "award_years",
-    "taste", "pairings", "address", "homepage", "features", "seed_match_key",
+    "taste", "pairings", "address", "homepage", "features", "seed_match_key", "card_score", "card_missing",
 ]
 _JSON_COLS = {"special_ingredients", "volumes_ml", "award_years", "taste", "pairings"}
 
@@ -375,7 +378,7 @@ def publish(ctx: Context) -> StepResult:
         row = {c: r.get(c) for c in _PROFILE_COLS}
         for c in _JSON_COLS:
             row[c] = json.dumps(row[c] if row[c] is not None else [], ensure_ascii=False)
-        for c in ("aged_years", "volume_ml", "award_count"):
+        for c in ("aged_years", "volume_ml", "award_count", "card_score"):
             row[c] = None if row[c] is None else int(row[c])
         rows.append(row)
 
@@ -573,6 +576,35 @@ def _build_purchases(ctx: Context) -> int:
         "online_buy_reachable": int((out["online_buy"] & out["link_state"].isin(["alive", "login", "blocked"])).sum()),
     }
     return int(len(out))
+
+
+# 술 카드 충실도 (U1): 장소(좌표)·구매 경로까지 만든 뒤 mart_sool_profile 에 card_score·card_missing 추가
+def _add_completeness(ctx: Context) -> None:
+    with duckdb.connect(str(ctx.warehouse)) as con:
+        prof = con.execute("SELECT * FROM mart_sool_profile").df()
+        places = con.execute("SELECT lat, products FROM mart_place").df()
+        links = con.execute("SELECT sool_id, link_state FROM mart_purchase").df()
+
+    located = {int(p["sool_id"]) for lat, products in zip(places["lat"], places["products"])
+               if pd.notna(lat) for p in json.loads(products)}
+    link_state = dict(zip(links["sool_id"].astype(int), links["link_state"]))
+    scores, missing = [], []
+    for r in prof.itertuples(index=False):
+        sid = int(r.sool_id)
+        score, miss = card_completeness(
+            category=r.category, main_ingredient=r.main_ingredient, taste_axes_mentioned=r.taste_axes_mentioned,
+            pairings=r.pairings, description=r.description, located=sid in located, link_state=link_state.get(sid))
+        scores.append(score)
+        missing.append(miss)
+    prof["card_score"] = scores
+    prof["card_missing"] = [json.dumps(m) for m in missing]   # 구조 타입 충돌을 피하려고 JSON 문자열
+    with duckdb.connect(str(ctx.warehouse)) as con:
+        con.register("prof", prof)
+        con.execute("CREATE OR REPLACE TABLE mart_sool_profile AS SELECT * FROM prof")
+
+    summary = summarize(scores, missing)
+    ctx.metrics["card_completeness"] = summary
+    ctx.quality["card_full_pct"] = summary["full_pct"]
 
 
 # 시장 구조 지표 (P6): 술 카드 + 시도 + 장소 + 구매 경로를 제품 단위로 합쳐 계산 → mart_market (key, payload JSON)

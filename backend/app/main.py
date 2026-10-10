@@ -11,6 +11,7 @@ from sqlalchemy import text
 #   DB + ORM
 # =====================#
 from app.core.database import SessionLocal, Base, engine
+from app.core.migrate import add_missing_columns
 
 # =====================#
 #   APP 생성
@@ -68,6 +69,9 @@ app.include_router(explore_router)
 def startup():
     print("📌 Creating tables...")
     Base.metadata.create_all(bind=engine)
+    added = add_missing_columns(engine)
+    if added:
+        print(f"📌 Added columns: {', '.join(added)}")
 
 
 # =====================#
