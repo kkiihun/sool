@@ -72,3 +72,8 @@ backups/
 # Docker CLI 임시 설정 (실수로 커밋됐던 것)
 .docker_tmp/
 temp_docker_config/
+
+# ======================
+# 런타임 생성물
+# ======================
+backend/app/static/reports/
