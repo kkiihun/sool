@@ -3,13 +3,14 @@
 services:
   db:
     ports:
-      - "3306:3306"
+      # 맥에 이미 MySQL 이 3306 을 쓰면 .env 에 DB_HOST_PORT=3307
+      - "127.0.0.1:${DB_HOST_PORT:-3306}:3306"
 
   backend:
     environment:
       SQL_ECHO: "true"
     ports:
-      - "8000:8000"
+      - "127.0.0.1:8000:8000"
     volumes:
       - ./backend:/app
     command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
@@ -17,6 +18,8 @@ services:
   frontend:
     build:
       target: dev
+    # next dev 는 컴파일 때 메모리를 많이 씀 (운영 상한 512m 로는 재시작됨)
+    mem_limit: 2g
     environment:
       WATCHPACK_POLLING: "true"
     volumes:
