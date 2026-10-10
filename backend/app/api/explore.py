@@ -8,7 +8,7 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
-from app.models.analytics import AnalyticsBlog, AnalyticsPlace, AnalyticsPurchase, AnalyticsSoolProfile
+from app.models.analytics import AnalyticsBlog, AnalyticsIngredient, AnalyticsPlace, AnalyticsPurchase, AnalyticsSoolProfile
 from app.models.sool import Sool
 
 router = APIRouter(prefix="/explore", tags=["Explore"])
@@ -217,3 +217,11 @@ def sool_cards(ids: str = Query(..., description="쉼표 구분 sool_id, 최대 
             "pairings": pairings or [], "intro": _first_sentence(s.description), "on_sale": on_sale,
         }
     return {"items": [by_id[i] for i in want if i in by_id]}
+
+
+@router.get("/ingredients")
+def ingredients(db: Session = Depends(get_db)):
+    """양조 원료 시세 (aT 중도매, 상품 등급, 원/kg). 원재료에 많이 쓰이는 순"""
+    cols = [c.name for c in AnalyticsIngredient.__table__.columns]
+    rows = db.query(AnalyticsIngredient).order_by(AnalyticsIngredient.products.desc()).all()
+    return {"items": [{c: getattr(r, c) for c in cols} for r in rows]}

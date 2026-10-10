@@ -22,6 +22,7 @@ import {
   MenuOutlined,
   ProfileOutlined,
   FileTextOutlined,
+  RiseOutlined,
 } from "@ant-design/icons";
 import { useAuth } from "./AuthProvider";
 import AppShellProvider, { useAppShell } from "./AppShellProvider";
@@ -48,6 +49,7 @@ function ShellLayout({ children }: { children: React.ReactNode }) {
     { key: "/owners/restaurant/report", icon: <FileTextOutlined style={{ fontSize: '18px' }} />, label: "식당 리포트" },
     { key: "/owners/menu-board", icon: <ProfileOutlined style={{ fontSize: '18px' }} />, label: "술 메뉴판" },
     { key: "/owners/brewery", icon: <FileSearchOutlined style={{ fontSize: '18px' }} />, label: "양조장 리포트" },
+    { key: "/owners/ingredients", icon: <RiseOutlined style={{ fontSize: '18px' }} />, label: "원료 시세" },
     { key: "/Tasting", icon: <StarOutlined style={{ fontSize: '18px' }} />, label: "시음 노트" },
     { key: "/dashboard", icon: <BarChartOutlined style={{ fontSize: '18px' }} />, label: "통계" },
     { key: "/updates", icon: <CompassOutlined style={{ fontSize: '18px' }} />, label: "업데이트" },

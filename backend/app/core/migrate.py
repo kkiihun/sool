@@ -12,6 +12,7 @@ ADDED_COLUMNS: dict[str, dict[str, str]] = {
         "card_score": "INT NULL", "card_missing": "JSON NULL",
         "on_sale": "TINYINT(1) NULL",            # aT 판매여부 (2026-10-10)
     },
+    "analytics_ingredient": {"variety": "VARCHAR(20) NULL", "on_market_months": "JSON NULL"},   # 대표 품종·출하 시기 (2026-10-10)
 }
 
 

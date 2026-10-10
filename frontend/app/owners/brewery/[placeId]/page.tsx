@@ -3,6 +3,8 @@
 // 양조장 진단 리포트 (B1): /explore/breweries/{place_id}/report
 import { API_BASE } from "@/lib/api";
 import { CHANNEL_LABEL, LINK_STATE, httpUrl } from "@/lib/soolLabels";
+import { IngredientRow, pctColor, pctText, timing, won, ymLabel } from "@/lib/ingredients";
+import Sparkline from "@/components/Sparkline";
 import Link from "next/link";
 import { use, useEffect, useState } from "react";
 import { Button, Empty, Spin, Tag, Tooltip, Typography } from "antd";
@@ -25,6 +27,7 @@ type Report = {
   ranks: { sido: string | null; peer_breweries: number; blog_pct: number | null; score_pct: number | null };
   issues: Issue[]; strengths: string[]; products: Product[];
   pairing: { group: string; mine: number; region_pct: number }[]; run_date: string;
+  ingredients: (IngredientRow & { my_products: number })[];
 };
 
 const ITEMS: [string, string][] = [
@@ -168,6 +171,30 @@ export default function BreweryReport({ params }: { params: Promise<{ placeId: s
             })}
           </div>
         </section>
+
+        {/* 주원료 시세 */}
+        {r.ingredients.length > 0 && (
+          <section className="report-card rounded-3xl border border-white/10 bg-white/[0.03] p-6 md:p-8">
+            <Title level={4} className="!text-white !mb-1">주원료 시세</Title>
+            <Text className="!text-white/40 !text-sm block mb-5">
+              내 제품 원재료에 나오는 원료의 도매 가격 (aT 중도매·상품, 원/kg). 원가 계획과 원료 구매 시기에 참고하세요. <Link href="/owners/ingredients" className="!text-amber-400 no-print">전체 원료 시세 →</Link>
+            </Text>
+            <div className="flex flex-col divide-y divide-white/5">
+              {r.ingredients.map((g) => (
+                <div key={g.ingredient} className="py-3 grid grid-cols-[1fr_auto] md:grid-cols-[150px_150px_1fr_auto] gap-x-4 gap-y-1 items-center">
+                  <div><div className="text-white font-bold">{g.ingredient}{g.variety && <span className="text-white/35 text-xs font-normal"> ({g.variety})</span>}</div><div className="text-white/35 text-xs">내 제품 {g.my_products}종</div></div>
+                  <div className="text-right md:text-left"><div className="text-white font-bold">{won(g.latest_kg)}<span className="text-white/35 text-xs">/kg</span></div><div className="text-white/35 text-xs">{ymLabel(g.latest_ym)}</div></div>
+                  <div className="text-xs flex flex-wrap gap-x-4 gap-y-1">
+                    <span className="text-white/40">전년 대비 <b className={pctColor(g.yoy_pct)}>{pctText(g.yoy_pct)}</b></span>
+                    <span className="text-white/40">3개월 <b className={pctColor(g.trend_3m_pct)}>{pctText(g.trend_3m_pct)}</b></span>
+                    <span className="text-white/40">{timing(g).label} <b className="text-green-300">{timing(g).text}</b></span>
+                  </div>
+                  <div className="hidden md:block"><Sparkline values={g.monthly.map((m) => m.kg)} width={140} height={36} /></div>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
 
         {/* 페어링 포지션 */}
         {r.pairing.length > 0 && (

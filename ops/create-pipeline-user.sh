@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # 데이터 파이프라인 전용 DB 계정 생성/갱신. 여러 번 실행해도 안전.
-#   서비스 테이블: SELECT 만 / 결과 테이블(analytics_sool_profile, pipeline_run, analytics_place, analytics_purchase, analytics_market, analytics_blog): SELECT·INSERT·DELETE
+#   서비스 테이블: SELECT 만 / 결과 테이블(analytics_sool_profile, pipeline_run, analytics_place, analytics_purchase, analytics_market, analytics_blog, analytics_ingredient, analytics_sool_ingredient): SELECT·INSERT·DELETE
 #   결과 테이블은 백엔드가 기동하며 만든다 → 백엔드 배포 후에 실행
 #   사용: ./ops/create-pipeline-user.sh     (.env 의 PIPELINE_DB_PASSWORD 사용)
 set -euo pipefail
@@ -19,6 +19,8 @@ GRANT SELECT, INSERT, DELETE ON \`${DB}\`.analytics_place TO 'sool_pipeline'@'%'
 GRANT SELECT, INSERT, DELETE ON \`${DB}\`.analytics_purchase TO 'sool_pipeline'@'%';
 GRANT SELECT, INSERT, DELETE ON \`${DB}\`.analytics_market TO 'sool_pipeline'@'%';
 GRANT SELECT, INSERT, DELETE ON \`${DB}\`.analytics_blog TO 'sool_pipeline'@'%';
+GRANT SELECT, INSERT, DELETE ON \`${DB}\`.analytics_ingredient TO 'sool_pipeline'@'%';
+GRANT SELECT, INSERT, DELETE ON \`${DB}\`.analytics_sool_ingredient TO 'sool_pipeline'@'%';
 FLUSH PRIVILEGES;
 SQL
-echo "✅ sool_pipeline 계정 준비 (SELECT on ${DB}.*, 쓰기: analytics_sool_profile, pipeline_run, analytics_place, analytics_purchase, analytics_market, analytics_blog)"
+echo "✅ sool_pipeline 계정 준비 (SELECT on ${DB}.*, 쓰기: analytics_sool_profile, pipeline_run, analytics_place, analytics_purchase, analytics_market, analytics_blog, analytics_ingredient, analytics_sool_ingredient)"

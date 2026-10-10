@@ -82,6 +82,7 @@ services:
       DB_PASSWORD: ${PIPELINE_DB_PASSWORD:-}
       DB_NAME: ${DB_NAME:-sool}
       KAKAO_REST_API_KEY: ${KAKAO_REST_API_KEY:-}
+      DATA_GO_KR_SERVICE_KEY: ${DATA_GO_KR_SERVICE_KEY:-}   # aT 일별 도·소매 가격 (원료 시세)
     volumes:
       - ./data/pipeline:/data
       - ./backend/data:/seed:ro

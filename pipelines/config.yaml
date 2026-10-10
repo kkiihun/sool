@@ -42,3 +42,10 @@ blog_search:
 at_source:
   enabled: true
   check_days: 7          # 연 1회 갱신이라 주 1회 확인이면 충분
+
+# ① collect: 양조 원료 시세 (aT 일별 도·소매 가격, 중도매). 월 단위, 없는 달만 + 최근 달은 매번 다시
+ingredient_prices:
+  enabled: true
+  start_month: "2021-01"
+  refresh_months: 2
+  max_calls: 2000        # 개발 계정 하루 1만 건

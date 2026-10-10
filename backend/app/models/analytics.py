@@ -146,3 +146,32 @@ class AnalyticsBlog(Base):
     blogname = Column(String(100))
     posted_at = Column(Date)
     match = Column(String(20))                       # name+producer / name
+
+
+class AnalyticsIngredient(Base):
+    """양조 원료 시세 (aT 중도매, 상품 등급): 원료별 최근 가격·전년 대비·출하기(가장 싼 달)·월별 추이"""
+    __tablename__ = "analytics_ingredient"
+
+    ingredient = Column(String(20), primary_key=True)
+    run_date = Column(Date, nullable=False)
+    item_code = Column(String(10))                   # 부류-품목 (예: 100-111)
+    variety = Column(String(20))                     # 대표 품종으로 고정한 경우 (예: 포도 캠벨얼리)
+    products = Column(Integer)                       # 이 원료가 원재료에 나오는 제품 수
+    latest_ym = Column(String(6))
+    latest_kg = Column(Float)                        # 원/kg
+    yoy_pct = Column(Float)
+    trend_3m_pct = Column(Float)
+    volatility = Column(Float)                       # 최근 24개월 변동계수
+    cheapest_months = Column(JSON)                   # [10, 11, 9]
+    on_market_months = Column(JSON)                  # 출하 시기 [7, 8, 9, 10] (연중 유통이면 1~12)
+    season = Column(JSON)                            # {월: 연평균 대비 비율}
+    monthly = Column(JSON)                           # [{ym, kg}] 최근 36개월
+
+
+class AnalyticsSoolIngredient(Base):
+    """제품 ↔ 시세가 있는 원료 (원재료 문구에서 매칭)"""
+    __tablename__ = "analytics_sool_ingredient"
+
+    sool_id = Column(Integer, primary_key=True)
+    ingredient = Column(String(20), primary_key=True)
+    run_date = Column(Date, nullable=False)

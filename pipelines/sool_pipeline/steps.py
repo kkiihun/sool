@@ -15,6 +15,7 @@ from collections import Counter
 from .blogs import build_query, kakao_blog_fetcher, pick as pick_blogs
 from .categorize import standardize, suggest
 from . import source_at
+from . import ingredients as ingr
 from .completeness import card_completeness, summarize
 from .geo import clean_address, geocode, kakao_fetcher, short_sido
 from .links import check as check_link, classify as classify_link, interpret as interpret_link, normalize_url
@@ -55,7 +56,58 @@ def collect(ctx: Context) -> StepResult:
     geo = _geocode_new(ctx)
     links = _check_links(ctx)
     blogs = _search_blogs(ctx)
-    return StepResult(out=sum(counts.values()), extra={"tables": counts, "geocode": geo, "links": links, "blogs": blogs})
+    prices = _collect_ingredient_prices(ctx)
+    return StepResult(out=sum(counts.values()),
+                      extra={"tables": counts, "geocode": geo, "links": links, "blogs": blogs, "prices": prices})
+
+
+def _collect_ingredient_prices(ctx: Context) -> dict:
+    """원료 시세 (aT 중도매, 월 단위). 없는 달만 받고, 최근 refresh_months 달은 매번 다시 받음"""
+    cfg = ctx.config.get("ingredient_prices", {})
+    if not cfg.get("enabled", True):
+        return {"state": "skipped"}
+    key = os.environ.get("DATA_GO_KR_SERVICE_KEY")
+    if not key:
+        ctx.warn("DATA_GO_KR_SERVICE_KEY 없음 → 원료 시세 건너뜀")
+        return {"state": "skipped"}
+    months = [p.strftime("%Y%m") for p in pd.period_range(cfg.get("start_month", "2021-01"), ctx.run_date.strftime("%Y-%m"), freq="M")]
+    recent = set(months[-int(cfg.get("refresh_months", 2)):])
+    with duckdb.connect(str(ctx.warehouse)) as con:
+        con.execute("""CREATE TABLE IF NOT EXISTS ingredient_price (
+            ingredient VARCHAR, exmn_ymd VARCHAR, vrty_nm VARCHAR, grd_cd VARCHAR, mrkt_nm VARCHAR, sgg_nm VARCHAR,
+            unit VARCHAR, unit_sz VARCHAR, prc DOUBLE, kg_prc DOUBLE)""")
+        con.execute("""CREATE TABLE IF NOT EXISTS ingredient_fetch (
+            ingredient VARCHAR, ym VARCHAR, rows INTEGER, fetched_at TIMESTAMP, PRIMARY KEY (ingredient, ym))""")
+        done = {(r[0], r[1]) for r in con.execute("SELECT ingredient, ym FROM ingredient_fetch").fetchall()}
+        # 최근 달부터 (모든 원료가 먼저 최신 시세를 갖도록), 같은 달 안에서는 원료 순
+        todo = [(name, ym) for ym in reversed(months) for name in ingr.INGREDIENTS if (name, ym) not in done or ym in recent]
+        todo = todo[: int(cfg.get("max_calls", 2000))]
+        calls, error = 0, None
+        for name, ym in todo:
+            ctgry, item, _ = ingr.INGREDIENTS[name]
+            try:
+                rows = ingr.fetch_month(key, ctgry, item, ym)
+            except Exception as ex:               # 한도 초과·키 오류: 기록하고 중단 (다음 실행에 이어서)
+                error = f"{type(ex).__name__}: {ex}"
+                ctx.warn(f"원료 시세 수집 중단 ({name} {ym}): {error}")
+                break
+            calls += 1
+            con.execute("DELETE FROM ingredient_price WHERE ingredient = ? AND exmn_ymd LIKE ?", [name, f"{ym}%"])
+            if rows:
+                df = pd.DataFrame([{
+                    "ingredient": name, "exmn_ymd": r.get("exmn_ymd"), "vrty_nm": r.get("vrty_nm"), "grd_cd": r.get("grd_cd"),
+                    "mrkt_nm": r.get("mrkt_nm"), "sgg_nm": r.get("sgg_nm"), "unit": r.get("unit"), "unit_sz": r.get("unit_sz"),
+                    "prc": pd.to_numeric(r.get("exmn_dd_prc"), errors="coerce"),
+                    "kg_prc": pd.to_numeric(r.get("exmn_dd_cnvs_prc"), errors="coerce"),
+                } for r in rows])
+                con.register("df", df)
+                con.execute("INSERT INTO ingredient_price SELECT * FROM df")
+                con.unregister("df")
+            con.execute("INSERT OR REPLACE INTO ingredient_fetch VALUES (?, ?, ?, now())", [name, ym, len(rows)])
+        total = con.execute("SELECT COUNT(*) FROM ingredient_price").fetchone()[0]
+    left = max(0, len([1 for name in ingr.INGREDIENTS for ym in months if (name, ym) not in done]) - calls)
+    ctx.metrics["ingredient_prices"] = {"calls": calls, "rows": int(total), "months_left": left, "error": error}
+    return {"state": "error" if error else "ok", "calls": calls, "rows": int(total), "months_left": left}
 
 
 def _bundled_seed(ctx: Context) -> pd.DataFrame | None:
@@ -368,6 +420,7 @@ def analyze(ctx: Context) -> StepResult:
     places = _build_places(ctx)
     purchases = _build_purchases(ctx)
     blogs = _build_blogs(ctx)
+    ingredients = _build_ingredients(ctx)
     _add_completeness(ctx)
     market = _build_market(ctx)
 
@@ -376,6 +429,7 @@ def analyze(ctx: Context) -> StepResult:
         "places": places,
         "purchases": purchases,
         "blog_reviews": blogs,
+        "ingredients": ingredients,
         "market_metrics": market,
         "card_full_pct": ctx.metrics["card_completeness"]["full_pct"],
         "total_items": int(len(sug)),
@@ -526,6 +580,16 @@ def publish(ctx: Context) -> StepResult:
             conn.execute(text("DELETE FROM analytics_blog"))
             conn.execute(text(f"INSERT INTO analytics_blog ({', '.join(f'`{c}`' for c in _BLOG_COLS)}) "
                               f"VALUES ({', '.join(':' + c for c in _BLOG_COLS)})"), blog_rows)
+        ing_rows = _mart_rows(ctx, "mart_ingredient", _INGREDIENT_COLS)
+        if ing_rows:
+            conn.execute(text("DELETE FROM analytics_ingredient"))
+            conn.execute(text(f"INSERT INTO analytics_ingredient ({', '.join(_INGREDIENT_COLS)}) "
+                              f"VALUES ({', '.join(':' + c for c in _INGREDIENT_COLS)})"), ing_rows)
+            sool_ing_rows = _mart_rows(ctx, "mart_sool_ingredient", ["sool_id", "ingredient", "run_date"])
+            conn.execute(text("DELETE FROM analytics_sool_ingredient"))
+            if sool_ing_rows:
+                conn.execute(text("INSERT INTO analytics_sool_ingredient (sool_id, ingredient, run_date) "
+                                  "VALUES (:sool_id, :ingredient, :run_date)"), sool_ing_rows)
         market_rows = _mart_rows(ctx, "mart_market", ["key", "run_date", "payload"])
         if market_rows:
             conn.execute(text("DELETE FROM analytics_market"))
@@ -533,9 +597,11 @@ def publish(ctx: Context) -> StepResult:
                          market_rows)
     return StepResult(out=len(rows) + len(place_rows) + len(purchase_rows) + len(blog_rows) + len(market_rows),
                       message=f"술 카드 {len(rows)}, 장소 {len(place_rows)}, 구매 경로 {len(purchase_rows)}, "
-                              f"블로그 후기 {len(blog_rows)}, 시장 지표 {len(market_rows)}행 교체")
+                              f"블로그 후기 {len(blog_rows)}, 원료 {len(ing_rows)}, 시장 지표 {len(market_rows)}행 교체")
 
 
+_INGREDIENT_COLS = ["ingredient", "run_date", "item_code", "variety", "products", "latest_ym", "latest_kg", "yoy_pct",
+                    "trend_3m_pct", "volatility", "cheapest_months", "on_market_months", "season", "monthly"]
 _BLOG_COLS = ["sool_id", "seq", "title", "url", "blogname", "posted_at", "match", "run_date"]
 
 
@@ -736,6 +802,51 @@ def _build_blogs(ctx: Context) -> int:
         "by_match": dict(by_match), "none": len(rows_in) - with_any,
     }
     return int(len(blogs))
+
+
+# 원료 시세: ingredient_price → 원료별 월 가격·요약 (mart_ingredient), 제품 ↔ 원료 (mart_sool_ingredient)
+def _build_ingredients(ctx: Context) -> int:
+    with duckdb.connect(str(ctx.warehouse)) as con:
+        tables = {r[0] for r in con.execute("SHOW TABLES").fetchall()}
+        prof = con.execute("SELECT p.sool_id, s.ingredients FROM mart_sool_profile p JOIN staged_sool s ON s.id = p.sool_id").df()
+        raw = (con.execute("SELECT ingredient, exmn_ymd, grd_cd, vrty_nm, kg_prc FROM ingredient_price").df()
+               if "ingredient_price" in tables else pd.DataFrame(columns=["ingredient", "exmn_ymd", "grd_cd", "vrty_nm", "kg_prc"]))
+
+    links = [{"sool_id": int(r.sool_id), "ingredient": name, "run_date": ctx.run_date}
+             for r in prof.itertuples() for name in ingr.match_ingredients(r.ingredients)]
+    sool_ing = pd.DataFrame(links, columns=["sool_id", "ingredient", "run_date"])
+    used = sool_ing["ingredient"].value_counts().to_dict()
+
+    today_ym = ctx.run_date.strftime("%Y%m")
+    rows = []
+    for name, (ctgry, item, _) in ingr.INGREDIENTS.items():
+        sub = raw[raw["ingredient"] == name]
+        summ = ingr.summarize(ingr.monthly_series(sub, ingr.VARIETY.get(name)), today_ym) if len(sub) else {}
+        rows.append({
+            "ingredient": name, "run_date": ctx.run_date,
+            "item_code": f"{ctgry}-{item}", "variety": ingr.VARIETY.get(name),
+            "products": int(used.get(name, 0)),
+            "latest_ym": summ.get("latest_ym"), "latest_kg": summ.get("latest_kg"),
+            "yoy_pct": summ.get("yoy_pct"), "trend_3m_pct": summ.get("trend_3m_pct"),
+            "volatility": summ.get("volatility"),
+            "cheapest_months": json.dumps(summ.get("cheapest_months", [])),
+            "on_market_months": json.dumps(summ.get("on_market_months", [])),
+            "season": json.dumps(summ.get("season", {})),
+            "monthly": json.dumps(summ.get("monthly", [])),
+        })
+    mart = pd.DataFrame(rows)
+    with duckdb.connect(str(ctx.warehouse)) as con:
+        con.register("mart", mart)
+        con.execute("CREATE OR REPLACE TABLE mart_ingredient AS SELECT * FROM mart")
+        con.register("sool_ing", sool_ing)
+        con.execute("CREATE OR REPLACE TABLE mart_sool_ingredient AS SELECT * FROM sool_ing")
+    priced = mart[mart["latest_kg"].notna()]
+    ctx.metrics["ingredient_summary"] = {
+        "with_price": int(len(priced)), "product_links": int(len(sool_ing)),
+        "products_with_priced_ingredient": int(sool_ing["sool_id"].nunique()),
+        "top_used": dict(sorted(used.items(), key=lambda x: -x[1])[:8]),
+    }
+    return int(len(mart))
 
 
 # 술 카드 충실도 (U1): 장소(좌표)·구매 경로까지 만든 뒤 mart_sool_profile 에 card_score·card_missing 추가

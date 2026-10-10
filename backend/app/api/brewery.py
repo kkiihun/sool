@@ -7,7 +7,8 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
-from app.models.analytics import AnalyticsBlog, AnalyticsPlace, AnalyticsPurchase, AnalyticsSoolProfile
+from app.models.analytics import (AnalyticsBlog, AnalyticsIngredient, AnalyticsPlace, AnalyticsPurchase,
+                                  AnalyticsSoolIngredient, AnalyticsSoolProfile)
 from app.models.sool import Sool
 from app.services.brewery_report import DEAD, build_issues, percentile_rank, strengths, summarize
 
@@ -111,9 +112,20 @@ def brewery_report(place_id: str, db: Session = Depends(get_db)):
     pairing = [{"group": g, "mine": mine.get(g, 0), "region_pct": round(100 * region.get(g, 0) / region_n)}
                for g in sorted(set(mine) | set(region), key=lambda g: -region.get(g, 0))]
 
+    # 주원료 시세: 내 제품 원재료에 나오는 원료의 최근 가격·전년 대비·출하기
+    links = db.query(AnalyticsSoolIngredient).filter(AnalyticsSoolIngredient.sool_id.in_(my_ids)).all() if my_ids else []
+    used = Counter(x.ingredient for x in links)
+    ing_rows = {r.ingredient: r for r in db.query(AnalyticsIngredient).filter(AnalyticsIngredient.ingredient.in_(list(used))).all()} if used else {}
+    ingredients = [{
+        "ingredient": name, "my_products": n, "latest_ym": r.latest_ym, "latest_kg": r.latest_kg, "yoy_pct": r.yoy_pct,
+        "trend_3m_pct": r.trend_3m_pct, "cheapest_months": r.cheapest_months or [],
+        "on_market_months": r.on_market_months or [], "variety": r.variety, "monthly": (r.monthly or [])[-24:],
+    } for name, n in used.most_common() if (r := ing_rows.get(name)) is not None and r.latest_kg]
+
     return {
         "place": place,
         "summary": s,
+        "ingredients": ingredients,
         "ranks": ranks,
         "issues": build_issues(s, place),
         "strengths": strengths(s, place, ranks),
