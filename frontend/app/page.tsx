@@ -36,6 +36,8 @@ const FLAGS = [
 const PAGE_SIZE = 24;
 
 const catColor = (c: string | null) => CAT_COLOR[c ?? ""] ?? "#64748b";
+// 도수별 색상 (기존 카드와 같음)
+const abvColor = (abv: number) => (abv < 10 ? "#52c41a" : abv < 20 ? "#f59e0b" : "#ff4d4f");
 
 function Chip({ on, onClick, children, tone = "amber" }: { on: boolean; onClick: () => void; children: React.ReactNode; tone?: "amber" | "purple" }) {
   const onCls = tone === "purple" ? "bg-purple-400 text-black border-purple-400" : "bg-amber-500 text-black border-amber-500";
@@ -59,24 +61,29 @@ function SoolTile({ item }: { item: Item }) {
   return (
     <Link href={`/sool/${item.id}`} className="group block h-full">
       <div className="h-full flex flex-col rounded-3xl overflow-hidden border border-white/10 bg-white/[0.03] hover:border-amber-500/50 hover:bg-white/[0.05] transition-colors">
-        {/* 위: 이미지 또는 주종 색 패널 */}
-        <div className="relative h-36 overflow-hidden" style={{ background: `linear-gradient(135deg, ${color}33, ${color}0d 70%)` }}>
-          {img ? (
-            <img src={img} alt={item.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
-          ) : (
-            <div className="absolute inset-0 flex items-end p-5">
-              <span className="text-4xl font-black tracking-tight" style={{ color: `${color}cc` }}>{item.category ?? "전통주"}</span>
-            </div>
-          )}
-          <div className="absolute top-0 left-0 right-0 h-1" style={{ background: color }} />
-          {item.abv != null && (
-            <span className="absolute top-4 right-4 px-2.5 py-1 rounded-lg bg-black/60 backdrop-blur text-white text-sm font-black">{item.abv}%</span>
-          )}
-          {item.awarded && (
-            <span className="absolute top-4 left-4 px-2 py-1 rounded-lg bg-black/60 backdrop-blur text-amber-400 text-xs font-bold">
-              <TrophyFilled /> {item.best_award ?? "수상"}
-            </span>
-          )}
+        {/* 위: 이미지 (없으면 주종 이모지) — 기존 디자인 유지 */}
+        <div className="p-4 pb-0">
+          <div className="relative aspect-square bg-gradient-to-br from-neutral-900 to-black rounded-[2rem] flex flex-col items-center justify-center overflow-hidden border border-white/10 group-hover:border-amber-500/30 transition-all shadow-inner">
+            {img ? (
+              <img src={img} alt={item.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-1000" />
+            ) : (
+              <div className="text-8xl drop-shadow-[0_15px_15px_rgba(0,0,0,0.9)] group-hover:scale-125 transition-transform duration-700">
+                {item.category === "탁주" ? "🍶" : "🥃"}
+              </div>
+            )}
+            {item.abv != null && (
+              <div className="absolute top-5 right-5 backdrop-blur-xl px-4 py-2 rounded-2xl border shadow-2xl"
+                style={{ backgroundColor: `${abvColor(item.abv)}22`, borderColor: `${abvColor(item.abv)}44` }}>
+                <span style={{ color: abvColor(item.abv) }} className="font-black text-sm">{item.abv}%</span>
+              </div>
+            )}
+            {item.awarded && (
+              <span className="absolute top-5 left-5 px-2.5 py-1.5 rounded-xl bg-black/60 backdrop-blur text-amber-400 text-xs font-bold">
+                <TrophyFilled /> {item.best_award ?? "수상"}
+              </span>
+            )}
+            <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+          </div>
         </div>
 
         {/* 아래: 술 카드 요약 */}
