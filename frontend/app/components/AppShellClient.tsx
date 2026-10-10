@@ -170,7 +170,8 @@ function ShellLayout({ children }: { children: React.ReactNode }) {
           style={{ 
             transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
             minHeight: "calc(100vh - 80px)",
-            minWidth: 0,   // 가로 스크롤 칩 줄이 본문 폭을 밀어내지 않게 (flex 기본 min-width:auto)
+            flex: "1 1 0%",   // antd 스타일이 붙기 전 첫 화면에서도 본문이 남은 폭을 차지하게
+            minWidth: 0,      // 가로 스크롤 칩 줄이 본문 폭을 밀어내지 않게 (flex 기본 min-width:auto)
             padding: "0",
             background: "transparent"
           }}
