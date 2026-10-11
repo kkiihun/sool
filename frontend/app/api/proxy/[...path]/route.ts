@@ -15,7 +15,15 @@ export async function DELETE(req: NextRequest, ctx: Ctx) { return forward(req, c
 
 // 요청 → 백엔드로 그대로 전달할 헤더 / 응답 → 브라우저로 돌려줄 헤더
 const REQUEST_HEADERS = ["content-type", "accept", "cookie", "authorization"];
-const RESPONSE_HEADERS = ["content-type", "cache-control", "pragma", "expires", "content-disposition"];
+const RESPONSE_HEADERS = ["content-type", "cache-control", "pragma", "expires", "content-disposition", "retry-after"];
+
+// 백엔드 호출 제한(IP 당)용 클라이언트 IP. 앞단 프록시(Caddy)가 X-Forwarded-For 를 새로 쓰므로
+// 가장 오른쪽 값(가장 가까운 프록시가 본 주소)을 쓴다. 없으면 x-real-ip, 그것도 없으면 "direct".
+function clientIp(req: NextRequest): string {
+  const xff = req.headers.get("x-forwarded-for");
+  const last = xff?.split(",").map((s) => s.trim()).filter(Boolean).pop();
+  return (last || req.headers.get("x-real-ip") || "direct").slice(0, 64);
+}
 
 async function forward(req: NextRequest, ctx: Ctx) {
   const { path = [] } = await ctx.params;
@@ -29,6 +37,7 @@ async function forward(req: NextRequest, ctx: Ctx) {
     const v = req.headers.get(k);
     if (v) headers.set(k, v);
   }
+  headers.set("x-sool-client-ip", clientIp(req));
 
   const method = req.method.toUpperCase();
   const init: RequestInit = { method, headers, cache: "no-store" };

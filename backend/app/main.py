@@ -96,6 +96,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# 공개 API 호출 제한 (IP 당, 프록시 경유 요청만)
+from app.core.ratelimit import RateLimitMiddleware
+app.add_middleware(RateLimitMiddleware)
+
 # =====================#
 #   Static 경로
 # =====================#

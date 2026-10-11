@@ -112,7 +112,7 @@ export default function RestaurantOwners() {
     setLocating(true);
     try {
       const r = await fetch(`${API_BASE}/explore/restaurant/geocode?q=${encodeURIComponent(address.trim())}`);
-      if (!r.ok) { message.warning(r.status === 404 ? "주소를 찾지 못했습니다. 도로명 주소나 가게 이름으로 다시 입력해 주세요." : "주소 변환을 잠시 쓸 수 없습니다."); return; }
+      if (!r.ok) { message.warning(r.status === 429 ? "요청이 너무 많습니다. 잠시 후 다시 시도해 주세요." : r.status === 404 ? "주소를 찾지 못했습니다. 도로명 주소나 가게 이름으로 다시 입력해 주세요." : "주소 변환을 잠시 쓸 수 없습니다."); return; }
       setStore(await r.json());
     } finally { setLocating(false); }
   };

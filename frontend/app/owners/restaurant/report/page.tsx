@@ -72,7 +72,7 @@ export default function RestaurantReport() {
     setLocating(true);
     try {
       const r = await fetch(`${API_BASE}/explore/restaurant/geocode?q=${encodeURIComponent(address.trim())}`);
-      if (!r.ok) { message.warning("주소를 찾지 못했습니다. 도로명 주소나 가게 이름으로 다시 입력해 주세요."); return; }
+      if (!r.ok) { message.warning(r.status === 429 ? "요청이 너무 많습니다. 잠시 후 다시 시도해 주세요." : "주소를 찾지 못했습니다. 도로명 주소나 가게 이름으로 다시 입력해 주세요."); return; }
       setStore(await r.json());
     } finally { setLocating(false); }
   };
