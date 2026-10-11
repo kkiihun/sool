@@ -169,7 +169,7 @@ function ShellLayout({ children }: { children: React.ReactNode }) {
             zIndex: 40
           }}
         >
-          <div style={{ flex: 1, overflowY: "auto", overflowX: "hidden", padding: "0 12px" }}>
+          <div className="app-sider-scroll" style={{ flex: 1, minHeight: 0, overflowY: "auto", overflowX: "hidden", padding: "0 12px" }}>
             <Menu
               theme="dark"
               mode="inline"
@@ -251,6 +251,9 @@ function ShellLayout({ children }: { children: React.ReactNode }) {
           .build-badge { display: none !important; }
           input, textarea { font-size: 16px !important; }
         }
+        /* antd 가 만드는 안쪽 래퍼도 세로 flex 로 → 메뉴 영역만 스크롤, 아래 접기 버튼은 고정 */
+        .app-sider .ant-layout-sider-children { display: flex; flex-direction: column; height: 100%; min-height: 0; }
+        .app-sider-scroll { scrollbar-width: thin; scrollbar-color: rgba(255,255,255,0.15) transparent; }
         .premium-sidebar-menu .ant-menu-item-group-title { color: rgba(255,255,255,0.28) !important; font-size: 11px !important; font-weight: 800 !important; padding: 14px 16px 6px !important; }
         .ant-menu-inline-collapsed .ant-menu-item-group-title { display: none !important; }
         .premium-sidebar-menu .ant-menu-submenu-title { color: rgba(255,255,255,0.4) !important; font-weight: 600 !important; border-radius: 12px !important; }

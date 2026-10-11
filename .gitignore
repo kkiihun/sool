@@ -80,3 +80,4 @@ backend/app/static/reports/
 
 # 데이터 파이프라인 실행 결과 (raw 스냅샷, warehouse, output, status.json)
 data/pipeline/
+logs/
